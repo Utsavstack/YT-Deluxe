@@ -33,20 +33,25 @@ def search_videos(q: str):
             'quiet': True,
             'extract_flat': True,
             'skip_download': True,
+            'cookiesfrombrowser': ('chrome',),  # Try to use Chrome cookies
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['web', 'android'],
-                    'formats': ['missing_pot']
+                    'player_client': ['web', 'android', 'mobile'],
                 }
             },
             'nocheckcertificate': True,
             'ignoreerrors': True,
             'no_warnings': True,
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate, br',
                 'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Dest': 'document',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
             }
         }
         with YoutubeDL(ydl_opts) as ydl:
@@ -72,20 +77,25 @@ def get_video_details(url: str):
         ydl_opts = {
             'quiet': True,
             'skip_download': True,
+            'cookiesfrombrowser': ('chrome',),  # Try to use Chrome cookies
             'extractor_args': {
                 'youtube': {
                     'player_client': ['web', 'android', 'mobile'],
-                    'formats': ['missing_pot']
                 }
             },
             'nocheckcertificate': True,
             'ignoreerrors': True,
             'no_warnings': True,
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate, br',
                 'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Dest': 'document',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
             }
         }
         with YoutubeDL(ydl_opts) as ydl:
@@ -158,6 +168,18 @@ def download_worker(task_id: str, url: str, quality: str = None,
         ydl_opts = {
             'quiet': True,
             'skip_download': True,
+            'cookiesfrombrowser': ('chrome',),  # Try to use Chrome cookies
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Dest': 'document',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
         }
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -179,7 +201,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    ' preferredquality': '192',
                 }],
                 'progress_hooks': [lambda d: progress_hook(d, task_id)],
                 'extractor_args': {

@@ -179,7 +179,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    ' preferredquality': '192',
                 }],
                 'progress_hooks': [lambda d: progress_hook(d, task_id)],
                 'extractor_args': {

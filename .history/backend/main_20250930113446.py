@@ -148,7 +148,7 @@ def download_video(
         return JSONResponse({"error": str(e)}, status_code=500)
 
 # --- Download worker function ---
-def download_worker(task_id: str, url: str, quality: str = None, 
+
                    format: str = None, trim_start: float = None, 
                    trim_end: float = None, rename: str = None):
     try:

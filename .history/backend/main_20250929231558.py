@@ -184,20 +184,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'progress_hooks': [lambda d: progress_hook(d, task_id)],
                 'extractor_args': {
                     'youtube': {
-                        'player_client': ['android', 'web', 'mobile'],
+                        'player_client': ['web'],
+                        'formats': ['missing_pot']
                     }
-                },
-                'retries': 10,
-                'fragment_retries': 10,
-                'ignoreerrors': True,
-                'no_warnings': True,
-                'nocheckcertificate': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Referer': 'https://www.youtube.com/'
                 }
             }
         else:
@@ -214,20 +203,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'progress_hooks': [lambda d: progress_hook(d, task_id)],
                 'extractor_args': {
                     'youtube': {
-                        'player_client': ['web', 'android', 'mobile']
+                        'player_client': ['web'],
+                        'formats': ['missing_pot']
                     }
-                },
-                'retries': 10,
-                'fragment_retries': 10,
-                'ignoreerrors': True,
-                'no_warnings': True,
-                'nocheckcertificate': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Referer': 'https://www.youtube.com/'
                 }
             }
         
