@@ -17,7 +17,7 @@ const Routes = () => {
       <ScrollToTop />
       <RouterRoutes>
         {/* Define your route here */}
-        <Route path="/" element={<BatchDownloadManager />} />
+        <Route path="/" element={<HomeSearchDashboard />} />
         <Route path="/batch-download-manager" element={<BatchDownloadManager />} />
         <Route path="/home-search-dashboard" element={<HomeSearchDashboard />} />
         <Route path="/download-history-management" element={<DownloadHistoryManagement />} />

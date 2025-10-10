@@ -185,6 +185,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'extractor_args': {
                     'youtube': {
                         'player_client': ['android', 'web', 'mobile'],
+                        'player_skip': ['webpage', 'configs', 'js']
                     }
                 },
                 'retries': 10,
@@ -192,8 +193,11 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'ignoreerrors': True,
                 'no_warnings': True,
                 'nocheckcertificate': True,
+                'geo_bypass': True,
+                'geo_bypass_country': 'US',
+                'cookiefile': 'cookies.txt',
                 'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
                     'Sec-Fetch-Mode': 'navigate',
@@ -209,27 +213,31 @@ def download_worker(task_id: str, url: str, quality: str = None,
             
             output_template = f"downloads/{base_filename}.%(ext)s"
             ydl_opts = {
-                'outtmpl': output_template,
-                'format': format_spec,
-                'progress_hooks': [lambda d: progress_hook(d, task_id)],
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['web', 'android', 'mobile']
-                    }
-                },
-                'retries': 10,
-                'fragment_retries': 10,
-                'ignoreerrors': True,
-                'no_warnings': True,
-                'nocheckcertificate': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Referer': 'https://www.youtube.com/'
+            'outtmpl': output_template,
+            'format': format_spec,
+            'progress_hooks': [lambda d: progress_hook(d, task_id)],
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['web', 'android', 'mobile'],
+                    'player_skip': ['webpage', 'configs', 'js']
                 }
+            },
+            'retries': 10,
+            'fragment_retries': 10,
+            'ignoreerrors': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'geo_bypass_country': 'US',
+            'cookiefile': 'cookies.txt',
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Sec-Fetch-Mode': 'navigate',
+                'Referer': 'https://www.youtube.com/'
             }
+        }
         
         # Download the file
         with YoutubeDL(ydl_opts) as ydl:
