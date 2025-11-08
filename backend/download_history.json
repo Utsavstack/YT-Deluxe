@@ -268,5 +268,23 @@
     "downloaded_at": "2025-10-11T09:27:59.980419",
     "file_size": 28818919,
     "batch_id": null
+  },
+  {
+    "id": "d116061e-08bc-4a33-8a87-e8305331f80f",
+    "title": "2020 LG OLED l  The Black 4K HDR 60fps",
+    "url": "https://www.youtube.com/watch?v=njX2bu-_Vw4",
+    "filename": "2020 LG OLED l  The Black 4K HDR 60fps.mp4.part",
+    "downloaded_at": "2025-11-08T22:15:35.338706",
+    "file_size": 7277607,
+    "batch_id": null
+  },
+  {
+    "id": "bf6f7de5-146c-48e8-af37-66393d6e563f",
+    "title": "2020 LG OLED l  The Black 4K HDR 60fps",
+    "url": "https://www.youtube.com/watch?v=njX2bu-_Vw4",
+    "filename": "2020 LG OLED l  The Black 4K HDR 60fps.mp4",
+    "downloaded_at": "2025-11-08T22:15:48.775278",
+    "file_size": 7277607,
+    "batch_id": null
   }
 ]
