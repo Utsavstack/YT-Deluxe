@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request, BackgroundTasks, UploadFile, File, Form
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Request, BackgroundTasks, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import uuid
@@ -8,6 +8,7 @@ import subprocess
 from yt_dlp import YoutubeDL
 from datetime import datetime
 import json
+import requests
 
 app = FastAPI(title="YT Deluxe Backend")
 
@@ -111,6 +112,81 @@ def get_video_details(url: str):
             'formats': formats,
         }
         return {"video": video}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# --- Endpoint: Stream video (with quality selection) ---
+@app.get("/api/stream")
+def stream_video(url: str, quality: Optional[str] = None):
+    try:
+        # Map quality to yt-dlp format string
+        quality_map = {
+            '1080p': 'best[height<=1080]',
+            '720p': 'best[height<=720]',
+            '480p': 'best[height<=480]',
+            '360p': 'best[height<=360]',
+            '144p': 'best[height<=144]'
+        }
+        
+        # Default to best quality if not specified or invalid
+        format_string = quality_map.get(quality, 'best')
+        
+        ydl_opts = {
+            'quiet': True,
+            'skip_download': True,
+            'format': format_string,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['web', 'android', 'mobile'],
+                    'formats': ['missing_pot']
+                }
+            },
+            'nocheckcertificate': True,
+            'ignoreerrors': True,
+            'no_warnings': True,
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Sec-Fetch-Mode': 'navigate',
+            }
+        }
+        
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            # Get the best format that matches our criteria
+            formats = info.get('formats', [])
+            best_format = None
+            
+            for f in formats:
+                if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+                    if best_format is None or f.get('height', 0) > best_format.get('height', 0):
+                        best_format = f
+            
+            if best_format and best_format.get('url'):
+                video_url = best_format['url']
+                
+                # Stream the video content
+                response = requests.get(video_url, stream=True, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Referer': 'https://www.youtube.com/'
+                })
+                
+                response.raise_for_status()
+                
+                return StreamingResponse(
+                    response.iter_content(chunk_size=8192),
+                    media_type='video/mp4',
+                    headers={
+                        'Accept-Ranges': 'bytes',
+                        'Content-Disposition': f'inline; filename="{info.get("title", "video")}.mp4"',
+                        'Access-Control-Expose-Headers': 'Content-Disposition'
+                    }
+                )
+            else:
+                raise HTTPException(status_code=404, detail="No suitable video format found")
+                
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
