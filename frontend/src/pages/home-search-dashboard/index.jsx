@@ -97,14 +97,26 @@ const HomeSearchDashboard = () => {
       // Try to get trending videos from API
       const response = await YTDeluxeAPI.searchVideos('trending');
       if (response.results && response.results.length > 0) {
-        setTrendingVideos(response.results);
+        const normalizedResults = response.results.map(v => ({
+          ...v,
+          thumbnail: v?.thumbnail || (v?.id ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
+        }));
+        setTrendingVideos(normalizedResults);
       } else {
         // Fallback to mock data
-        setTrendingVideos(mockTrendingVideos);
+        const normalizedMock = mockTrendingVideos.map(v => ({
+          ...v,
+          thumbnail: v?.thumbnail || '/assets/images/no_image.png',
+        }));
+        setTrendingVideos(normalizedMock);
       }
     } catch (error) {
       console.warn('API not available, using mock data:', error);
-      setTrendingVideos(mockTrendingVideos);
+      const normalizedMock = mockTrendingVideos.map(v => ({
+        ...v,
+        thumbnail: v?.thumbnail || '/assets/images/no_image.png',
+      }));
+      setTrendingVideos(normalizedMock);
     } finally {
       setIsTrendingLoading(false);
     }
@@ -131,7 +143,7 @@ const HomeSearchDashboard = () => {
         const transformedResult = {
           id: video.id,
           title: video.title,
-          thumbnail: video.thumbnail,
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
           duration: video.duration,
           views: Math.floor(Math.random() * 1000000) + 10000, // Mock views
           uploadDate: new Date().toISOString(),
@@ -155,7 +167,7 @@ const HomeSearchDashboard = () => {
         const transformedResults = response.results.map(video => ({
           id: video.id,
           title: video.title,
-          thumbnail: video.thumbnail,
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
           duration: video.duration,
           views: Math.floor(Math.random() * 1000000) + 10000, // Mock views
           uploadDate: new Date().toISOString(), // Mock upload date
