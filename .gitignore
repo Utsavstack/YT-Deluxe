@@ -5,6 +5,7 @@ node_modules
 .idea/
 __pycache__/
 *.pyc
+backend/__pycache__/main.cpython-313.pyc
 venv/
 .venv
 .env
