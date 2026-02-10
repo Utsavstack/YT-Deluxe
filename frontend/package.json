@@ -56,6 +56,7 @@
     "tailwindcss-fluid-type": "^2.0.7"
   },
   "scripts": {
+    "dev": "vite",
     "start": "vite",
     "build": "vite build --sourcemap",
     "serve": "vite preview"
