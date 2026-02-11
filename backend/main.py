@@ -243,8 +243,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
             base_filename = rename
         else:
             base_filename = info.get('title', 'video')
-            # Clean filename for filesystem
-            base_filename = "".join(c for c in base_filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        
+        # Clean filename for filesystem - ALWAYS sanitize regardless of source
+        base_filename = "".join(c for c in base_filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
         
         # Set format based on quality preference
         if format == "mp3":
@@ -315,15 +316,40 @@ def download_worker(task_id: str, url: str, quality: str = None,
             }
         }
         
+        # Get list of files before download to detect new files
+        existing_files = set(os.listdir("downloads")) if os.path.exists("downloads") else set()
+        
         # Download the file
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
         
-        # Find the downloaded file (fix: match with spaces and special characters, case-insensitive)
+        # Find the downloaded file
+        # Method 1: Match by base_filename (case-insensitive startswith)
         downloaded_files = [
             f for f in os.listdir("downloads")
-            if f.lower().startswith(base_filename.lower())
+            if f.lower().startswith(base_filename.lower()[:50])  # Use first 50 chars for matching
         ]
+        
+        # Method 2: Fallback - find new files added to downloads folder
+        if not downloaded_files:
+            current_files = set(os.listdir("downloads"))
+            new_files = current_files - existing_files
+            if new_files:
+                downloaded_files = list(new_files)
+        
+        # Method 3: Fallback - find most recently modified file
+        if not downloaded_files:
+            all_files = os.listdir("downloads")
+            if all_files:
+                all_files_with_time = [
+                    (f, os.path.getmtime(os.path.join("downloads", f)))
+                    for f in all_files
+                ]
+                all_files_with_time.sort(key=lambda x: x[1], reverse=True)
+                # Check if the most recent file was modified in the last 60 seconds
+                import time
+                if time.time() - all_files_with_time[0][1] < 60:
+                    downloaded_files = [all_files_with_time[0][0]]
         
         if downloaded_files:
             filename = downloaded_files[0]
