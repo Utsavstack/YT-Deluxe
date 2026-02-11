@@ -12,3 +12,5 @@ venv/
 downloads/
 download_history.json
 feedback.json
+backend/download_history.json
+backend/feedback.json
