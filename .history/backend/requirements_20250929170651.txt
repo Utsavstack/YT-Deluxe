@@ -1,5 +1,0 @@
-fastapi==0.116.1
-uvicorn[standard]==0.37.0
-yt-dlp==2025.09.26
-python-multipart==0.0.20
-aiofiles==24.1.0

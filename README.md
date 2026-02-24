@@ -7,6 +7,7 @@ A full-stack, feature-rich YouTube downloader and media management web applicati
 ## 🌟 Key Features
 
 ### Frontend
+
 - **React 18**: Modern, concurrent UI with hooks and functional components.
 - **Vite**: Ultra-fast development and build tool.
 - **Redux Toolkit**: Simplified, scalable state management.
@@ -19,6 +20,7 @@ A full-stack, feature-rich YouTube downloader and media management web applicati
 - **Responsive Design**: Mobile-first, fluid layouts.
 
 ### Backend
+
 - **FastAPI**: High-performance, async Python API.
 - **yt-dlp**: Advanced YouTube video/audio extraction.
 - **FFmpeg**: Video/audio processing and trimming.
@@ -44,27 +46,63 @@ A full-stack, feature-rich YouTube downloader and media management web applicati
 ## 📁 Project Structure
 
 ```
-Project/
-├── frontend/           # React app (Vite, Tailwind, Redux, etc.)
-│   ├── src/
-│   │   ├── components/ # Reusable UI components
-│   │   ├── pages/      # Page-level components
-│   │   ├── styles/     # Tailwind & global styles
-│   │   ├── utils/      # Utility functions
-│   │   ├── App.jsx     # Main app component
-│   │   ├── Routes.jsx  # App routes
-│   │   └── index.jsx   # Entry point
-│   ├── public/         # Static assets
-│   ├── tailwind.config.js
-│   ├── vite.config.mjs
-│   └── package.json
-├── backend/            # FastAPI backend
-│   ├── main.py         # API entry point
-│   ├── requirements.txt
-│   ├── downloads/      # Downloaded files
-│   └── README.md
-├── README.md           # (This file)
-└── ...
+yt-deluxe/
+├── .env                        # Environment variables
+├── .gitignore                  # Git ignore rules
+├── .nvmrc                      # Node version config
+├── README.md                   # This file
+│
+├── frontend/                   # React app (Vite + TailwindCSS)
+│   ├── index.html              # HTML entry point
+│   ├── package.json            # NPM dependencies & scripts
+│   ├── vite.config.mjs         # Vite build config
+│   ├── tailwind.config.js      # Tailwind theme & plugins
+│   ├── postcss.config.js       # PostCSS config
+│   ├── jsconfig.json           # JS path aliases
+│   ├── public/                 # Static assets
+│   │   ├── assets/             # Public assets
+│   │   ├── favicon.ico
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   └── src/
+│       ├── index.jsx           # Entry point
+│       ├── App.jsx             # Main app component
+│       ├── Routes.jsx          # App routes
+│       ├── components/         # Reusable UI components
+│       │   ├── AppIcon.jsx
+│       │   ├── AppImage.jsx
+│       │   ├── ErrorBoundary.jsx
+│       │   ├── ScrollToTop.jsx
+│       │   └── ui/             # Core UI components
+│       │       ├── Button.jsx
+│       │       ├── Checkbox.jsx
+│       │       ├── Header.jsx
+│       │       ├── Input.jsx
+│       │       ├── ProgressNotification.jsx
+│       │       └── Select.jsx
+│       ├── pages/              # Feature pages
+│       │   ├── NotFound.jsx
+│       │   ├── home-search-dashboard/
+│       │   ├── video-details-download/
+│       │   ├── batch-download-manager/
+│       │   ├── download-history-management/
+│       │   ├── user-authentication/
+│       │   └── user-settings-preferences/
+│       ├── styles/             # Global styles & assets
+│       │   ├── index.css
+│       │   ├── tailwind.css
+│       │   └── YT-Deluxe_logo.png
+│       └── utils/              # Utility functions
+│           ├── api.js          # API client
+│           └── cn.js           # Classname helper
+│
+└── backend/                    # FastAPI backend
+    ├── main.py                 # API entry point (all endpoints)
+    ├── requirements.txt        # Python dependencies
+    ├── cookies.txt             # YouTube auth cookies
+    ├── downloads/              # Downloaded files directory
+    ├── download_history.json   # Download history (auto-generated)
+    └── feedback.json           # User feedback (auto-generated)
 ```
 
 ---
@@ -73,30 +111,85 @@ Project/
 
 ### Prerequisites
 
-- **Node.js** (v14+)
-- **npm** or **yarn**
-- **Python** (3.8+)
-- **FFmpeg** (for video/audio processing)
-- **yt-dlp** (for YouTube downloads)
+- **nvm**: 1.2.2
+- **Node.js**: v20.20.0 (LTS)
+- **npm**: (bundled with Node.js)
+- **Python**: 3.8+
+- **FFmpeg**: Required for video/audio processing
+
+---
+
+## 📦 Tech Stack & Dependencies
+
+### Frontend Dependencies
+
+| Package | Version | Purpose |
+|---|---|---|
+| react | ^18.2.0 | UI library |
+| react-dom | ^18.2.0 | React DOM renderer |
+| react-router-dom | 6.0.2 | Client-side routing |
+| @reduxjs/toolkit | ^2.6.1 | State management |
+| redux | ^5.0.1 | State container |
+| axios | ^1.8.4 | HTTP client |
+| framer-motion | ^10.16.4 | UI animations |
+| d3 | ^7.9.0 | Data visualization |
+| recharts | ^2.15.2 | Chart components |
+| react-hook-form | ^7.55.0 | Form handling |
+| react-helmet | ^6.1.0 | Document head manager |
+| lucide-react | ^0.484.0 | Icon library |
+| clsx | ^2.1.1 | Classname utility |
+| class-variance-authority | ^0.7.1 | Component variants |
+| tailwind-merge | ^3.3.1 | Tailwind class merging |
+| date-fns | ^4.1.0 | Date utilities |
+
+### Frontend Dev Dependencies
+
+| Package | Version | Purpose |
+|---|---|---|
+| vite | ^6.4.1 | Build tool |
+| @vitejs/plugin-react | ^4.7.0 | React plugin for Vite |
+| tailwindcss | 3.4.6 | Utility-first CSS |
+| autoprefixer | 10.4.2 | CSS vendor prefixing |
+| postcss | ^8.5.6 | CSS transformations |
+| @tailwindcss/typography | ^0.5.16 | Typography plugin |
+| @tailwindcss/forms | ^0.5.7 | Form styles plugin |
+| @tailwindcss/aspect-ratio | ^0.4.2 | Aspect ratio plugin |
+| @tailwindcss/container-queries | ^0.1.1 | Container queries |
+| tailwindcss-animate | ^1.0.7 | Animation utilities |
+| tailwindcss-fluid-type | ^2.0.7 | Fluid typography |
+| tailwindcss-elevation | ^2.0.0 | Elevation/shadow utilities |
+
+### Backend Dependencies
+
+| Package | Version | Purpose |
+|---|---|---|
+| fastapi | 0.133.0 | High-performance async API |
+| uvicorn[standard] | 0.41.0 | ASGI server |
+| yt-dlp | 2026.2.21 | YouTube video/audio extraction |
+| python-multipart | 0.0.22 | Form data parsing |
+| aiofiles | 25.1.0 | Async file operations |
+| requests | 2.32.5 | HTTP requests (video streaming) |
+
+---
 
 ### Frontend Setup
 
 ```bash
 cd frontend
-npm install         # or yarn install
-npm run dev         # or yarn dev
+npm install
+npm run dev         # or: npm start
 ```
 
 ### Backend Setup
 
 ```bash
 cd backend
-python -m venv venv
+python -m venv .venv
 # Activate the venv:
 # Windows:
-venv\Scripts\activate
+.venv\Scripts\activate
 # macOS/Linux:
-source venv/bin/activate
+source .venv/bin/activate
 
 pip install -r requirements.txt
 # Make sure FFmpeg is installed and in your PATH
@@ -104,7 +197,7 @@ pip install -r requirements.txt
 #   Windows: Download from https://ffmpeg.org/download.html
 #   macOS: brew install ffmpeg
 #   Ubuntu/Debian: sudo apt install ffmpeg
-python main.py      # Dev mode
+uvicorn main:app --reload    # Dev mode
 # or for production:
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
@@ -122,25 +215,30 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ## 🧩 Usage Guide
 
 ### Search for Videos
+
 - Enter keywords in the search bar to get YouTube results with thumbnails, titles, and durations.
 - API: `GET /api/search?q=search_term`
 
 ### View Video Details
+
 - Click a video to see all available formats, resolutions, and metadata.
 - API: `GET /api/video?url=youtube_url`
 
 ### Download Options
+
 - Choose format (mp4, mp3, etc.), quality, and optionally trim the video.
 - Batch download: Paste multiple URLs.
 - Rename files before downloading.
 - API: `POST /api/download` and `POST /api/batch-download`
 
 ### Track Progress
+
 - Real-time progress bars for each download.
 - View download history and re-download files.
 - API: `GET /api/progress/{task_id}` and `GET /api/history`
 
 ### Submit Feedback
+
 - Use the feedback form to send suggestions or report issues.
 - API: `POST /api/feedback`
 
@@ -163,16 +261,19 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ### API Usage Examples
 
 #### Search for Videos
+
 ```bash
 curl "http://localhost:8000/api/search?q=python+tutorial"
 ```
 
 #### Get Video Details
+
 ```bash
 curl "http://localhost:8000/api/video?url=https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 #### Download Video
+
 ```bash
 curl -X POST "http://localhost:8000/api/download" \
   -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
@@ -181,6 +282,7 @@ curl -X POST "http://localhost:8000/api/download" \
 ```
 
 #### Download with Trimming
+
 ```bash
 curl -X POST "http://localhost:8000/api/download" \
   -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
@@ -190,6 +292,7 @@ curl -X POST "http://localhost:8000/api/download" \
 ```
 
 #### Batch Download
+
 ```bash
 curl -X POST "http://localhost:8000/api/batch-download" \
   -F "urls=[\"https://www.youtube.com/watch?v=ID1\",\"https://www.youtube.com/watch?v=ID2\"]" \
@@ -198,26 +301,31 @@ curl -X POST "http://localhost:8000/api/batch-download" \
 ```
 
 #### Download Progress
+
 ```bash
 curl "http://localhost:8000/api/progress/{task_id}"
 ```
 
 #### Download History
+
 ```bash
 curl "http://localhost:8000/api/history"
 ```
 
 #### Submit Feedback
+
 ```bash
 curl -X POST "http://localhost:8000/api/feedback" -F "feedback=Great app!"
 ```
 
 #### Legal Disclaimer
+
 ```bash
 curl "http://localhost:8000/api/legal"
 ```
 
 #### Download a File
+
 ```bash
 curl -O "http://localhost:8000/api/downloads/{filename}"
 ```
@@ -227,10 +335,12 @@ curl -O "http://localhost:8000/api/downloads/{filename}"
 ## 🔧 Backend Configuration
 
 ### Environment Variables
+
 - `PORT`: Server port (default: 8000)
 - `HOST`: Server host (default: 0.0.0.0)
 
 ### Backend File Structure
+
 ```
 backend/
 ├── main.py              # FastAPI application
@@ -256,8 +366,8 @@ backend/
 
 ```bash
 cd frontend
-npm run build
-# Output in dist/
+npm run build       # Output in dist/
+npm run serve       # Preview production build
 ```
 
 ### Backend
@@ -266,6 +376,16 @@ npm run build
 cd backend
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+### Quick Reference Commands
+
+| Action | Command |
+|---|---|
+| Frontend dev server | `npm run dev` or `npm start` |
+| Frontend build | `npm run build` |
+| Frontend preview | `npm run serve` |
+| Backend dev server | `uvicorn main:app --reload` |
+| Backend production | `uvicorn main:app --host 0.0.0.0 --port 8000` |
 
 ---
 
@@ -294,6 +414,7 @@ This project is for educational purposes. Please respect YouTube’s terms of se
 ## 🆘 Support
 
 For issues and questions:
+
 1. Check the API documentation at `/docs`
 2. Review the error logs
 3. Ensure FFmpeg is properly installed
@@ -301,4 +422,6 @@ For issues and questions:
 
 ---
 
-**Made With❤️UP7**
+**Made With ❤️ UP7**
+
+_Last Updated: February 2026_
