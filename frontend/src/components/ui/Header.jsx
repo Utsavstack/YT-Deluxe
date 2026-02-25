@@ -96,8 +96,8 @@ const Header = () => {
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary shadow-glass-md">
               <Icon name="Play" size={20} color="white" />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-foreground">YT Deluxe</h1>
+            <div className="block">
+              <h1 className="text-xl allan-bold text-foreground">YT Deluxe</h1>
               <p className="text-xs text-muted-foreground">Premium Video Downloader</p>
             </div>
           </div>
@@ -126,18 +126,7 @@ const Header = () => {
 
           {/* User Section */}
           <div className="flex items-center space-x-3">
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-9 h-9 rounded-lg"
-              onClick={() => {
-                // Theme toggle logic would go here
-                console.log('Toggle theme');
-              }}
-            >
-              <Icon name="Sun" size={18} />
-            </Button>
+            {/* Theme Toggle removed as per request */}
 
             {/* User Menu */}
             {isAuthenticated ? (
@@ -192,44 +181,34 @@ const Header = () => {
               </Button>
             )}
 
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden w-9 h-9 rounded-lg"
-              onClick={() => {
-                // Mobile menu toggle logic
-                console.log('Toggle mobile menu');
-              }}
-            >
-              <Icon name="Menu" size={18} />
-            </Button>
+            {/* Mobile Menu Button removed as per request */}
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden border-t border-border bg-card/50 backdrop-blur-md">
-          <nav className="flex items-center justify-around py-2">
-            {navigationItems?.map((item) => (
-              <button
-                key={item?.path}
-                onClick={() => handleNavigation(item?.path)}
-                className={`
-                  flex flex-col items-center space-y-1 px-3 py-2 rounded-lg text-xs font-medium
-                  transition-all duration-200 spring-smooth min-w-0 flex-1
-                  ${isActivePath(item?.path)
-                    ? 'text-primary' :'text-muted-foreground hover:text-foreground'
-                  }
-                `}
-                title={item?.tooltip}
-              >
-                <Icon name={item?.icon} size={18} />
-                <span className="truncate">{item?.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
       </header>
+
+      {/* Mobile Navigation (Sticky Bottom) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] border-t border-border bg-background/95 backdrop-blur-md pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <nav className="flex items-center justify-around py-2">
+          {navigationItems?.map((item) => (
+            <button
+              key={item?.path}
+              onClick={() => handleNavigation(item?.path)}
+              className={`
+                flex flex-col items-center space-y-1 px-3 py-1.5 rounded-lg text-xs font-medium
+                transition-all duration-200 spring-smooth min-w-0 flex-1
+                ${isActivePath(item?.path)
+                  ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                }
+              `}
+              title={item?.tooltip}
+            >
+              <Icon name={item?.icon} size={20} />
+              <span className="truncate pt-0.5">{item?.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
       {/* Authentication Modal */}
       {isAuthModalOpen && (
         <AuthModal

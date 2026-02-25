@@ -457,17 +457,17 @@ const HomeSearchDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <BackgroundShapes />
       <Header />
       {/* ProgressNotification will only be shown when downloads are active */}
 
-      <main className="pt-20 pb-8 px-4 lg:px-6">
+      <main className="pt-20 pb-32 lg:pb-8 px-4 lg:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Search Section */}
           <div className="mb-12">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            <div className="text-center mb-8 mt-[45px]">
+              <h1 className="text-4xl lg:text-5xl allan-bold text-foreground mb-4">
                 YT Deluxe
               </h1>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

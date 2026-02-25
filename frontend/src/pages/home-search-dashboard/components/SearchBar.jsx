@@ -25,7 +25,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        searchRef?.current && 
+        searchRef?.current &&
         !searchRef?.current?.contains(event.target) &&
         suggestionsRef?.current &&
         !suggestionsRef?.current?.contains(event.target)
@@ -66,7 +66,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
   const handleInputChange = (e) => {
     const value = e?.target?.value;
     setSearchQuery(value);
-    
+
     if (value?.trim()) {
       // Filter suggestions based on input
       const filtered = mockSuggestions?.filter(suggestion =>
@@ -84,7 +84,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
     if (query?.trim()) {
       onSearch(query?.trim());
       setShowSuggestions(false);
-      
+
       // Add to recent searches
       const recent = JSON.parse(localStorage.getItem('ytdeluxe_recent_searches') || '[]');
       const updatedRecent = [query?.trim(), ...recent?.filter(item => item !== query?.trim())]?.slice(0, 10);
@@ -102,29 +102,29 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
-      
+
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
-      
+
       recognition.onstart = () => {
         setIsListening(true);
       };
-      
+
       recognition.onresult = (event) => {
         const transcript = event.results?.[0]?.[0]?.transcript;
         setSearchQuery(transcript);
         handleSearch(transcript);
       };
-      
+
       recognition.onerror = () => {
         setIsListening(false);
       };
-      
+
       recognition.onend = () => {
         setIsListening(false);
       };
-      
+
       recognition?.start();
     } else {
       onVoiceSearch?.();
@@ -140,51 +140,54 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
       {/* Main Search Bar */}
       <div ref={searchRef} className="relative">
         <div className="glass-card shadow-glass-lg">
-          <div className="flex items-center p-4">
-            <Icon name="Search" size={20} className="text-muted-foreground mr-3 flex-shrink-0" />
-            
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Search videos or paste YouTube URL..."
-              className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none text-base"
-            />
-            
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-8 h-8 mr-2 flex-shrink-0"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSuggestions([]);
-                  setShowSuggestions(false);
-                }}
-              >
-                <Icon name="X" size={16} />
-              </Button>
-            )}
-            
+          <div className="flex items-center p-2 sm:p-4">
+            <div className="flex-1 flex items-center border border-muted-foreground/30 rounded-[40px] px-3 sm:px-4 py-1 sm:py-1.5 mr-1 sm:mr-3 focus-within:ring-2 focus-within:ring-primary/50 transition-all bg-transparent text-foreground">
+              <Icon name="Search" size={18} className="text-muted-foreground mr-2 sm:mr-3 flex-shrink-0" />
+
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                placeholder="Search videos or paste YouTube URL..."
+                className="flex-1 bg-transparent text-foreground placeholder-muted-foreground outline-none text-sm sm:text-base min-w-0 py-1 border-none focus:ring-0"
+              />
+
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-6 h-6 sm:w-8 sm:h-8 ml-1 sm:ml-2 flex-shrink-0 rounded-full"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  <Icon name="X" size={14} />
+                </Button>
+              )}
+            </div>
+
             <Button
               variant="ghost"
               size="icon"
-              className={`w-8 h-8 mr-2 flex-shrink-0 ${isListening ? 'text-error animate-pulse' : 'text-muted-foreground'}`}
+              className={`w-8 h-8 mr-1 sm:mr-2 flex-shrink-0 ${isListening ? 'text-error animate-pulse' : 'text-muted-foreground'}`}
               onClick={handleVoiceSearch}
               disabled={isListening}
             >
-              <Icon name="Mic" size={16} />
+              <Icon name="Mic" size={18} />
             </Button>
-            
+
             <Button
               variant="default"
               size="sm"
               onClick={() => handleSearch()}
               disabled={!searchQuery?.trim()}
-              className="flex-shrink-0"
+              className="flex-shrink-0 rounded-[40px] px-3 sm:px-6 text-sm"
             >
-              {isYouTubeUrl(searchQuery) ? 'Download' : 'Search'}
+              <span className="hidden sm:inline">{isYouTubeUrl(searchQuery) ? 'Download' : 'Search'}</span>
+              <span className="sm:hidden">{isYouTubeUrl(searchQuery) ? 'Get' : 'Go'}</span>
             </Button>
           </div>
         </div>

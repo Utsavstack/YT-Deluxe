@@ -1,3 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Allan:wght@400;700&display=swap');
+
+.allan-regular {
+  font-family: "Allan", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.allan-bold {
+  font-family: "Allan", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
 body {
   margin: 0;
   padding: 0;

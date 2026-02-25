@@ -45,7 +45,7 @@ const FloatingActionButton = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-100">
+    <div className="fixed bottom-24 md:bottom-6 right-6 z-[110]">
       {/* Quick Action Buttons */}
       {isExpanded && (
         <div className="absolute bottom-16 right-0 space-y-3 animate-slide-up">
@@ -75,9 +75,8 @@ const FloatingActionButton = () => {
         variant="default"
         size="icon"
         onClick={handleMainAction}
-        className={`w-14 h-14 rounded-full shadow-glass-xl bg-primary hover:bg-primary/90 spring-bounce transition-transform duration-300 ${
-          isExpanded ? 'rotate-45' : 'rotate-0'
-        }`}
+        className={`w-14 h-14 rounded-full shadow-glass-xl bg-primary hover:bg-primary/90 spring-bounce transition-transform duration-300 ${isExpanded ? 'rotate-45' : 'rotate-0'
+          }`}
       >
         <Icon name="Plus" size={24} />
       </Button>
