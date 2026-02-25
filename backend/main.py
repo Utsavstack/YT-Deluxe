@@ -51,8 +51,8 @@ def search_videos(q: str):
             }
         }
         with YoutubeDL(ydl_opts) as ydl:
-            # ytsearch10 returns top 10 results
-            search_result = ydl.extract_info(f"ytsearch10:{q}", download=False)
+            # ytsearch12 returns top 12 results (perfect for 3-column grid)
+            search_result = ydl.extract_info(f"ytsearch12:{q}", download=False)
         videos = []
         for entry in search_result.get('entries', []):
             videos.append({
@@ -62,6 +62,7 @@ def search_videos(q: str):
                 'thumbnail': entry.get('thumbnail'),
                 'duration': entry.get('duration'),
                 'uploader': entry.get('uploader'),
+                'views': entry.get('view_count'),
             })
         return {"results": videos}
     except Exception as e:
@@ -117,7 +118,7 @@ def get_video_details(url: str):
 
 # --- Endpoint: Stream video (with quality selection) ---
 @app.get("/api/stream")
-def stream_video(url: str, quality: Optional[str] = None):
+def stream_video(url: str, quality: Optional[str] = None, download: bool = False):
     try:
         # Map quality to yt-dlp format string
         quality_map = {
@@ -125,7 +126,8 @@ def stream_video(url: str, quality: Optional[str] = None):
             '720p': 'best[height<=720]',
             '480p': 'best[height<=480]',
             '360p': 'best[height<=360]',
-            '144p': 'best[height<=144]'
+            '144p': 'best[height<=144]',
+            'audio': 'bestaudio/best',
         }
         
         # Default to best quality if not specified or invalid
@@ -160,9 +162,16 @@ def stream_video(url: str, quality: Optional[str] = None):
             best_format = None
             
             for f in formats:
-                if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
-                    if best_format is None or f.get('height', 0) > best_format.get('height', 0):
-                        best_format = f
+                if quality == 'audio':
+                    # Look for audio-only formats
+                    if f.get('acodec') != 'none' and f.get('vcodec') == 'none':
+                        if best_format is None or f.get('abr', 0) > best_format.get('abr', 0):
+                            best_format = f
+                else:
+                    # Look for video+audio formats
+                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+                        if best_format is None or f.get('height', 0) > best_format.get('height', 0):
+                            best_format = f
             
             if best_format and best_format.get('url'):
                 video_url = best_format['url']
@@ -175,12 +184,15 @@ def stream_video(url: str, quality: Optional[str] = None):
                 
                 response.raise_for_status()
                 
+                disposition_type = "attachment" if download else "inline"
+                content_disposition = f'{disposition_type}; filename="{info.get("title", "audio" if quality == "audio" else "video")}.{"mp3" if quality == "audio" else "mp4"}"'
+                
                 return StreamingResponse(
                     response.iter_content(chunk_size=8192),
-                    media_type='video/mp4',
+                    media_type='audio/mpeg' if quality == 'audio' else 'video/mp4',
                     headers={
                         'Accept-Ranges': 'bytes',
-                        'Content-Disposition': f'inline; filename="{info.get("title", "video")}.mp4"',
+                        'Content-Disposition': content_disposition,
                         'Access-Control-Expose-Headers': 'Content-Disposition'
                     }
                 )

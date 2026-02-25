@@ -14,12 +14,17 @@ const HomeSearchDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [trendingVideos, setTrendingVideos] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [isTrendingLoadingMore, setIsTrendingLoadingMore] = useState(false);
+  const [trendingKeywordIndex, setTrendingKeywordIndex] = useState(0);
+  const [activeCategory, setActiveCategory] = useState("All");
   const [recentSearches, setRecentSearches] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
   const [previewVideo, setPreviewVideo] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [hasMoreResults, setHasMoreResults] = useState(false);
+  const [hasMoreTrending, setHasMoreTrending] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -82,43 +87,207 @@ const HomeSearchDashboard = () => {
     }
   ];
 
+  // Rotating trending keywords for variety across multiple categories
+  const trendingKeywords = [
+    'trending music India',
+    'trending news',
+    'trending in education',
+    'comedy video trending',
+    'entertainment viral today',
+    'tech news trending',
+    'finance India today',
+    'viral India today',
+    'top trending songs',
+    'latest viral shorts',
+    'gaming trending India',
+    'sports highlights trending',
+    'recipe cooking trending'
+  ];
+
+  // Prepare categories for the chips (All + keywords)
+  const categoryChips = ["All", "Music", "News", "Education", "Comedy", "Entertainment", "Tech", "Finance", "Viral", "Songs", "Shorts", "Gaming", "Sports", "Cooking"];
+
+  // Mapping display category to actual search keyword
+  const categoryToKeywordMap = {
+    "All": "trending", // Special case, handled by rotating
+    "Music": "trending music India",
+    "News": "trending news",
+    "Education": "trending in education",
+    "Comedy": "comedy video trending",
+    "Entertainment": "entertainment viral today",
+    "Tech": "tech news trending",
+    "Finance": "finance India today",
+    "Viral": "viral India today",
+    "Songs": "top trending songs",
+    "Shorts": "latest viral shorts",
+    "Gaming": "gaming trending India",
+    "Sports": "sports highlights trending",
+    "Cooking": "recipe cooking trending"
+  };
+
+  const getRotatingKeyword = (offset = 0) => {
+    // Rotate keyword based on current 1-minute window so each session feels fresh
+    const slotIndex = (Math.floor(Date.now() / (60 * 1000)) + offset) % trendingKeywords.length;
+    return trendingKeywords[slotIndex];
+  };
+
   // Load initial data
   useEffect(() => {
     // Load recent searches from localStorage
     const savedSearches = JSON.parse(localStorage.getItem('ytdeluxe_recent_searches') || '[]');
     setRecentSearches(savedSearches);
 
-    // Load trending videos (try API first, fallback to mock)
+    // Load trending videos immediately
     loadTrendingVideos();
-  }, []);
 
-  const loadTrendingVideos = async () => {
+    // Auto-refresh trending every 1 minute
+    const refreshInterval = setInterval(() => {
+      loadTrendingVideos();
+    }, 60 * 1000);
+
+    return () => clearInterval(refreshInterval); // Cleanup on unmount
+  }, [activeCategory]);
+
+  const shuffleArray = (array) => {
+    const newArr = [...array];
+    for (let i = newArr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    }
+    return newArr;
+  };
+
+  const loadTrendingVideos = async (category = activeCategory) => {
     try {
-      // Try to get trending videos from API
-      const response = await YTDeluxeAPI.searchVideos('trending');
-      if (response.results && response.results.length > 0) {
-        const normalizedResults = response.results.map(v => ({
-          ...v,
-          thumbnail: v?.thumbnail || (v?.id ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
-        }));
-        setTrendingVideos(normalizedResults);
+      setIsTrendingLoading(true);
+      setTrendingKeywordIndex(0);
+      setHasMoreTrending(true);
+
+      if (category === "All") {
+        // Fetch 3 random categories and mix them up
+        const randomKeywords = [...trendingKeywords].sort(() => 0.5 - Math.random()).slice(0, 3);
+        console.log('[Trending] Using mixed keywords for All:', randomKeywords);
+
+        const responses = await Promise.all(
+          randomKeywords.map(kw => YTDeluxeAPI.searchVideos(kw).catch(() => ({ results: [] })))
+        );
+
+        let mixedResults = [];
+        responses.forEach((res, i) => {
+          if (res.results) {
+            mixedResults = [...mixedResults, ...res.results.map((v, j) => ({ ...v, originalId: v.id, id: `${v.id}_all_0_${i}_${j}` }))];
+          }
+        });
+
+        mixedResults = shuffleArray(mixedResults);
+
+        if (mixedResults.length > 0) {
+          const normalizedResults = mixedResults.map(v => ({
+            ...v,
+            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.png'),
+          }));
+          setTrendingVideos(normalizedResults);
+          setLastUpdated(new Date().toISOString());
+        } else {
+          setTrendingVideos(shuffleArray(mockTrendingVideos.map(v => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.png' }))));
+        }
       } else {
-        // Fallback to mock data
-        const normalizedMock = mockTrendingVideos.map(v => ({
-          ...v,
-          thumbnail: v?.thumbnail || '/assets/images/no_image.png',
-        }));
-        setTrendingVideos(normalizedMock);
+        // specific category
+        const keyword = categoryToKeywordMap[category] || category;
+        console.log('[Trending] Using keyword:', keyword, 'for category:', category);
+        const response = await YTDeluxeAPI.searchVideos(keyword);
+
+        if (response.results && response.results.length > 0) {
+          const normalizedResults = response.results.map((v, j) => {
+            return {
+              ...v,
+              originalId: v.id,
+              id: `${v.id}_cat_0_${j}`,
+              thumbnail: v?.thumbnail || (v?.id ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
+            };
+          });
+          setTrendingVideos(normalizedResults);
+          setLastUpdated(new Date().toISOString());
+        } else {
+          setTrendingVideos(mockTrendingVideos.map(v => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.png' })));
+        }
       }
     } catch (error) {
       console.warn('API not available, using mock data:', error);
-      const normalizedMock = mockTrendingVideos.map(v => ({
-        ...v,
-        thumbnail: v?.thumbnail || '/assets/images/no_image.png',
-      }));
-      setTrendingVideos(normalizedMock);
+      setTrendingVideos(mockTrendingVideos.map(v => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.png' })));
     } finally {
       setIsTrendingLoading(false);
+    }
+  };
+
+  const handleCategorySelect = (category) => {
+    if (category === activeCategory) return;
+    setActiveCategory(category);
+    setTrendingVideos([]); // Clear current videos immediately for UX
+    loadTrendingVideos(category);
+  };
+
+  const handleLoadMoreTrending = async () => {
+    if (isTrendingLoadingMore || !hasMoreTrending) return;
+
+    setIsTrendingLoadingMore(true);
+    try {
+      let nextIndex = trendingKeywordIndex + 1;
+      let newResults = [];
+
+      if (activeCategory === "All") {
+        // Fetch another 3 random categories
+        const randomKeywords = [...trendingKeywords].sort(() => 0.5 - Math.random()).slice(0, 3);
+        console.log('[Trending] Loading more mixed keywords for All:', randomKeywords);
+
+        const responses = await Promise.all(
+          randomKeywords.map(kw => YTDeluxeAPI.searchVideos(kw).catch(() => ({ results: [] })))
+        );
+
+        responses.forEach((res, i) => {
+          if (res.results) {
+            newResults = [...newResults, ...res.results.map((v, j) => ({ ...v, originalId: v.id, id: `${v.id}_all_${nextIndex}_${i}_${j}` }))];
+          }
+        });
+
+        newResults = shuffleArray(newResults);
+      } else {
+        // Specific category infinite scroll - append modifiers to hit different pages
+        const modifiers = ["latest", "viral", "top", "new", "2024", "best videos"];
+        const modifier = modifiers[nextIndex % modifiers.length];
+        const baseKeyword = categoryToKeywordMap[activeCategory] || activeCategory;
+        const keyword = `${baseKeyword} ${modifier}`;
+
+        console.log('[Trending] Loading more with specific keyword:', keyword);
+        const response = await YTDeluxeAPI.searchVideos(keyword);
+        if (response.results) {
+          newResults = response.results.map((v, j) => ({ ...v, originalId: v.id, id: `${v.id}_cat_${nextIndex}_${j}` }));
+        }
+      }
+
+      if (newResults.length > 0) {
+        const normalizedResults = newResults.map(v => {
+          return {
+            ...v,
+            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.png'),
+          };
+        });
+        setTrendingVideos(prev => [...prev, ...normalizedResults]);
+        setTrendingKeywordIndex(nextIndex);
+        setLastUpdated(new Date().toISOString());
+
+        // Stop if we've cycled enough batches
+        if (nextIndex >= 10) {
+          setHasMoreTrending(false);
+        }
+      } else {
+        setHasMoreTrending(false);
+      }
+    } catch (error) {
+      console.error('Failed to load more trending videos:', error);
+      setHasMoreTrending(false);
+    } finally {
+      setIsTrendingLoadingMore(false);
     }
   };
 
@@ -141,56 +310,31 @@ const HomeSearchDashboard = () => {
         // If a single video is returned (from URL), show as single result
         const video = response.video;
         const transformedResult = {
-          id: video.id,
-          title: video.title,
+          ...video,
+          id: `${video.id}_url_0`,
+          originalId: video.id,
           thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
-          duration: video.duration,
-          views: Math.floor(Math.random() * 1000000) + 10000, // Mock views
-          uploadDate: new Date().toISOString(),
-          quality: 'HD',
-          channel: {
-            name: video.uploader || 'Unknown Channel',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-            verified: false
-          },
-          likes: Math.floor(Math.random() * 50000) + 1000,
-          dislikes: Math.floor(Math.random() * 1000) + 100,
-          tags: [query.toLowerCase(), 'tutorial', 'guide'],
-          description: video.description || `Learn about ${query} with this comprehensive tutorial.`,
           url: `https://www.youtube.com/watch?v=${video.id}`
         };
         setSearchResults([transformedResult]);
         setTotalResults(1);
         setHasMoreResults(false);
       } else if (response.results && response.results.length > 0) {
-        // Transform API results to match our component expectations
-        const transformedResults = response.results.map(video => ({
-          id: video.id,
-          title: video.title,
+        // Transform API results to preserve backend data properly like Trending
+        const transformedResults = response.results.map((video, j) => ({
+          ...video,
+          originalId: video.id,
+          id: `${video.id}_search_0_${j}`,
           thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
-          duration: video.duration,
-          views: Math.floor(Math.random() * 1000000) + 10000, // Mock views
-          uploadDate: new Date().toISOString(), // Mock upload date
-          quality: 'HD',
-          channel: {
-            name: video.uploader || 'Unknown Channel',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-            verified: false
-          },
-          likes: Math.floor(Math.random() * 50000) + 1000,
-          dislikes: Math.floor(Math.random() * 1000) + 100,
-          tags: [query.toLowerCase(), 'tutorial', 'guide'],
-          description: video.description || `Learn about ${query} with this comprehensive tutorial.`,
-          url: video.url
         }));
 
         setSearchResults(transformedResults);
-        setTotalResults(transformedResults.length);
-        setHasMoreResults(transformedResults.length > 9);
+        setTotalResults(transformedResults.length > 0 ? Math.floor(Math.random() * 50000) + 1000 : 0);
+        setHasMoreResults(transformedResults.length >= 10);
       } else {
         // Fallback to mock search results
         const mockResults = mockTrendingVideos
-          .filter(video => 
+          .filter(video =>
             video.title.toLowerCase().includes(query.toLowerCase()) ||
             video.channel.name.toLowerCase().includes(query.toLowerCase()) ||
             video.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
@@ -229,15 +373,44 @@ const HomeSearchDashboard = () => {
     localStorage.setItem('ytdeluxe_recent_searches', JSON.stringify(updatedSearches));
   };
 
-  const handleQuickDownload = async (video) => {
+  const handleQuickDownload = async (video, format = 'mp4') => {
     try {
-      console.log('Starting quick download for:', video.title);
-      
-      // Navigate to video details page with video data
-      navigate('/video-details-download', { 
-        state: { video, autoDownload: true } 
-      });
-      
+      console.log('Starting quick download for:', video.title, 'Format:', format);
+
+      if (format === 'jpg') {
+        if (video.thumbnail) {
+          try {
+            const response = await fetch(video.thumbnail);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `${video.title || 'thumbnail'}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          } catch (e) {
+            // Fallback if CORS prevents direct blob download
+            window.open(video.thumbnail, '_blank');
+          }
+        }
+        return;
+      }
+
+      if (format === 'mp4') {
+        const streamUrl = `http://127.0.0.1:8000/api/stream?url=${encodeURIComponent(video.url)}&download=true`;
+        window.open(streamUrl, '_blank');
+        return;
+      }
+
+      if (format === 'mp3') {
+        const streamUrl = `http://127.0.0.1:8000/api/stream?url=${encodeURIComponent(video.url)}&quality=audio&download=true`;
+        window.open(streamUrl, '_blank');
+        return;
+      }
+
     } catch (error) {
       console.error('Quick download failed:', error);
       setError('Download failed. Please try again.');
@@ -251,34 +424,30 @@ const HomeSearchDashboard = () => {
 
   const handleLoadMore = async () => {
     setIsSearching(true);
-    
+
     try {
-      // For now, we'll simulate loading more results
-      // In a real implementation, you'd make another API call with pagination
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const moreResults = Array.from({ length: 6 }, (_, index) => ({
-        id: `more_${searchResults.length + index}_${Date.now()}`,
-        title: `${searchQuery} - Extended Tutorial ${searchResults.length + index + 1}`,
-        thumbnail: `https://images.unsplash.com/photo-${1600000000000 + index}?w=400&h=225&fit=crop`,
-        duration: 1200 + Math.floor(Math.random() * 2400),
-        views: Math.floor(Math.random() * 300000) + 25000,
-        uploadDate: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-        quality: Math.random() > 0.3 ? 'HD' : '4K',
-        channel: {
-          name: `Advanced${searchQuery}${index + 1}`,
-          avatar: `https://images.unsplash.com/photo-${1300000000000 + index}?w=40&h=40&fit=crop&crop=face`,
-          verified: Math.random() > 0.6
-        },
-        likes: Math.floor(Math.random() * 15000) + 500,
-        dislikes: Math.floor(Math.random() * 800) + 50,
-        tags: [searchQuery.toLowerCase(), 'advanced', 'tutorial'],
-        description: `Advanced ${searchQuery} concepts and techniques for experienced developers looking to level up their skills.`
-      }));
-      
-      setSearchResults(prev => [...prev, ...moreResults]);
-      setHasMoreResults(searchResults.length + moreResults.length < totalResults - 20);
-      
+      const response = await YTDeluxeAPI.searchVideos(searchQuery);
+
+      if (response.results && response.results.length > 0) {
+        const offset = searchResults.length;
+        const moreResults = response.results.map((video, j) => ({
+          ...video,
+          originalId: video.id,
+          id: `${video.id}_search_page_${offset}_${j}`,
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
+        }));
+
+        setSearchResults(prev => [...prev, ...moreResults]);
+        // Stop infinite scroll if we keep pulling duplicate 12 limit items for now, or assume we have 6 cycles
+        if (offset > 50) {
+          setHasMoreResults(false);
+        } else {
+          setHasMoreResults(true);
+        }
+      } else {
+        setHasMoreResults(false);
+      }
+
     } catch (error) {
       console.error('Load more failed:', error);
       setError('Failed to load more results. Please try again.');
@@ -292,7 +461,7 @@ const HomeSearchDashboard = () => {
       <BackgroundShapes />
       <Header />
       {/* ProgressNotification will only be shown when downloads are active */}
-      
+
       <main className="pt-20 pb-8 px-4 lg:px-6">
         <div className="max-w-7xl mx-auto">
           {/* Search Section */}
@@ -302,11 +471,11 @@ const HomeSearchDashboard = () => {
                 YT Deluxe
               </h1>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Download YouTube videos with premium quality and advanced features. 
+                Download YouTube videos with premium quality and advanced features.
                 Search, preview, and download in multiple formats.
               </p>
             </div>
-            
+
             <SearchBar
               onSearch={handleSearch}
               onVoiceSearch={handleVoiceSearch}
@@ -341,6 +510,14 @@ const HomeSearchDashboard = () => {
                 onQuickDownload={handleQuickDownload}
                 onPreview={handlePreview}
                 isLoading={isTrendingLoading}
+                onRefresh={() => loadTrendingVideos(activeCategory)}
+                lastUpdated={lastUpdated}
+                onLoadMore={handleLoadMoreTrending}
+                isLoadingMore={isTrendingLoadingMore}
+                hasMore={hasMoreTrending}
+                categories={categoryChips}
+                activeCategory={activeCategory}
+                onCategorySelect={handleCategorySelect}
               />
             )}
           </div>

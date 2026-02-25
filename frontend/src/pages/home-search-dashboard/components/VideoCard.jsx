@@ -13,7 +13,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes?.toString()?.padStart(2, '0')}:${secs?.toString()?.padStart(2, '0')}`;
     }
@@ -34,7 +34,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
     const uploaded = new Date(uploadDate);
     const diffTime = Math.abs(now - uploaded);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
@@ -43,15 +43,15 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   };
 
   const handleCardClick = () => {
-    navigate('/video-details-download', { 
-      state: { video } 
+    navigate('/video-details-download', {
+      state: { video }
     });
   };
 
   const handleQuickDownload = async (e) => {
     e?.stopPropagation();
     setIsLoading(true);
-    
+
     try {
       await onQuickDownload(video);
     } catch (error) {
@@ -80,19 +80,19 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
           alt={video?.title}
           className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        
+
         {/* Duration Badge */}
         <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
           {formatDuration(video?.duration)}
         </div>
-        
+
         {/* Quality Badge */}
         {video?.quality && (
           <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded backdrop-blur-sm font-medium">
             {video?.quality}
           </div>
         )}
-        
+
         {/* Hover Overlay */}
         {isHovered && (
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center space-x-3 animate-fade-in">
@@ -125,46 +125,76 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
         <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
           {video?.title}
         </h3>
-        
+
         {/* Channel Info */}
-        <div className="flex items-center space-x-2 mb-2">
-          <Image
-            src={video?.channel?.avatar}
-            alt={video?.channel?.name}
-            className="w-6 h-6 rounded-full"
-          />
-          <span className="text-xs text-muted-foreground font-medium truncate">
-            {video?.channel?.name}
-          </span>
-          {video?.channel?.verified && (
-            <Icon name="CheckCircle" size={12} className="text-primary flex-shrink-0" />
-          )}
-        </div>
-        
-        {/* Video Stats */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center space-x-3">
-            <span>{formatViews(video?.views)}</span>
-            <span>•</span>
-            <span>{formatUploadTime(video?.uploadDate)}</span>
+        <div className="flex items-center justify-between mb-2 mt-3">
+          <div className="flex items-center space-x-2 overflow-hidden mr-2">
+            {video?.channel?.avatar ? (
+              <Image
+                src={video?.channel?.avatar}
+                alt={video?.channel?.name || video?.uploader || 'Channel Avatar'}
+                className="w-6 h-6 rounded-full flex-shrink-0"
+              />
+            ) : (
+              (() => {
+                const name = video?.channel?.name || video?.uploader || '?';
+                // Simple hash function to generate deterministic color
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                  hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const hue = Math.abs(hash % 360);
+                const bgColor = `hsl(${hue}, 70%, 85%)`; // Light pastel background
+                const textColor = `hsl(${hue}, 80%, 30%)`; // Dark readable text
+
+                return (
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0"
+                    style={{ backgroundColor: bgColor, color: textColor }}
+                  >
+                    {name[0]}
+                  </div>
+                );
+              })()
+            )}
+            <span className="text-xs text-muted-foreground font-medium truncate">
+              {video?.channel?.name || video?.uploader || 'Unknown Channel'}
+            </span>
+            {video?.channel?.verified && (
+              <Icon name="CheckCircle" size={12} className="text-primary flex-shrink-0" />
+            )}
           </div>
-          
-          {/* Like Ratio Indicator */}
-          {video?.likes && video?.dislikes && (
-            <div className="flex items-center space-x-1">
-              <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-success rounded-full"
-                  style={{ 
-                    width: `${(video?.likes / (video?.likes + video?.dislikes)) * 100}%` 
-                  }}
-                />
-              </div>
-              <Icon name="ThumbsUp" size={10} className="text-success" />
-            </div>
+          {video?.views !== undefined && (
+            <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+              {formatViews(video?.views)}
+            </span>
           )}
         </div>
-        
+
+        {/* Video Stats */}
+        {video?.uploadDate !== undefined && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center space-x-3">
+              <span>{formatUploadTime(video?.uploadDate)}</span>
+            </div>
+
+            {/* Like Ratio Indicator */}
+            {video?.likes && video?.dislikes && (
+              <div className="flex items-center space-x-1">
+                <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-success rounded-full"
+                    style={{
+                      width: `${(video?.likes / (video?.likes + video?.dislikes)) * 100}%`
+                    }}
+                  />
+                </div>
+                <Icon name="ThumbsUp" size={10} className="text-success" />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tags */}
         {video?.tags && video?.tags?.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
@@ -181,11 +211,21 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
       </div>
       {/* Quick Actions Footer */}
       <div className="px-4 pb-4 flex items-center justify-between border-t border-border/50 pt-3">
-        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-          <Icon name="Eye" size={12} />
-          <span>Click to view details</span>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            className="h-7 text-xs px-2 rounded-md font-medium text-muted-foreground"
+            onClick={(e) => {
+              e?.stopPropagation();
+              onQuickDownload?.(video, 'jpg');
+            }}
+            title="Download Thumbnail (JPG)"
+          >
+            <Icon name="Image" size={14} className="mr-2" />
+            Download Thumbnail
+          </Button>
         </div>
-        
+
         <div className="flex items-center space-x-1">
           <Button
             variant="ghost"
@@ -193,35 +233,15 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
             className="w-7 h-7"
             onClick={(e) => {
               e?.stopPropagation();
-              // Add to watch later
-              console.log('Add to watch later:', video?.id);
+              if (video?.url) {
+                navigator.clipboard.writeText(video.url);
+                // Optional: You could trigger a toast notification here
+                alert('URL Copied to clipboard!');
+              }
             }}
+            title="Copy Video Link"
           >
-            <Icon name="Clock" size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-7 h-7"
-            onClick={(e) => {
-              e?.stopPropagation();
-              // Add to bookmarks
-              console.log('Add to bookmarks:', video?.id);
-            }}
-          >
-            <Icon name="Bookmark" size={14} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-7 h-7"
-            onClick={(e) => {
-              e?.stopPropagation();
-              // Share video
-              console.log('Share video:', video?.id);
-            }}
-          >
-            <Icon name="Share2" size={14} />
+            <Icon name="Copy" size={14} />
           </Button>
         </div>
       </div>
