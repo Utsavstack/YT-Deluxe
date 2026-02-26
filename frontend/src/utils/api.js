@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = '';
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
@@ -39,7 +39,7 @@ class YTDeluxeAPI {
     try {
       const formData = new FormData();
       formData.append('url', downloadConfig.url);
-      
+
       if (downloadConfig.quality) {
         formData.append('quality', downloadConfig.quality);
       }
@@ -60,7 +60,7 @@ class YTDeluxeAPI {
         method: 'POST',
         body: formData,
       });
-      
+
       return await handleResponse(response);
     } catch (error) {
       console.error('Download API error:', error);
@@ -83,12 +83,12 @@ class YTDeluxeAPI {
   static async batchDownload(urls, options = {}) {
     try {
       const formData = new FormData();
-      
+
       // Add URLs
       urls.forEach(url => {
         formData.append('urls', url);
       });
-      
+
       // Add options
       if (options.quality) {
         formData.append('quality', options.quality);
@@ -101,7 +101,7 @@ class YTDeluxeAPI {
         method: 'POST',
         body: formData,
       });
-      
+
       return await handleResponse(response);
     } catch (error) {
       console.error('Batch download API error:', error);
@@ -130,7 +130,7 @@ class YTDeluxeAPI {
         method: 'POST',
         body: formData,
       });
-      
+
       return await handleResponse(response);
     } catch (error) {
       console.error('Feedback API error:', error);
@@ -175,7 +175,7 @@ class YTDeluxeAPI {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }

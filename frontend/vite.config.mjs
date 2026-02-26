@@ -16,6 +16,12 @@ export default defineConfig({
     port: 5848,
     host: "0.0.0.0",
     strictPort: false,
-    allowedHosts: ['.amazonaws.com', '.builtwithrocket.new']
+    allowedHosts: ['.amazonaws.com', '.builtwithrocket.new', '.ngrok-free.dev'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      }
+    }
   }
 });
