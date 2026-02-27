@@ -176,7 +176,7 @@ const ProgressNotification = ({ downloads = [] }) => {
                       className="text-xs h-6 px-2"
                       onClick={() => {
                         if (notification?.filename) {
-                          const downloadUrl = `http://localhost:8000/api/downloads/${encodeURIComponent(notification.filename)}`;
+                          const downloadUrl = `/api/downloads/${encodeURIComponent(notification.filename)}`;
                           window.location.assign(downloadUrl);
                         }
                       }}

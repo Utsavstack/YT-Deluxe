@@ -247,7 +247,7 @@ const VideoDetailsDownload = () => {
                 // Using window.location.assign forces an immediate navigation.
                 // Since the backend sets Content-Disposition: attachment, it won't change the page
                 // but will instantly pop up the native browser download dialog/notification.
-                const downloadUrl = `http://localhost:8000/api/downloads/${encodeURIComponent(progress.filename)}`;
+                const downloadUrl = `/api/downloads/${encodeURIComponent(progress.filename)}`;
                 window.location.assign(downloadUrl);
               } catch (e) {
                 console.error("Failed to trigger download", e);

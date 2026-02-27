@@ -16,93 +16,93 @@ const DownloadTabs = ({ videoData, onDownload }) => {
   ];
 
   const videoQualities = [
-    { 
-      quality: '1080p', 
-      format: 'MP4', 
-      size: '45.2 MB', 
+    {
+      quality: '1080p',
+      format: 'MP4',
+      size: '45.2 MB',
       label: 'Excellent',
       description: 'Best quality for viewing'
     },
-    { 
-      quality: '720p', 
-      format: 'MP4', 
-      size: '28.7 MB', 
+    {
+      quality: '720p',
+      format: 'MP4',
+      size: '28.7 MB',
       label: 'Good',
       description: 'Balanced quality and size'
     },
-    { 
-      quality: '480p', 
-      format: 'MP4', 
-      size: '18.3 MB', 
+    {
+      quality: '480p',
+      format: 'MP4',
+      size: '18.3 MB',
       label: 'Medium',
       description: 'Standard definition'
     },
-    { 
-      quality: '360p', 
-      format: 'MP4', 
-      size: '12.1 MB', 
+    {
+      quality: '360p',
+      format: 'MP4',
+      size: '12.1 MB',
       label: 'Low',
       description: 'Smaller file size'
     },
-    { 
-      quality: '144p', 
-      format: 'MP4', 
-      size: '5.8 MB', 
+    {
+      quality: '144p',
+      format: 'MP4',
+      size: '5.8 MB',
       label: 'Average',
       description: 'Minimum quality'
     }
   ];
 
   const audioQualities = [
-    { 
-      quality: '320kbps', 
-      format: 'MP3', 
-      size: '8.2 MB', 
+    {
+      quality: '320kbps',
+      format: 'MP3',
+      size: '8.2 MB',
       label: 'Excellent',
       description: 'High quality audio'
     },
-    { 
-      quality: '256kbps', 
-      format: 'MP3', 
-      size: '6.8 MB', 
+    {
+      quality: '256kbps',
+      format: 'MP3',
+      size: '6.8 MB',
       label: 'Good',
       description: 'Good quality audio'
     },
-    { 
-      quality: '128kbps', 
-      format: 'MP3', 
-      size: '3.4 MB', 
+    {
+      quality: '128kbps',
+      format: 'MP3',
+      size: '3.4 MB',
       label: 'Medium',
       description: 'Standard quality'
     },
-    { 
-      quality: '96kbps', 
-      format: 'MP3', 
-      size: '2.6 MB', 
+    {
+      quality: '96kbps',
+      format: 'MP3',
+      size: '2.6 MB',
       label: 'Average',
       description: 'Basic quality'
     }
   ];
 
   const thumbnailOptions = [
-    { 
-      quality: 'Max Resolution', 
-      format: 'JPG', 
-      size: '245 KB', 
+    {
+      quality: 'Max Resolution',
+      format: 'JPG',
+      size: '245 KB',
       label: 'Excellent',
       description: '1920x1080 pixels'
     },
-    { 
-      quality: 'High Resolution', 
-      format: 'JPG', 
-      size: '156 KB', 
+    {
+      quality: 'High Resolution',
+      format: 'JPG',
+      size: '156 KB',
       label: 'Good',
       description: '1280x720 pixels'
     },
-    { 
-      quality: 'Medium Resolution', 
-      format: 'JPG', 
-      size: '89 KB', 
+    {
+      quality: 'Medium Resolution',
+      format: 'JPG',
+      size: '89 KB',
       label: 'Medium',
       description: '640x480 pixels'
     }
@@ -134,7 +134,7 @@ const DownloadTabs = ({ videoData, onDownload }) => {
     onDownload({
       type: activeTab,
       quality: preset?.quality,
-      format: preset?.format,
+      format: preset?.format?.toLowerCase(),
       filename: customFilename,
       size: preset?.size
     });
@@ -181,15 +181,14 @@ const DownloadTabs = ({ videoData, onDownload }) => {
             <div key={index} className="glass-card p-4 hover:shadow-glass-md transition-all spring-smooth">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${
-                    preset?.label === 'Excellent' ? 'bg-success' :
-                    preset?.label === 'Medium' ? 'bg-warning' : 'bg-muted-foreground'
-                  }`} />
+                  <div className={`w-3 h-3 rounded-full ${preset?.label === 'Excellent' ? 'bg-success' :
+                      preset?.label === 'Medium' ? 'bg-warning' : 'bg-muted-foreground'
+                    }`} />
                   <span className="font-semibold text-foreground">{preset?.label}</span>
                 </div>
                 <span className="text-sm text-muted-foreground">{preset?.size}</span>
               </div>
-              
+
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Quality:</span>
@@ -201,7 +200,7 @@ const DownloadTabs = ({ videoData, onDownload }) => {
                 </div>
                 <p className="text-xs text-muted-foreground">{preset?.description}</p>
               </div>
-              
+
               <Button
                 variant="default"
                 size="sm"
@@ -241,7 +240,7 @@ const DownloadTabs = ({ videoData, onDownload }) => {
                     className={`
                       p-3 rounded-lg border text-left transition-all spring-smooth
                       ${selectedQuality === option?.quality
-                        ? 'border-primary bg-primary/10 text-primary' :'border-border hover:border-primary/50 text-foreground'
+                        ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/50 text-foreground'
                       }
                     `}
                   >
