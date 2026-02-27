@@ -110,6 +110,8 @@ def get_video_details(url: str):
             'duration': info.get('duration'),
             'uploader': info.get('uploader'),
             'description': info.get('description'),
+            'view_count': info.get('view_count'),
+            'upload_date': info.get('upload_date'),
             'formats': formats,
         }
         return {"video": video}
@@ -118,7 +120,7 @@ def get_video_details(url: str):
 
 # --- Endpoint: Stream video (with quality selection) ---
 @app.get("/api/stream")
-def stream_video(url: str, quality: Optional[str] = None, download: bool = False):
+def stream_video(request: Request, url: str, quality: Optional[str] = None, download: bool = False):
     try:
         # Map quality to yt-dlp format string
         quality_map = {
@@ -184,8 +186,16 @@ def stream_video(url: str, quality: Optional[str] = None, download: bool = False
                         'Referer': 'https://www.youtube.com/'
                     }
                 
+                # Pass down range header for seeking support
+                range_header = request.headers.get('Range')
+                if range_header:
+                    headers['Range'] = range_header
+                
                 # Stream the video content
                 response = requests.get(video_url, stream=True, headers=headers)
+                
+                # Status code may be 206 Partial Content
+                status_code = response.status_code
                 
                 response.raise_for_status()
                 
@@ -197,14 +207,26 @@ def stream_video(url: str, quality: Optional[str] = None, download: bool = False
                 ext = "mp3" if quality == "audio" else "mp4"
                 content_disposition = f'{disposition_type}; filename="{safe_filename}.{ext}"'
                 
+                response_headers = {
+                    'Accept-Ranges': 'bytes',
+                    'Content-Disposition': content_disposition,
+                    'Access-Control-Expose-Headers': 'Content-Disposition'
+                }
+                
+                if 'Content-Range' in response.headers:
+                    response_headers['Content-Range'] = response.headers['Content-Range']
+                if 'Content-Length' in response.headers:
+                    response_headers['Content-Length'] = response.headers['Content-Length']
+                
+                media_type = response.headers.get('Content-Type')
+                if not media_type:
+                    media_type = 'audio/mpeg' if quality == 'audio' else 'video/mp4'
+                
                 return StreamingResponse(
                     response.iter_content(chunk_size=8192),
-                    media_type='audio/mpeg' if quality == 'audio' else 'video/mp4',
-                    headers={
-                        'Accept-Ranges': 'bytes',
-                        'Content-Disposition': content_disposition,
-                        'Access-Control-Expose-Headers': 'Content-Disposition'
-                    }
+                    status_code=status_code,
+                    media_type=media_type,
+                    headers=response_headers
                 )
             else:
                 raise HTTPException(status_code=404, detail="No suitable video format found")

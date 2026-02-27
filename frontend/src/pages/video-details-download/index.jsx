@@ -50,10 +50,12 @@ const VideoDetailsDownload = () => {
             description: response.video.description || 'No description available.',
             thumbnail: response.video.thumbnail,
             duration: response.video.duration,
-            views: Math.floor(Math.random() * 1000000) + 10000, // Mock views
+            views: response.video.view_count || (initialVideo && initialVideo.views) || Math.floor(Math.random() * 1000000) + 10000,
             likes: Math.floor(Math.random() * 50000) + 1000, // Mock likes
             comments: Math.floor(Math.random() * 5000) + 100, // Mock comments
-            uploadDate: new Date().toISOString(), // Mock upload date
+            uploadDate: response.video.upload_date
+              ? `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z`
+              : new Date().toISOString(),
             channel: {
               name: response.video.uploader || 'Unknown Channel',
               subscribers: '1M+',
@@ -61,7 +63,8 @@ const VideoDetailsDownload = () => {
             },
             tags: ['tutorial', 'guide', 'learning'],
             formats: response.video.formats || [],
-            url: initialVideo.url
+            url: initialVideo.url,
+            videoUrl: `/api/stream?url=${encodeURIComponent(initialVideo.url)}&quality=720p`
           };
         }
       }

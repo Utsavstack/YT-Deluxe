@@ -8,19 +8,29 @@ const VideoMetadata = ({ videoData }) => {
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const formatViews = (views) => {
-    if (views >= 1000000) {
-      return `${(views / 1000000)?.toFixed(1)}M views`;
-    } else if (views >= 1000) {
-      return `${(views / 1000)?.toFixed(1)}K views`;
+    // Clean string format if it has commas like "1,746,153,552"
+    let numericViews = views;
+    if (typeof views === 'string') {
+      numericViews = parseInt(views.replace(/,/g, ''), 10);
     }
-    return `${views} views`;
+
+    if (isNaN(numericViews)) {
+      return `${views || 0} views`;
+    }
+
+    if (numericViews >= 1000000) {
+      return `${(numericViews / 1000000)?.toFixed(1)}M views`;
+    } else if (numericViews >= 1000) {
+      return `${(numericViews / 1000)?.toFixed(1)}K views`;
+    }
+    return `${numericViews} views`;
   };
 
   const formatDuration = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes?.toString()?.padStart(2, '0')}:${secs?.toString()?.padStart(2, '0')}`;
     }
@@ -28,11 +38,18 @@ const VideoMetadata = ({ videoData }) => {
   };
 
   const formatUploadDate = (date) => {
+    if (!date) return 'Unknown date';
     const now = new Date();
     const uploadDate = new Date(date);
+
+    if (isNaN(uploadDate.getTime())) {
+      return 'Unknown date';
+    }
+
     const diffTime = Math.abs(now - uploadDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
+    if (diffDays === 0) return 'Today';
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
@@ -47,7 +64,7 @@ const VideoMetadata = ({ videoData }) => {
         <h1 className="text-2xl lg:text-3xl font-bold text-foreground leading-tight mb-2">
           {videoData?.title}
         </h1>
-        
+
         {/* Video Stats */}
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{formatViews(videoData?.views)}</span>
@@ -84,7 +101,7 @@ const VideoMetadata = ({ videoData }) => {
           >
             {videoData?.likes}
           </Button>
-          
+
           <Button
             variant={isBookmarked ? "default" : "outline"}
             size="sm"
@@ -94,7 +111,7 @@ const VideoMetadata = ({ videoData }) => {
           >
             Save
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -120,11 +137,11 @@ const VideoMetadata = ({ videoData }) => {
               {isDescriptionExpanded ? 'Show less' : 'Show more'}
             </Button>
           </div>
-          
+
           <div className={`text-sm text-muted-foreground ${isDescriptionExpanded ? '' : 'line-clamp-3'}`}>
             <p className="whitespace-pre-wrap">{videoData?.description}</p>
           </div>
-          
+
           {isDescriptionExpanded && (
             <div className="pt-3 border-t border-border">
               <div className="flex flex-wrap gap-2">
@@ -150,7 +167,7 @@ const VideoMetadata = ({ videoData }) => {
           <p className="text-lg font-semibold text-foreground">{formatViews(videoData?.views)}</p>
           <p className="text-xs text-muted-foreground">Views</p>
         </div>
-        
+
         <div className="glass-card p-4 text-center">
           <div className="flex items-center justify-center w-10 h-10 bg-success/10 rounded-full mx-auto mb-2">
             <Icon name="ThumbsUp" size={20} className="text-success" />
@@ -158,7 +175,7 @@ const VideoMetadata = ({ videoData }) => {
           <p className="text-lg font-semibold text-foreground">{videoData?.likes}</p>
           <p className="text-xs text-muted-foreground">Likes</p>
         </div>
-        
+
         <div className="glass-card p-4 text-center">
           <div className="flex items-center justify-center w-10 h-10 bg-warning/10 rounded-full mx-auto mb-2">
             <Icon name="MessageCircle" size={20} className="text-warning" />
@@ -166,7 +183,7 @@ const VideoMetadata = ({ videoData }) => {
           <p className="text-lg font-semibold text-foreground">{videoData?.comments}</p>
           <p className="text-xs text-muted-foreground">Comments</p>
         </div>
-        
+
         <div className="glass-card p-4 text-center">
           <div className="flex items-center justify-center w-10 h-10 bg-accent/50 rounded-full mx-auto mb-2">
             <Icon name="Clock" size={20} className="text-foreground" />
