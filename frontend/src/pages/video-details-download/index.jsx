@@ -86,7 +86,7 @@ const VideoDetailsDownload = () => {
             avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
           },
           tags: [
-            "react", "javascript", "web-development", "programming", "tutorial", 
+            "react", "javascript", "web-development", "programming", "tutorial",
             "frontend", "hooks", "components", "jsx", "modern-web", "coding", "learn-to-code"
           ],
           formats: []
@@ -116,9 +116,30 @@ const VideoDetailsDownload = () => {
   };
 
   const handleDownload = async (downloadConfig) => {
+    // Quick handle for thumbnail download to match HomeSearchDashboard
+    if (downloadConfig?.type === 'thumbnail') {
+      try {
+        const response = await fetch(videoData.thumbnail);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${videoData.title || 'thumbnail'}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (e) {
+        // Fallback
+        window.open(videoData.thumbnail, '_blank');
+      }
+      return;
+    }
+
     const newDownload = {
       id: Date.now() + Math.random(),
-      filename: `${downloadConfig?.filename}.${downloadConfig?.format}`,
+      filename: `${downloadConfig?.filename || 'video'}.${downloadConfig?.format || 'mp4'}`,
       type: downloadConfig?.type,
       quality: downloadConfig?.quality,
       format: downloadConfig?.format,
@@ -147,7 +168,7 @@ const VideoDetailsDownload = () => {
 
       // Start download via API
       const response = await YTDeluxeAPI.downloadVideo(apiConfig);
-      
+
       if (response.task_id) {
         // Track progress
         trackDownloadProgress(response.task_id, newDownload.id);
@@ -156,13 +177,14 @@ const VideoDetailsDownload = () => {
       }
 
     } catch (error) {
-      console.error('Download failed:', error);
-      setDownloads(prev => prev.map(download => 
-        download.id === newDownload.id 
+      console.error('Download setup failed:', error);
+      setDownloads(prev => prev.map(download =>
+        download.id === newDownload.id
           ? { ...download, status: 'error', error: error.message }
           : download
       ));
-      setError('Download failed. Please try again.');
+      setError('Download setup failed. Please try again.');
+      setIsDownloading(false);
     }
   };
 
@@ -170,20 +192,20 @@ const VideoDetailsDownload = () => {
     const progressInterval = setInterval(async () => {
       try {
         const progress = await YTDeluxeAPI.getDownloadProgress(taskId);
-        
-        setDownloads(prev => prev.map(download => 
-          download.id === downloadId 
+
+        setDownloads(prev => prev.map(download =>
+          download.id === downloadId
             ? {
-                ...download,
-                progress: progress.progress || 0,
-                status: progress.status || 'downloading',
-                filename: progress.filename || download.filename,
-                error: progress.error || null,
-                speed: progress.speed || 0,
-                timeRemaining: progress.eta || 0,
-                downloaded_bytes: progress.downloaded_bytes || 0,
-                total_bytes: progress.total_bytes || 0
-              }
+              ...download,
+              progress: progress.progress || 0,
+              status: progress.status || 'downloading',
+              filename: progress.filename || download.filename,
+              error: progress.error || null,
+              speed: progress.speed || 0,
+              timeRemaining: progress.eta || 0,
+              downloaded_bytes: progress.downloaded_bytes || 0,
+              total_bytes: progress.total_bytes || 0
+            }
             : download
         ));
 
@@ -191,28 +213,44 @@ const VideoDetailsDownload = () => {
         if (progress.status === 'completed' || progress.status === 'error') {
           clearInterval(progressInterval);
           setIsDownloading(false);
-          
+
           if (progress.status === 'completed') {
             // Update the download with 100% progress
-            setDownloads(prev => prev.map(download => 
-              download.id === downloadId 
+            setDownloads(prev => prev.map(download =>
+              download.id === downloadId
                 ? {
-                    ...download,
-                    progress: 100,
-                    status: 'completed',
-                    completedAt: new Date().toISOString()
-                  }
+                  ...download,
+                  progress: 100,
+                  status: 'completed',
+                  completedAt: new Date().toISOString()
+                }
                 : download
             ));
-            
+
             // Show success notification
             if (Notification.permission === 'granted') {
               const completedDownload = downloads.find(d => d.id === downloadId);
               if (completedDownload) {
+                const fileType = completedDownload.type
+                  ? completedDownload.type.charAt(0).toUpperCase() + completedDownload.type.slice(1)
+                  : 'File';
                 new Notification('Download Complete', {
-                  body: `${completedDownload.filename} has been downloaded successfully!`,
+                  body: `${fileType} Downloaded Successfully!`,
                   icon: '/favicon.ico'
                 });
+              }
+            }
+
+            // Actually trigger the browser download by navigating to the file URL
+            if (progress.filename) {
+              try {
+                // Using window.location.assign forces an immediate navigation.
+                // Since the backend sets Content-Disposition: attachment, it won't change the page
+                // but will instantly pop up the native browser download dialog/notification.
+                const downloadUrl = `http://localhost:8000/api/downloads/${encodeURIComponent(progress.filename)}`;
+                window.location.assign(downloadUrl);
+              } catch (e) {
+                console.error("Failed to trigger download", e);
               }
             }
           }
@@ -226,8 +264,8 @@ const VideoDetailsDownload = () => {
   };
 
   const handleCancelDownload = (downloadId) => {
-    setDownloads(prev => prev.map(download => 
-      download.id === downloadId 
+    setDownloads(prev => prev.map(download =>
+      download.id === downloadId
         ? { ...download, status: 'cancelled', progress: 0 }
         : download
     ));
@@ -236,12 +274,12 @@ const VideoDetailsDownload = () => {
   const handleRetryDownload = (downloadId) => {
     const download = downloads.find(d => d.id === downloadId);
     if (download) {
-      setDownloads(prev => prev.map(d => 
-        d.id === downloadId 
+      setDownloads(prev => prev.map(d =>
+        d.id === downloadId
           ? { ...d, status: 'downloading', progress: 0, error: null }
           : d
       ));
-      
+
       // Retry the download
       handleDownload({
         url: videoData?.url,
@@ -343,14 +381,14 @@ const VideoDetailsDownload = () => {
             {/* Main Content */}
             <div className="xl:col-span-2 space-y-8">
               {/* Video Player */}
-              <VideoPlayer 
-                videoData={videoData} 
+              <VideoPlayer
+                videoData={videoData}
                 onQualityChange={handleQualityChange}
               />
-              
+
               {/* Video Metadata */}
               <VideoMetadata videoData={videoData} />
-              
+
               {/* Download Configuration */}
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -365,14 +403,14 @@ const VideoDetailsDownload = () => {
                     Share
                   </Button>
                 </div>
-                
-                <DownloadTabs 
-                  videoData={videoData} 
+
+                <DownloadTabs
+                  videoData={videoData}
                   onDownload={handleDownload}
                 />
-                
-                <VideoTrimmer 
-                  videoData={videoData} 
+
+                <VideoTrimmer
+                  videoData={videoData}
                   onTrimChange={handleTrimChange}
                 />
               </div>
@@ -402,7 +440,7 @@ const VideoDetailsDownload = () => {
                   >
                     Quick Download (1080p)
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     size="lg"
@@ -420,25 +458,29 @@ const VideoDetailsDownload = () => {
                   >
                     Audio Only (MP3)
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     size="lg"
                     fullWidth
-                    iconName="Bookmark"
+                    iconName="Image"
                     iconPosition="left"
-                    onClick={() => {
-                      // Add to watch later
-                      console.log('Added to watch later');
-                    }}
+                    onClick={() => handleDownload({
+                      url: videoData?.url,
+                      type: 'thumbnail',
+                      quality: 'Max Resolution',
+                      format: 'jpg',
+                      filename: videoData?.title + ' Thumbnail',
+                      size: 'Max Resolution'
+                    })}
                   >
-                    Watch Later
+                    Download Thumbnail
                   </Button>
                 </div>
               </div>
 
               {/* Download Progress */}
-              <DownloadProgress 
+              <DownloadProgress
                 downloads={downloads}
                 onCancel={handleCancelDownload}
                 onRetry={handleRetryDownload}

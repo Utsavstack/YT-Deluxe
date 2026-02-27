@@ -74,7 +74,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
     if (!bytesPerSecond || bytesPerSecond === 0) {
       return 'Calculating...';
     }
-    
+
     if (bytesPerSecond >= 1024 * 1024) {
       return `${(bytesPerSecond / (1024 * 1024))?.toFixed(2)} MB/s`;
     } else if (bytesPerSecond >= 1024) {
@@ -87,7 +87,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
     if (!seconds || seconds === 0) {
       return 'Calculating...';
     }
-    
+
     if (seconds < 60) {
       return `${Math.ceil(seconds)}s remaining`;
     } else if (seconds < 3600) {
@@ -133,7 +133,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
               <div className={`flex-shrink-0 ${getStatusColor(download?.status)}`}>
                 <Icon name={getStatusIcon(download?.status)} size={20} />
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-sm font-medium text-foreground truncate">
@@ -142,17 +142,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     {download?.status === 'downloading' && (
                       <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-6 h-6"
-                          onClick={() => {
-                            // Pause/Resume download
-                            console.log('Toggle pause:', download?.id);
-                          }}
-                        >
-                          <Icon name={download?.status === 'paused' ? 'Play' : 'Pause'} size={12} />
-                        </Button>
+
                         <Button
                           variant="ghost"
                           size="icon"
@@ -163,7 +153,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                         </Button>
                       </>
                     )}
-                    
+
                     {download?.status === 'error' && (
                       <Button
                         variant="ghost"
@@ -174,15 +164,17 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                         <Icon name="RotateCcw" size={12} />
                       </Button>
                     )}
-                    
+
                     {download?.status === 'completed' && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="w-6 h-6"
                         onClick={() => {
-                          // Open file location
-                          console.log('Open file:', download?.id);
+                          if (download?.filename) {
+                            const downloadUrl = `http://localhost:8000/api/downloads/${encodeURIComponent(download.filename)}`;
+                            window.location.assign(downloadUrl);
+                          }
                         }}
                       >
                         <Icon name="FolderOpen" size={12} />
@@ -190,27 +182,27 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{download?.type?.toUpperCase()} • {download?.quality} • {download?.format?.toUpperCase()}</span>
                     <span>{download?.size}</span>
                   </div>
-                  
+
                   {download?.status === 'downloading' && (
                     <>
                       <div className="w-full bg-muted rounded-full h-2">
-                        <div 
+                        <div
                           className={`h-2 rounded-full transition-all duration-300 ease-out ${getProgressColor(download?.status)}`}
                           style={{ width: `${download?.progress}%` }}
                         />
                       </div>
-                      
+
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>
                           {download?.progress?.toFixed(1)}% complete
-                          {download?.downloaded_bytes && download?.total_bytes ? 
-                            ` (${(download?.downloaded_bytes / (1024 * 1024))?.toFixed(1)}/${(download?.total_bytes / (1024 * 1024))?.toFixed(1)} MB)` : 
+                          {download?.downloaded_bytes && download?.total_bytes ?
+                            ` (${(download?.downloaded_bytes / (1024 * 1024))?.toFixed(1)}/${(download?.total_bytes / (1024 * 1024))?.toFixed(1)} MB)` :
                             ''}
                         </span>
                         <div className="flex items-center space-x-2">
@@ -221,7 +213,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                       </div>
                     </>
                   )}
-                  
+
                   {download?.status === 'completed' && (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-success">Download completed</span>
@@ -230,13 +222,13 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                       </span>
                     </div>
                   )}
-                  
+
                   {download?.status === 'error' && (
                     <div className="text-xs text-error">
                       Error: {download?.error || 'Download failed'}
                     </div>
                   )}
-                  
+
                   {download?.status === 'cancelled' && (
                     <div className="text-xs text-muted-foreground">
                       Download cancelled
@@ -257,12 +249,12 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
               {downloads?.filter(d => d?.status === 'completed')?.length} of {downloads?.length} completed
             </span>
           </div>
-          
+
           <div className="w-full bg-muted rounded-full h-2">
-            <div 
+            <div
               className="h-2 bg-primary rounded-full transition-all duration-300 ease-out"
-              style={{ 
-                width: `${(downloads?.filter(d => d?.status === 'completed')?.length / downloads?.length) * 100}%` 
+              style={{
+                width: `${(downloads?.filter(d => d?.status === 'completed')?.length / downloads?.length) * 100}%`
               }}
             />
           </div>

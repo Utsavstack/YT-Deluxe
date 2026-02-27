@@ -176,16 +176,26 @@ def stream_video(url: str, quality: Optional[str] = None, download: bool = False
             if best_format and best_format.get('url'):
                 video_url = best_format['url']
                 
+                # Get the headers from yt-dlp to bypass 403
+                headers = best_format.get('http_headers', {})
+                if not headers:
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                        'Referer': 'https://www.youtube.com/'
+                    }
+                
                 # Stream the video content
-                response = requests.get(video_url, stream=True, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'Referer': 'https://www.youtube.com/'
-                })
+                response = requests.get(video_url, stream=True, headers=headers)
                 
                 response.raise_for_status()
                 
                 disposition_type = "attachment" if download else "inline"
-                content_disposition = f'{disposition_type}; filename="{info.get("title", "audio" if quality == "audio" else "video")}.{"mp3" if quality == "audio" else "mp4"}"'
+                
+                # Create filename, stripping non-ascii if necessary/helpful
+                filename = info.get("title", "audio" if quality == "audio" else "video")
+                safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                ext = "mp3" if quality == "audio" else "mp4"
+                content_disposition = f'{disposition_type}; filename="{safe_filename}.{ext}"'
                 
                 return StreamingResponse(
                     response.iter_content(chunk_size=8192),
@@ -595,7 +605,9 @@ def get_legal():
 def serve_download(filename: str):
     file_path = os.path.join("downloads", filename)
     if os.path.exists(file_path):
-        return FileResponse(file_path, filename=filename)
+        response = FileResponse(file_path, filename=filename)
+        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+        return response
     return JSONResponse({"error": "File not found."}, status_code=404)
 
 # --- Main entry point ---
