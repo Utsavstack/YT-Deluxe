@@ -44,6 +44,11 @@ const VideoDetailsDownload = () => {
         // Get video details from API
         const response = await YTDeluxeAPI.getVideoDetails(initialVideo.url);
         if (response.video) {
+          // Determine the best available quality from real formats
+          const videoFormats = (response.video.formats || []).filter(f => f.type === 'video');
+          const bestQuality = response.video.max_quality
+            || (videoFormats.length ? videoFormats[0].quality : '1080p');
+
           videoInfo = {
             id: response.video.id,
             title: response.video.title,
@@ -51,8 +56,8 @@ const VideoDetailsDownload = () => {
             thumbnail: response.video.thumbnail,
             duration: response.video.duration,
             views: response.video.view_count || (initialVideo && initialVideo.views) || Math.floor(Math.random() * 1000000) + 10000,
-            likes: Math.floor(Math.random() * 50000) + 1000, // Mock likes
-            comments: Math.floor(Math.random() * 5000) + 100, // Mock comments
+            likes: Math.floor(Math.random() * 50000) + 1000,
+            comments: Math.floor(Math.random() * 5000) + 100,
             uploadDate: response.video.upload_date
               ? `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z`
               : new Date().toISOString(),
@@ -63,6 +68,7 @@ const VideoDetailsDownload = () => {
             },
             tags: ['tutorial', 'guide', 'learning'],
             formats: response.video.formats || [],
+            max_quality: bestQuality,
             url: initialVideo.url,
             videoUrl: `/api/stream?url=${encodeURIComponent(initialVideo.url)}&quality=720p`
           };
@@ -98,15 +104,14 @@ const VideoDetailsDownload = () => {
 
       setVideoData(videoInfo);
 
-      // Auto-download if requested
+      // Auto-download if requested — use best available quality
       if (location.state?.autoDownload) {
         handleDownload({
           url: videoInfo.url,
           type: 'video',
-          quality: '1080p',
+          quality: videoInfo.max_quality || '1080p',
           format: 'mp4',
           filename: videoInfo.title,
-          size: '45.2 MB'
         });
       }
 
@@ -435,13 +440,12 @@ const VideoDetailsDownload = () => {
                     onClick={() => handleDownload({
                       url: videoData?.url,
                       type: 'video',
-                      quality: '1080p',
+                      quality: videoData?.max_quality || '1080p',
                       format: 'mp4',
                       filename: videoData?.title,
-                      size: '45.2 MB'
                     })}
                   >
-                    Quick Download (1080p)
+                    Quick Download ({videoData?.max_quality || '1080p'})
                   </Button>
 
                   <Button

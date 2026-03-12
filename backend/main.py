@@ -74,35 +74,91 @@ def get_video_details(url: str):
         ydl_opts = {
             'quiet': True,
             'skip_download': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['web', 'android', 'mobile'],
-                    'formats': ['missing_pot']
-                }
-            },
+            'extract_flat': False,
             'nocheckcertificate': True,
             'ignoreerrors': True,
             'no_warnings': True,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Sec-Fetch-Mode': 'navigate',
-            }
         }
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-        formats = []
+        # Build deduplicated, quality-grouped format list
+        # Collect all unique heights from real video formats
+        seen_heights = {}
+        audio_formats = []
+        
         for f in info.get('formats', []):
+            height = f.get('height')
+            vcodec = f.get('vcodec', 'none')
+            acodec = f.get('acodec', 'none')
+            ext = f.get('ext', '')
+            
+            # Collect best audio-only formats
+            if vcodec == 'none' and acodec != 'none':
+                abr = f.get('abr') or 0
+                if not audio_formats or abr > (audio_formats[0].get('abr') or 0):
+                    audio_formats = [f]
+                continue
+            
+            # Only include real video formats with a height
+            if not height or vcodec == 'none':
+                continue
+            
+            # Keep only the best format per height (prefer highest bitrate/filesize)
+            existing = seen_heights.get(height)
+            if existing is None:
+                seen_heights[height] = f
+            else:
+                # Compare by total bitrate (tbr) or approximate filesize
+                curr_size = f.get('tbr') or f.get('filesize') or f.get('filesize_approx') or 0
+                prev_size = existing.get('tbr') or existing.get('filesize') or existing.get('filesize_approx') or 0
+                
+                # If sizes are roughly equal, slightly prefer mp4 container
+                if curr_size > prev_size * 1.05 or (curr_size >= prev_size * 0.95 and f.get('ext') == 'mp4' and existing.get('ext') != 'mp4'):
+                    seen_heights[height] = f
+        
+        # Sort heights descending (8K → 144p)
+        sorted_heights = sorted(seen_heights.keys(), reverse=True)
+        
+        # Build quality label map
+        height_labels = {
+            4320: '8K',  2160: '4K',  1440: '2K',
+            1080: '1080p', 720: '720p', 480: '480p',
+            360: '360p',  240: '240p', 144: '144p',
+        }
+        
+        formats = []
+        for h in sorted_heights:
+            f = seen_heights[h]
+            label = height_labels.get(h) or f'{h}p'
             formats.append({
                 'format_id': f.get('format_id'),
-                'ext': f.get('ext'),
-                'resolution': f.get('resolution') or f.get('height') or 'N/A',
-                'filesize': f.get('filesize'),
-                'format_note': f.get('format_note', ''),
+                'quality': label,
+                'height': h,
+                'ext': f.get('ext', 'mp4'),
+                'resolution': f'{f.get("width", "?")}x{h}',
+                'filesize': f.get('filesize') or f.get('filesize_approx'),
                 'vcodec': f.get('vcodec', 'none'),
                 'acodec': f.get('acodec', 'none'),
+                'fps': f.get('fps'),
+                'type': 'video',
             })
+        
+        # Add best audio option
+        if audio_formats:
+            af = audio_formats[0]
+            formats.append({
+                'format_id': af.get('format_id'),
+                'quality': 'Audio Only',
+                'height': 0,
+                'ext': 'mp3',
+                'resolution': 'audio',
+                'filesize': af.get('filesize') or af.get('filesize_approx'),
+                'vcodec': 'none',
+                'acodec': af.get('acodec', 'none'),
+                'abr': af.get('abr'),
+                'type': 'audio',
+            })
+        
         video = {
             'id': info.get('id'),
             'title': info.get('title'),
@@ -113,6 +169,7 @@ def get_video_details(url: str):
             'view_count': info.get('view_count'),
             'upload_date': info.get('upload_date'),
             'formats': formats,
+            'max_quality': height_labels.get(sorted_heights[0], f'{sorted_heights[0]}p') if sorted_heights else 'Unknown',
         }
         return {"video": video}
     except Exception as e:
@@ -240,6 +297,7 @@ def download_video(
     url: str = Form(...),
     quality: Optional[str] = Form(None),
     format: Optional[str] = Form(None),
+    format_id: Optional[str] = Form(None),   # ← exact YouTube stream ID (preferred)
     trim_start: Optional[float] = Form(None),
     trim_end: Optional[float] = Form(None),
     rename: Optional[str] = Form(None),
@@ -259,27 +317,42 @@ def download_video(
         # Start background download task
         background_tasks.add_task(
             download_worker, 
-            task_id, url, quality, format, 
-            trim_start, trim_end, rename
+            task_id, url, quality, format,
+            trim_start, trim_end, rename, format_id
         )
         
         return {"task_id": task_id, "message": "Download started successfully."}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+# --- Helper: build common cookie options for yt-dlp ---
+def get_cookie_opts():
+    """
+    Returns the best available cookie source for yt-dlp.
+    Only uses a local cookies.txt file if it exists and is >2KB.
+    (We no longer use cookiesfrombrowser because it crashes yt-dlp when Chrome is open).
+    """
+    import os
+    cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+    if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 2048:
+        return {'cookiefile': cookie_path}
+
+    return {}
 
 # --- Download worker function ---
 def download_worker(task_id: str, url: str, quality: str = None, 
                    format: str = None, trim_start: float = None, 
-                   trim_end: float = None, rename: str = None):
+                   trim_end: float = None, rename: str = None,
+                   format_id: str = None):
     try:
         download_tasks[task_id]["status"] = "downloading"
         
-        # Get video info first
-        ydl_opts = {
+        # Get video info first (needed for title and format metadata)
+        ydl_opts_info = {
             'quiet': True,
             'skip_download': True,
+            'nocheckcertificate': True,
         }
-        with YoutubeDL(ydl_opts) as ydl:
+        with YoutubeDL(ydl_opts_info) as ydl:
             info = ydl.extract_info(url, download=False)
         
         # Determine output filename
@@ -288,11 +361,44 @@ def download_worker(task_id: str, url: str, quality: str = None,
         else:
             base_filename = info.get('title', 'video')
         
-        # Clean filename for filesystem - ALWAYS sanitize regardless of source
+        # Clean filename for filesystem
         base_filename = "".join(c for c in base_filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
         
-        # Set format based on quality preference
-        if format == "mp3":
+        # ── Determine format spec ─────────────────────────────────────
+        cookie_opts = get_cookie_opts()
+        
+        if format_id and format != 'mp3':
+            # ── FORMAT_ID BASED DOWNLOAD (highest quality, reliable) ──────
+            # Detect if this format is video-only (needs audio merge)
+            all_formats = info.get('formats', [])
+            selected_fmt = next(
+                (f for f in all_formats if f.get('format_id') == format_id), None
+            )
+            needs_audio = (
+                selected_fmt is not None and
+                selected_fmt.get('vcodec', 'none') != 'none' and
+                selected_fmt.get('acodec', 'none') == 'none'
+            )
+            
+            if needs_audio:
+                fmt_spec = f"{format_id}+bestaudio"
+            else:
+                fmt_spec = format_id
+            
+            output_template = f"downloads/{base_filename}.%(ext)s"
+            ydl_opts = {
+                'outtmpl': output_template,
+                'format': fmt_spec,
+                'merge_output_format': 'mp4',
+                'progress_hooks': [lambda d: progress_hook(d, task_id)],
+                'retries': 10,
+                'fragment_retries': 10,
+                'no_warnings': True,
+                'nocheckcertificate': True,
+                **cookie_opts,
+            }
+        
+        elif format == "mp3":
             output_template = f"downloads/{base_filename}.%(ext)s"
             ydl_opts = {
                 'outtmpl': output_template,
@@ -303,62 +409,55 @@ def download_worker(task_id: str, url: str, quality: str = None,
                     'preferredquality': '192',
                 }],
                 'progress_hooks': [lambda d: progress_hook(d, task_id)],
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'web', 'mobile'],
-                        'player_skip': ['webpage', 'configs', 'js']
-                    }
-                },
                 'retries': 10,
                 'fragment_retries': 10,
                 'ignoreerrors': True,
                 'no_warnings': True,
                 'nocheckcertificate': True,
-                'geo_bypass': True,
-                'geo_bypass_country': 'US',
-                'cookiefile': 'cookies.txt',
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Referer': 'https://www.youtube.com/'
-                }
+                **cookie_opts,
             }
         else:
-            # Video download
+            # Video download — strip 'p' from quality (e.g. "1080p" → "1080")
             if quality:
-                format_spec = f"best[height<={quality}]/best"
+                # Handle labels like "1080p", "4K", "2K", "8K", "720p", etc.
+                quality_height_map = {
+                    '8k': '4320', '8K': '4320',
+                    '4k': '2160', '4K': '2160',
+                    '2k': '1440', '2K': '1440',
+                }
+                if quality in quality_height_map:
+                    height_val = quality_height_map[quality]
+                else:
+                    # Strip 'p' suffix and any non-digit chars to get numeric height
+                    height_val = ''.join(filter(str.isdigit, quality))
+                
+                if height_val:
+                    # Use bestvideo+bestaudio for proper DASH stream merging
+                    # This is critical for 1080p+ on YouTube which are always DASH
+                    format_spec = (
+                        f"bestvideo[height<={height_val}][ext=mp4]+bestaudio[ext=m4a]"
+                        f"/bestvideo[height<={height_val}]+bestaudio"
+                        f"/best[height<={height_val}]"
+                        f"/best"
+                    )
+                else:
+                    format_spec = "bestvideo+bestaudio/best"
             else:
-                format_spec = "best"
+                format_spec = "bestvideo+bestaudio/best"
             
             output_template = f"downloads/{base_filename}.%(ext)s"
             ydl_opts = {
-            'outtmpl': output_template,
-            'format': format_spec,
-            'progress_hooks': [lambda d: progress_hook(d, task_id)],
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['web', 'android', 'mobile'],
-                    'player_skip': ['webpage', 'configs', 'js']
-                }
-            },
-            'retries': 10,
-            'fragment_retries': 10,
-            'ignoreerrors': True,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'geo_bypass_country': 'US',
-            'cookiefile': 'cookies.txt',
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Sec-Fetch-Mode': 'navigate',
-                'Referer': 'https://www.youtube.com/'
+                'outtmpl': output_template,
+                'format': format_spec,
+                'merge_output_format': 'mp4',
+                'progress_hooks': [lambda d: progress_hook(d, task_id)],
+                # Apply valid cookies.txt if available
+                **cookie_opts,
+                'retries': 10,
+                'fragment_retries': 10,
+                'no_warnings': True,
+                'nocheckcertificate': True,
             }
-        }
         
         # Get list of files before download to detect new files
         existing_files = set(os.listdir("downloads")) if os.path.exists("downloads") else set()

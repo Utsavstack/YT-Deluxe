@@ -3,14 +3,25 @@ node_modules
 /build
 .vscode/
 .idea/
+
+# Python caching
 __pycache__/
 *.pyc
-backend/__pycache__/main.cpython-313.pyc
+*.pyo
+
+# Virtual environments
 venv/
-.venv
+.venv/
+
+# Environment variables
 .env
-downloads/
-download_history.json
-feedback.json
+
+# Backend specific data (DO NOT PUSH)
+backend/downloads/
+backend/cookies.txt
 backend/download_history.json
 backend/feedback.json
+
+# Test and diagnostic files
+*test*.py
+*diag*.py

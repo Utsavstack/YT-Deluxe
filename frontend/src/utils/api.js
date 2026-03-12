@@ -40,6 +40,9 @@ class YTDeluxeAPI {
       const formData = new FormData();
       formData.append('url', downloadConfig.url);
 
+      if (downloadConfig.format_id) {
+        formData.append('format_id', downloadConfig.format_id);
+      }
       if (downloadConfig.quality) {
         formData.append('quality', downloadConfig.quality);
       }
