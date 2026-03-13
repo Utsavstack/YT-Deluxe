@@ -400,13 +400,13 @@ const HomeSearchDashboard = () => {
       }
 
       if (format === 'mp4') {
-        const streamUrl = `http://127.0.0.1:8000/api/stream?url=${encodeURIComponent(video.url)}&download=true`;
+        const streamUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(video.url)}&download=true`;
         window.open(streamUrl, '_blank');
         return;
       }
 
       if (format === 'mp3') {
-        const streamUrl = `http://127.0.0.1:8000/api/stream?url=${encodeURIComponent(video.url)}&quality=audio&download=true`;
+        const streamUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(video.url)}&quality=audio&download=true`;
         window.open(streamUrl, '_blank');
         return;
       }
