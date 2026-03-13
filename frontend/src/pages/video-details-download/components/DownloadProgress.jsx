@@ -172,7 +172,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
                         className="w-6 h-6"
                         onClick={() => {
                           if (download?.filename) {
-                            const downloadUrl = `/api/downloads/${encodeURIComponent(download.filename)}`;
+                            const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/downloads/${encodeURIComponent(download.filename)}`;
                             window.location.assign(downloadUrl);
                           }
                         }}

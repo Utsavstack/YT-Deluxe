@@ -70,7 +70,7 @@ const VideoDetailsDownload = () => {
             formats: response.video.formats || [],
             max_quality: bestQuality,
             url: initialVideo.url,
-            videoUrl: `/api/stream?url=${encodeURIComponent(initialVideo.url)}&quality=720p`
+            videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(initialVideo.url)}&quality=720p`
           };
         }
       }
@@ -255,7 +255,7 @@ const VideoDetailsDownload = () => {
                 // Using window.location.assign forces an immediate navigation.
                 // Since the backend sets Content-Disposition: attachment, it won't change the page
                 // but will instantly pop up the native browser download dialog/notification.
-                const downloadUrl = `/api/downloads/${encodeURIComponent(progress.filename)}`;
+                const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/downloads/${encodeURIComponent(progress.filename)}`;
                 window.location.assign(downloadUrl);
               } catch (e) {
                 console.error("Failed to trigger download", e);

@@ -176,7 +176,7 @@ const ProgressNotification = ({ downloads = [] }) => {
                       className="text-xs h-6 px-2"
                       onClick={() => {
                         if (notification?.filename) {
-                          const downloadUrl = `/api/downloads/${encodeURIComponent(notification.filename)}`;
+                          const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/downloads/${encodeURIComponent(notification.filename)}`;
                           window.location.assign(downloadUrl);
                         }
                       }}
