@@ -31,6 +31,7 @@ feedback_list = []
 def search_videos(q: str):
     try:
         ydl_opts = {
+            'js_runtimes': {'node': {}},
             'quiet': True,
             'extract_flat': True,
             'skip_download': True,
@@ -72,6 +73,7 @@ def search_videos(q: str):
 def get_video_details(url: str):
     try:
         ydl_opts = {
+            'js_runtimes': {'node': {}},
             'quiet': True,
             'skip_download': True,
             'extract_flat': False,
@@ -193,6 +195,7 @@ def stream_video(request: Request, url: str, quality: Optional[str] = None, down
         format_string = quality_map.get(quality, 'best')
         
         ydl_opts = {
+            'js_runtimes': {'node': {}},
             'quiet': True,
             'skip_download': True,
             'format': format_string,
@@ -348,6 +351,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
         
         # Get video info first (needed for title and format metadata)
         ydl_opts_info = {
+            'js_runtimes': {'node': {}},
             'quiet': True,
             'skip_download': True,
             'nocheckcertificate': True,
@@ -387,6 +391,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             
             output_template = f"downloads/{base_filename}.%(ext)s"
             ydl_opts = {
+                'js_runtimes': {'node': {}},
                 'outtmpl': output_template,
                 'format': fmt_spec,
                 'merge_output_format': 'mp4',
@@ -401,6 +406,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
         elif format == "mp3":
             output_template = f"downloads/{base_filename}.%(ext)s"
             ydl_opts = {
+                'js_runtimes': {'node': {}},
                 'outtmpl': output_template,
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -447,6 +453,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             
             output_template = f"downloads/{base_filename}.%(ext)s"
             ydl_opts = {
+                'js_runtimes': {'node': {}},
                 'outtmpl': output_template,
                 'format': format_spec,
                 'merge_output_format': 'mp4',

@@ -165,7 +165,8 @@ yt-deluxe/
 |---|---|---|
 | fastapi | 0.133.0 | High-performance async API |
 | uvicorn[standard] | 0.41.0 | ASGI server |
-| yt-dlp | 2026.2.21 | YouTube video/audio extraction |
+| yt-dlp | 2026.3.17 | YouTube video/audio extraction |
+| bgutil-ytdlp-pot-provider | 1.3.1 | PoToken Provider Plugin for yt-dlp |
 | python-multipart | 0.0.22 | Form data parsing |
 | aiofiles | 25.1.0 | Async file operations |
 | requests | 2.32.5 | HTTP requests (video streaming) |
@@ -424,4 +425,4 @@ For issues and questions:
 
 **Made With ❤️ UP7**
 
-_Last Updated: February 2026_
+_Last Updated: March 2026_

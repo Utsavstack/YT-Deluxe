@@ -2,6 +2,7 @@
 node_modules
 /build
 .vscode/
+.agent/
 .idea/
 
 # Python caching
@@ -21,6 +22,8 @@ backend/downloads/
 backend/cookies.txt
 backend/download_history.json
 backend/feedback.json
+backend/check_thumbnail.py
+
 
 # Test and diagnostic files
 *test*.py
