@@ -9,8 +9,13 @@ from yt_dlp import YoutubeDL
 from datetime import datetime
 import json
 import requests
+import threading
+import time
 
 app = FastAPI(title="YT Deluxe Backend")
+
+if not os.path.exists("tempfiles"):
+    os.makedirs("tempfiles")
 
 # Allow CORS for frontend (adjust origins as needed)
 app.add_middleware(
@@ -316,6 +321,7 @@ def download_video(
             "error": None,
             "started_at": datetime.now().isoformat()
         }
+
         
         # Start background download task
         background_tasks.add_task(
@@ -340,6 +346,18 @@ def get_cookie_opts():
         return {'cookiefile': cookie_path}
 
     return {}
+
+def schedule_deletion(filepath: str, delay: int = 600):
+    def delete_task():
+        time.sleep(delay)
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print(f"Auto-deleted {filepath}")
+        except Exception as e:
+            print(f"Error deleting {filepath}: {e}")
+            
+    threading.Thread(target=delete_task, daemon=True).start()
 
 # --- Download worker function ---
 def download_worker(task_id: str, url: str, quality: str = None, 
@@ -389,7 +407,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             else:
                 fmt_spec = format_id
             
-            output_template = f"downloads/{base_filename}.%(ext)s"
+            output_template = f"tempfiles/{base_filename}.%(ext)s"
             ydl_opts = {
                 'js_runtimes': {'node': {}},
                 'outtmpl': output_template,
@@ -404,7 +422,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             }
         
         elif format == "mp3":
-            output_template = f"downloads/{base_filename}.%(ext)s"
+            output_template = f"tempfiles/{base_filename}.%(ext)s"
             ydl_opts = {
                 'js_runtimes': {'node': {}},
                 'outtmpl': output_template,
@@ -451,7 +469,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             else:
                 format_spec = "bestvideo+bestaudio/best"
             
-            output_template = f"downloads/{base_filename}.%(ext)s"
+            output_template = f"tempfiles/{base_filename}.%(ext)s"
             ydl_opts = {
                 'js_runtimes': {'node': {}},
                 'outtmpl': output_template,
@@ -467,7 +485,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             }
         
         # Get list of files before download to detect new files
-        existing_files = set(os.listdir("downloads")) if os.path.exists("downloads") else set()
+        existing_files = set(os.listdir("tempfiles")) if os.path.exists("tempfiles") else set()
         
         # Download the file
         with YoutubeDL(ydl_opts) as ydl:
@@ -476,23 +494,23 @@ def download_worker(task_id: str, url: str, quality: str = None,
         # Find the downloaded file
         # Method 1: Match by base_filename (case-insensitive startswith)
         downloaded_files = [
-            f for f in os.listdir("downloads")
+            f for f in os.listdir("tempfiles")
             if f.lower().startswith(base_filename.lower()[:50])  # Use first 50 chars for matching
         ]
         
-        # Method 2: Fallback - find new files added to downloads folder
+        # Method 2: Fallback - find new files added to tempfiles folder
         if not downloaded_files:
-            current_files = set(os.listdir("downloads"))
+            current_files = set(os.listdir("tempfiles"))
             new_files = current_files - existing_files
             if new_files:
                 downloaded_files = list(new_files)
         
         # Method 3: Fallback - find most recently modified file
         if not downloaded_files:
-            all_files = os.listdir("downloads")
+            all_files = os.listdir("tempfiles")
             if all_files:
                 all_files_with_time = [
-                    (f, os.path.getmtime(os.path.join("downloads", f)))
+                    (f, os.path.getmtime(os.path.join("tempfiles", f)))
                     for f in all_files
                 ]
                 all_files_with_time.sort(key=lambda x: x[1], reverse=True)
@@ -503,12 +521,12 @@ def download_worker(task_id: str, url: str, quality: str = None,
         
         if downloaded_files:
             filename = downloaded_files[0]
-            filepath = os.path.join("downloads", filename)
+            filepath = os.path.join("tempfiles", filename)
             
             # Apply trimming if specified
             if trim_start is not None or trim_end is not None:
                 trimmed_filename = f"trimmed_{filename}"
-                trimmed_filepath = os.path.join("downloads", trimmed_filename)
+                trimmed_filepath = os.path.join("tempfiles", trimmed_filename)
                 
                 # Use ffmpeg to trim
                 cmd = ["ffmpeg", "-i", filepath, "-y"]
@@ -524,6 +542,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 os.remove(filepath)
                 filename = trimmed_filename
                 filepath = trimmed_filepath
+                
+            # Schedule auto-deletion after 10 minutes
+            schedule_deletion(filepath, 600)
             
             # Update task status
             download_tasks[task_id].update({
@@ -737,6 +758,15 @@ def serve_download(filename: str):
         response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
         return response
     return JSONResponse({"error": "File not found."}, status_code=404)
+
+@app.get("/api/tempfiles/{filename}")
+def serve_tempfile(filename: str):
+    file_path = os.path.join("tempfiles", filename)
+    if os.path.exists(file_path):
+        response = FileResponse(file_path, filename=filename)
+        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+        return response
+    return JSONResponse({"error": "File not found or expired."}, status_code=404)
 
 # --- Main entry point ---
 if __name__ == "__main__":

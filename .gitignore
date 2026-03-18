@@ -19,6 +19,7 @@ venv/
 
 # Backend specific data (DO NOT PUSH)
 backend/downloads/
+backend/tempfiles/
 backend/cookies.txt
 backend/download_history.json
 backend/feedback.json

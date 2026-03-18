@@ -177,11 +177,14 @@ const VideoDetailsDownload = () => {
       // Start download via API
       const response = await YTDeluxeAPI.downloadVideo(apiConfig);
 
-      if (response.task_id) {
-        // Track progress
+      if (response.direct_url) {
+        // Direct CDN download via frontend
+        trackDirectCdnProgress(response.direct_url, response.filename, newDownload.id);
+      } else if (response.task_id) {
+        // Track API progress
         trackDownloadProgress(response.task_id, newDownload.id);
       } else {
-        throw new Error('No task ID received from server');
+        throw new Error('No task ID or direct stream URL received from server');
       }
 
     } catch (error) {
@@ -192,6 +195,71 @@ const VideoDetailsDownload = () => {
           : download
       ));
       setError('Download setup failed. Please try again.');
+      setIsDownloading(false);
+    }
+  };
+
+  const trackDirectCdnProgress = async (url, filename, downloadId) => {
+    try {
+      // First try to fetch for progress tracking
+      const response = await fetch(url, { mode: 'cors' });
+      
+      if (!response.ok || !response.body) {
+        throw new Error('Fetch failed or no body');
+      }
+      
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let loaded = 0;
+      
+      const reader = response.body.getReader();
+      const chunks = [];
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        chunks.push(value);
+        loaded += value.length;
+        
+        const progress = total ? Math.round((loaded / total) * 100) : 0;
+        setDownloads(prev => prev.map(d => 
+          d.id === downloadId 
+            ? { ...d, progress, status: 'downloading', downloaded_bytes: loaded, total_bytes: total } 
+            : d
+        ));
+      }
+      
+      const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = objectUrl;
+      a.download = filename || 'video.mp4';
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        window.URL.revokeObjectURL(objectUrl);
+        document.body.removeChild(a);
+      }, 1000);
+      
+      setDownloads(prev => prev.map(d => d.id === downloadId ? { ...d, progress: 100, status: 'completed' } : d));
+      setIsDownloading(false);
+      
+    } catch (error) {
+      console.warn('Direct fetch failed (likely CORS), falling back to browser native download without progress tracking.', error);
+      
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename || 'video.mp4';
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setDownloads(prev => prev.map(d => d.id === downloadId ? { ...d, progress: 100, status: 'completed' } : d));
       setIsDownloading(false);
     }
   };
@@ -252,11 +320,15 @@ const VideoDetailsDownload = () => {
             // Actually trigger the browser download by navigating to the file URL
             if (progress.filename) {
               try {
-                // Using window.location.assign forces an immediate navigation.
-                // Since the backend sets Content-Disposition: attachment, it won't change the page
-                // but will instantly pop up the native browser download dialog/notification.
-                const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/downloads/${encodeURIComponent(progress.filename)}`;
-                window.location.assign(downloadUrl);
+                // Create hidden anchor to download silently without redirecting main page
+                const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/tempfiles/${encodeURIComponent(progress.filename)}`;
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.download = progress.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
               } catch (e) {
                 console.error("Failed to trigger download", e);
               }

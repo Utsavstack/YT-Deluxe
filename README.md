@@ -100,10 +100,20 @@ yt-deluxe/
     ├── main.py                 # API entry point (all endpoints)
     ├── requirements.txt        # Python dependencies
     ├── cookies.txt             # YouTube auth cookies
-    ├── downloads/              # Downloaded files directory
+    ├── tempfiles/              # Auto-deleting download processing directory
     ├── download_history.json   # Download history (auto-generated)
     └── feedback.json           # User feedback (auto-generated)
 ```
+
+---
+
+## 🏗️ Download Architecture
+
+The application uses a sophisticated **Server-Merged Tempfile Architecture** to ensure the smoothest user experience without browser redirects:
+1. **Background Tasks**: All extraction (including `<720p` progressive and `1080p+` DASH formats) occurs in a robust background worker inside the FastAPI backend.
+2. **WebSocket/Polling Progress**: Frontend seamlessly pulls download speed, ETA, and progress from the backend without heavy page reloads, showing a smooth in-app progress bar.
+3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, a hidden `<a download>` tag silently triggers the browser's native file saving window (no new tab redirects).
+4. **Auto-Cleanup**: A background threading daemon in Python automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
 
 ---
 
@@ -257,7 +267,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | `/api/history`          | GET    | List download history              |
 | `/api/feedback`         | POST   | Submit user feedback               |
 | `/api/legal`            | GET    | Get legal disclaimer               |
-| `/api/downloads/{file}` | GET    | Download a file                    |
+| `/api/tempfiles/{file}` | GET    | Download a processed temp file     |
 
 ### API Usage Examples
 
@@ -328,7 +338,7 @@ curl "http://localhost:8000/api/legal"
 #### Download a File
 
 ```bash
-curl -O "http://localhost:8000/api/downloads/{filename}"
+curl -O "http://localhost:8000/api/tempfiles/{filename}"
 ```
 
 ---
@@ -346,7 +356,7 @@ curl -O "http://localhost:8000/api/downloads/{filename}"
 backend/
 ├── main.py              # FastAPI application
 ├── requirements.txt     # Python dependencies
-├── downloads/           # Downloaded files directory
+├── tempfiles/           # Auto-deleting download processing directory
 ├── download_history.json # Download history (auto-generated)
 └── README.md            # Backend documentation
 ```
