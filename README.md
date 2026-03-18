@@ -28,8 +28,8 @@ A full-stack, feature-rich YouTube downloader and media management web applicati
 - **Video Details**: Get comprehensive video information and available formats.
 - **Download Management**: Download videos/audio with quality/format options.
 - **Video Trimming**: Trim videos using ffmpeg.
-- **Batch Downloads**: Download multiple videos simultaneously.
-- **Progress Tracking**: Real-time download progress monitoring.
+- **Batch Downloads**: Batch download endpoint (disabled on free tier to conserve bandwidth).
+- **Progress Tracking**: Real-time download progress UI with seamless background browser native download handling.
 - **Download History**: Local storage of download history.
 - **File Renaming**: Custom filename support.
 - **Format Conversion**: MP4, MP3, and other format support.
@@ -124,8 +124,9 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 - **nvm**: 1.2.2
 - **Node.js**: v20.20.0 (LTS)
 - **npm**: (bundled with Node.js)
-- **Python**: 3.8+
+- **Python**: 3.11+ (3.8+ for local dev)
 - **FFmpeg**: Required for video/audio processing
+- **Docker**: Required for Render deployment
 
 ---
 
@@ -175,8 +176,8 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 |---|---|---|
 | fastapi | 0.133.0 | High-performance async API |
 | uvicorn[standard] | 0.41.0 | ASGI server |
-| yt-dlp | 2026.3.17 | YouTube video/audio extraction |
-| bgutil-ytdlp-pot-provider | 1.3.1 | PoToken Provider Plugin for yt-dlp |
+| yt-dlp | >=2026.2.21 | YouTube video/audio extraction |
+| bgutil-ytdlp-pot-provider | latest | Automatic PO token generation |
 | python-multipart | 0.0.22 | Form data parsing |
 | aiofiles | 25.1.0 | Async file operations |
 | requests | 2.32.5 | HTTP requests (video streaming) |
@@ -259,11 +260,12 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 | Endpoint                | Method | Description                        |
 |-------------------------|--------|------------------------------------|
-| `/api/search`           | GET    | Search YouTube by keyword          |
-| `/api/video`            | GET    | Get video details by URL           |
-| `/api/download`         | POST   | Download video/audio with options  |
-| `/api/batch-download`   | POST   | Download multiple videos           |
-| `/api/progress/{id}`    | GET    | Get download progress              |
+| `/api/search`         | GET       | Search YouTube by keyword                 |
+| `/api/video`          | GET       | Get video details and available formats   |
+| `/api/download`       | POST      | Download video/audio with quality options |
+| `/api/stream`         | GET       | Stream video directly to browser          |
+| `/api/batch-download` | POST      | Download multiple videos                  |
+| `/api/progress/{id}`  | GET       | Get download progress                     |
 | `/api/history`          | GET    | List download history              |
 | `/api/feedback`         | POST   | Submit user feedback               |
 | `/api/legal`            | GET    | Get legal disclaimer               |
@@ -347,18 +349,23 @@ curl -O "http://localhost:8000/api/tempfiles/{filename}"
 
 ### Environment Variables
 
-- `PORT`: Server port (default: 8000)
-- `HOST`: Server host (default: 0.0.0.0)
+**Backend (Render):**
+- `YOUTUBE_COOKIES_BASE64`: Base64 encoded YouTube cookies for bot detection bypass (optional but recommended)
+
+**Frontend (Vercel):**
+- `VITE_API_BASE_URL`: Backend API URL (e.g. `https://your-backend.onrender.com`)
 
 ### Backend File Structure
 
 ```
 backend/
-├── main.py              # FastAPI application
-├── requirements.txt     # Python dependencies
-├── tempfiles/           # Auto-deleting download processing directory
-├── download_history.json # Download history (auto-generated)
-└── README.md            # Backend documentation
+├── main.py                  # FastAPI application (port 10000)
+├── requirements.txt         # Python dependencies
+├── Dockerfile               # Docker config with FFmpeg + Node.js + bgutil
+├── cookies.txt              # YouTube cookies (local dev fallback)
+├── tempfiles/               # Auto-deleting download processing directory
+├── download_history.json    # Download history (auto-generated)
+└── feedback.json            # User feedback (auto-generated)
 ```
 
 ---
@@ -377,7 +384,7 @@ backend/
 
 ```bash
 cd frontend
-npm run build       # Output in dist/
+npm run build       # Output in build/ (not dist/)
 npm run serve       # Preview production build
 ```
 
@@ -385,7 +392,7 @@ npm run serve       # Preview production build
 
 ```bash
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 10000
 ```
 
 ### Quick Reference Commands
@@ -394,9 +401,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 |---|---|
 | Frontend dev server | `npm run dev` or `npm start` |
 | Frontend build | `npm run build` |
+| Frontend build output | `build/` directory (not `dist/`) |
 | Frontend preview | `npm run serve` |
 | Backend dev server | `uvicorn main:app --reload` |
-| Backend production | `uvicorn main:app --host 0.0.0.0 --port 8000` |
+| Backend production | `uvicorn main:app --host 0.0.0.0 --port 10000` |
 
 ---
 
