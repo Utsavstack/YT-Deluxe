@@ -19,7 +19,9 @@ COPY . .
 RUN git clone --single-branch --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git && \
     cd bgutil-ytdlp-pot-provider/server && \
     npm ci && \
-    npx tsc
+    npx tsc && \
+    cd .. && \
+    rm -rf plugin yt_dlp_plugins
 
 # Create downloads directory (fallback if not auto-generated)
 RUN mkdir -p tempfiles
