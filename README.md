@@ -4,7 +4,7 @@ A full-stack, feature-rich YouTube downloader and media management web applicati
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
 ### Frontend
 
@@ -37,77 +37,77 @@ A full-stack, feature-rich YouTube downloader and media management web applicati
 
 ---
 
-## 🖼️ Demo
+## Demo
 
 > _Add screenshots or a GIF here to showcase the UI and features!_
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 yt-deluxe/
-├── .env                        # Environment variables
-├── .gitignore                  # Git ignore rules
-├── .nvmrc                      # Node version config
-├── README.md                   # This file
+├── .env            # Environment variables
+├── .gitignore         # Git ignore rules
+├── .nvmrc           # Node version config
+├── README.md          # This file
 │
-├── frontend/                   # React app (Vite + TailwindCSS)
-│   ├── index.html              # HTML entry point
-│   ├── package.json            # NPM dependencies & scripts
-│   ├── vite.config.mjs         # Vite build config
-│   ├── tailwind.config.js      # Tailwind theme & plugins
-│   ├── postcss.config.js       # PostCSS config
-│   ├── jsconfig.json           # JS path aliases
-│   ├── public/                 # Static assets
-│   │   ├── assets/             # Public assets
-│   │   ├── favicon.ico
-│   │   ├── manifest.json
-│   │   └── robots.txt
-│   └── src/
-│       ├── index.jsx           # Entry point
-│       ├── App.jsx             # Main app component
-│       ├── Routes.jsx          # App routes
-│       ├── components/         # Reusable UI components
-│       │   ├── AppIcon.jsx
-│       │   ├── AppImage.jsx
-│       │   ├── ErrorBoundary.jsx
-│       │   ├── ScrollToTop.jsx
-│       │   └── ui/             # Core UI components
-│       │       ├── Button.jsx
-│       │       ├── Checkbox.jsx
-│       │       ├── Header.jsx
-│       │       ├── Input.jsx
-│       │       ├── ProgressNotification.jsx
-│       │       └── Select.jsx
-│       ├── pages/              # Feature pages
-│       │   ├── NotFound.jsx
-│       │   ├── home-search-dashboard/
-│       │   ├── video-details-download/
-│       │   ├── batch-download-manager/
-│       │   ├── download-history-management/
-│       │   ├── user-authentication/
-│       │   └── user-settings-preferences/
-│       ├── styles/             # Global styles & assets
-│       │   ├── index.css
-│       │   ├── tailwind.css
-│       │   └── YT-Deluxe_logo.png
-│       └── utils/              # Utility functions
-│           ├── api.js          # API client
-│           └── cn.js           # Classname helper
+├── frontend/          # React app (Vite + TailwindCSS)
+│  ├── index.html       # HTML entry point
+│  ├── package.json      # NPM dependencies & scripts
+│  ├── vite.config.mjs     # Vite build config
+│  ├── tailwind.config.js   # Tailwind theme & plugins
+│  ├── postcss.config.js    # PostCSS config
+│  ├── jsconfig.json      # JS path aliases
+│  ├── public/         # Static assets
+│  │  ├── assets/       # Public assets
+│  │  ├── favicon.ico
+│  │  ├── manifest.json
+│  │  └── robots.txt
+│  └── src/
+│    ├── index.jsx      # Entry point
+│    ├── App.jsx       # Main app component
+│    ├── Routes.jsx     # App routes
+│    ├── components/     # Reusable UI components
+│    │  ├── AppIcon.jsx
+│    │  ├── AppImage.jsx
+│    │  ├── ErrorBoundary.jsx
+│    │  ├── ScrollToTop.jsx
+│    │  └── ui/       # Core UI components
+│    │    ├── Button.jsx
+│    │    ├── Checkbox.jsx
+│    │    ├── Header.jsx
+│    │    ├── Input.jsx
+│    │    ├── ProgressNotification.jsx
+│    │    └── Select.jsx
+│    ├── pages/       # Feature pages
+│    │  ├── NotFound.jsx
+│    │  ├── home-search-dashboard/
+│    │  ├── video-details-download/
+│    │  ├── batch-download-manager/
+│    │  ├── download-history-management/
+│    │  ├── user-authentication/
+│    │  └── user-settings-preferences/
+│    ├── styles/       # Global styles & assets
+│    │  ├── index.css
+│    │  ├── tailwind.css
+│    │  └── YT-Deluxe_logo.png
+│    └── utils/       # Utility functions
+│      ├── api.js     # API client
+│      └── cn.js      # Classname helper
 │
-└── backend/                    # FastAPI backend
-    ├── main.py                 # API entry point (all endpoints)
-    ├── requirements.txt        # Python dependencies
-    ├── cookies.txt             # YouTube auth cookies
-    ├── tempfiles/              # Auto-deleting download processing directory
-    ├── download_history.json   # Download history (auto-generated)
-    └── feedback.json           # User feedback (auto-generated)
+└── backend/          # FastAPI backend
+  ├── main.py         # API entry point (all endpoints)
+  ├── requirements.txt    # Python dependencies
+  ├── cookies.txt       # YouTube auth cookies
+  ├── tempfiles/       # Auto-deleting download processing directory
+  ├── download_history.json  # Download history (auto-generated)
+  └── feedback.json      # User feedback (auto-generated)
 ```
 
 ---
 
-## 🏗️ Download Architecture
+## Download Architecture
 
 The application uses a sophisticated **Server-Merged Tempfile Architecture** to ensure the smoothest user experience without browser redirects:
 1. **Background Tasks**: All extraction (including `<720p` progressive and `1080p+` DASH formats) occurs in a robust background worker inside the FastAPI backend.
@@ -118,7 +118,7 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -131,7 +131,7 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 
 ---
 
-## 📦 Tech Stack & Dependencies
+## Tech Stack & Dependencies
 
 ### Frontend Dependencies
 
@@ -190,7 +190,7 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 ```bash
 cd frontend
 npm install
-npm run dev         # or: npm start
+npm run dev     # or: npm start
 ```
 
 ### Backend Setup
@@ -207,17 +207,17 @@ source .venv/bin/activate
 pip install -r requirements.txt
 # Make sure FFmpeg is installed and in your PATH
 # Install FFmpeg:
-#   Windows: Download from https://ffmpeg.org/download.html
-#   macOS: brew install ffmpeg
-#   Ubuntu/Debian: sudo apt install ffmpeg
-uvicorn main:app --reload    # Dev mode
+#  Windows: Download from https://ffmpeg.org/download.html
+#  macOS: brew install ffmpeg
+#  Ubuntu/Debian: sudo apt install ffmpeg
+uvicorn main:app --reload  # Dev mode
 # or for production:
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 ---
 
-## 🔗 Connecting Frontend & Backend
+## Connecting Frontend & Backend
 
 - By default, the frontend expects the backend API at `http://localhost:8000`.
 - CORS is enabled for local development.
@@ -225,7 +225,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 🧩 Usage Guide
+## Usage Guide
 
 ### Search for Videos
 
@@ -257,20 +257,20 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 🛠️ API Reference
+## API Reference
 
-| Endpoint                | Method | Description                        |
+| Endpoint        | Method | Description            |
 |-------------------------|--------|------------------------------------|
-| `/api/search`         | GET       | Search YouTube by keyword                 |
-| `/api/video`          | GET       | Get video details and available formats   |
-| `/api/download`       | POST      | Download video/audio with quality options |
-| `/api/stream`         | GET       | Stream video directly to browser          |
-| `/api/batch-download` | POST      | Download multiple videos                  |
-| `/api/progress/{id}`  | GET       | Get download progress                     |
-| `/api/history`          | GET    | List download history              |
-| `/api/feedback`         | POST   | Submit user feedback               |
-| `/api/legal`            | GET    | Get legal disclaimer               |
-| `/api/tempfiles/{file}` | GET    | Download a processed temp file     |
+| `/api/search`     | GET    | Search YouTube by keyword         |
+| `/api/video`     | GET    | Get video details and available formats  |
+| `/api/download`    | POST   | Download video/audio with quality options |
+| `/api/stream`     | GET    | Stream video directly to browser     |
+| `/api/batch-download` | POST   | Download multiple videos         |
+| `/api/progress/{id}` | GET    | Get download progress           |
+| `/api/history`     | GET  | List download history       |
+| `/api/feedback`     | POST  | Submit user feedback        |
+| `/api/legal`      | GET  | Get legal disclaimer        |
+| `/api/tempfiles/{file}` | GET  | Download a processed temp file   |
 
 ### API Usage Examples
 
@@ -290,28 +290,28 @@ curl "http://localhost:8000/api/video?url=https://www.youtube.com/watch?v=VIDEO_
 
 ```bash
 curl -X POST "http://localhost:8000/api/download" \
-  -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
-  -F "quality=720" \
-  -F "format=mp4"
+ -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
+ -F "quality=720" \
+ -F "format=mp4"
 ```
 
 #### Download with Trimming
 
 ```bash
 curl -X POST "http://localhost:8000/api/download" \
-  -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
-  -F "trim_start=30" \
-  -F "trim_end=120" \
-  -F "rename=my_video"
+ -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
+ -F "trim_start=30" \
+ -F "trim_end=120" \
+ -F "rename=my_video"
 ```
 
 #### Batch Download
 
 ```bash
 curl -X POST "http://localhost:8000/api/batch-download" \
-  -F "urls=[\"https://www.youtube.com/watch?v=ID1\",\"https://www.youtube.com/watch?v=ID2\"]" \
-  -F "quality=720" \
-  -F "format=mp4"
+ -F "urls=[\"https://www.youtube.com/watch?v=ID1\",\"https://www.youtube.com/watch?v=ID2\"]" \
+ -F "quality=720" \
+ -F "format=mp4"
 ```
 
 #### Download Progress
@@ -346,7 +346,7 @@ curl -O "http://localhost:8000/api/tempfiles/{filename}"
 
 ---
 
-## 🔧 Backend Configuration
+## Backend Configuration
 
 ### Environment Variables
 
@@ -360,18 +360,18 @@ curl -O "http://localhost:8000/api/tempfiles/{filename}"
 
 ```
 backend/
-├── main.py                  # FastAPI application (port 10000)
-├── requirements.txt         # Python dependencies
-├── Dockerfile               # Docker config with FFmpeg + Node.js + bgutil
-├── cookies.txt              # YouTube cookies (local dev fallback)
-├── tempfiles/               # Auto-deleting download processing directory
-├── download_history.json    # Download history (auto-generated)
-└── feedback.json            # User feedback (auto-generated)
+├── main.py         # FastAPI application (port 10000)
+├── requirements.txt     # Python dependencies
+├── Dockerfile        # Docker config with FFmpeg + Node.js + bgutil
+├── cookies.txt       # YouTube cookies (local dev fallback)
+├── tempfiles/        # Auto-deleting download processing directory
+├── download_history.json  # Download history (auto-generated)
+└── feedback.json      # User feedback (auto-generated)
 ```
 
 ---
 
-## 🎨 Styling & Customization
+## Styling & Customization
 
 - **TailwindCSS**: Easily customize themes, breakpoints, and animations.
 - **Plugins**: Forms, typography, aspect ratio, container queries, and more.
@@ -379,14 +379,14 @@ backend/
 
 ---
 
-## 📦 Deployment
+## Deployment
 
 ### Frontend
 
 ```bash
 cd frontend
-npm run build       # Output in build/ (not dist/)
-npm run serve       # Preview production build
+npm run build    # Output in build/ (not dist/)
+npm run serve    # Preview production build
 ```
 
 ### Backend
@@ -409,7 +409,7 @@ uvicorn main:app --host 0.0.0.0 --port 10000
 
 ---
 
-## 📝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -419,19 +419,19 @@ uvicorn main:app --host 0.0.0.0 --port 10000
 
 ---
 
-## ⚖️ Legal Notice
+## Legal Notice
 
 This tool is for personal use only. Downloading copyrighted content may violate YouTube’s terms of service. Use responsibly and respect copyright laws.
 
 ---
 
-## 📄 License
+## License
 
 This project is for educational purposes. Please respect YouTube’s terms of service and copyright laws.
 
 ---
 
-## 🆘 Support
+## Support
 
 For issues and questions:
 
@@ -442,6 +442,6 @@ For issues and questions:
 
 ---
 
-**Made With ❤️ UP7**
+**Made With UP7**
 
 _Last Updated: March 2026_

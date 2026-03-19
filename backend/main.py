@@ -19,809 +19,809 @@ app = FastAPI(title="YT Deluxe Backend")
 
 @app.on_event("startup")
 def startup_event():
-    global bgutil_process
-    server_path = os.path.join(os.path.dirname(__file__), 'bgutil-ytdlp-pot-provider', 'server', 'build', 'main.js')
-    if os.path.exists(server_path):
-        try:
-            print("Starting PO Token Generator Server on port 4416...")
-            bgutil_process = subprocess.Popen(["node", server_path, "-p", "4416"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception as e:
-            print(f"Failed to start bgutil token server: {e}")
+  global bgutil_process
+  server_path = os.path.join(os.path.dirname(__file__), 'bgutil-ytdlp-pot-provider', 'server', 'build', 'main.js')
+  if os.path.exists(server_path):
+    try:
+      print("Starting PO Token Generator Server on port 4416...")
+      bgutil_process = subprocess.Popen(["node", server_path, "-p", "4416"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+      print(f"Failed to start bgutil token server: {e}")
 
 @app.on_event("shutdown")
 def shutdown_event():
-    global bgutil_process
-    if bgutil_process:
-        print("Shutting down PO Token Generator Server...")
-        bgutil_process.terminate()
-        bgutil_process.wait()
+  global bgutil_process
+  if bgutil_process:
+    print("Shutting down PO Token Generator Server...")
+    bgutil_process.terminate()
+    bgutil_process.wait()
 
 
 def get_cookie_opts():
-    import base64
-    env_cookie_b64 = os.environ.get('YOUTUBE_COOKIES_BASE64')
-    env_cookie_path = 'tempfiles/youtube_cookies.txt'
-    if env_cookie_b64:
-        try:
-            with open(env_cookie_path, 'w', encoding='utf-8') as f:
-                f.write(base64.b64decode(env_cookie_b64).decode('utf-8'))
-            return {'cookiefile': env_cookie_path}
-        except Exception as e:
-            print(f"Failed to decode environment cookies: {e}")
+  import base64
+  env_cookie_b64 = os.environ.get('YOUTUBE_COOKIES_BASE64')
+  env_cookie_path = 'tempfiles/youtube_cookies.txt'
+  if env_cookie_b64:
+    try:
+      with open(env_cookie_path, 'w', encoding='utf-8') as f:
+        f.write(base64.b64decode(env_cookie_b64).decode('utf-8'))
+      return {'cookiefile': env_cookie_path}
+    except Exception as e:
+      print(f"Failed to decode environment cookies: {e}")
 
-    cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
-    if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 200:
-        return {'cookiefile': cookie_path}
-    return {}
+  cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+  if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 200:
+    return {'cookiefile': cookie_path}
+  return {}
 
 def get_yt_opts():
-    return {
-        'js_runtimes': {'node': {}},
-        'extractor_args': {
-            'youtubepot-bgutilhttp': {
-                'base_url': ['http://127.0.0.1:4416']
-            },
-            'youtube': {
-                'player_client': ['mweb', 'default'],
-                'formats': ['missing_pot']
-            }
-        },
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-        },
-        'nocheckcertificate': True,
-        'no_warnings': True,
-        'quiet': True,
-    }
+  return {
+    'js_runtimes': {'node': {}},
+    'extractor_args': {
+      'youtubepot-bgutilhttp': {
+        'base_url': ['http://127.0.0.1:4416']
+      },
+      'youtube': {
+        'player_client': ['mweb', 'default'],
+        'formats': ['missing_pot']
+      }
+    },
+    'http_headers': {
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+    'nocheckcertificate': True,
+    'no_warnings': True,
+    'quiet': True,
+  }
 
 def get_yt_search_opts():
-    return {
-        'js_runtimes': {'node': {}},
-        'extractor_args': {
-            'youtubepot-bgutilhttp': {
-                'base_url': ['http://127.0.0.1:4416']
-            },
-            'youtube': {
-                'player_client': ['web_creator', 'default'],
-                'formats': ['missing_pot']
-            }
-        },
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-        },
-        'nocheckcertificate': True,
-        'quiet': True,
-    }
+  return {
+    'js_runtimes': {'node': {}},
+    'extractor_args': {
+      'youtubepot-bgutilhttp': {
+        'base_url': ['http://127.0.0.1:4416']
+      },
+      'youtube': {
+        'player_client': ['web_creator', 'default'],
+        'formats': ['missing_pot']
+      }
+    },
+    'http_headers': {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+    'nocheckcertificate': True,
+    'quiet': True,
+  }
 
 if not os.path.exists("tempfiles"):
-    os.makedirs("tempfiles")
+  os.makedirs("tempfiles")
 
 # Allow CORS for frontend (adjust origins as needed)
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins=["*"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
 )
 
-# --- In-memory stores for demo (replace with persistent storage as needed) ---
+# Inmemory stores for demo (replace with persistent storage as needed) ---
 download_tasks = {}
 download_history = []
 feedback_list = []
 
-# --- Endpoint: Search YouTube (by keyword) ---
+# Endpoint: Search YouTube (by keyword)
 @app.get("/api/search")
 def search_videos(q: str):
-    try:
-        ydl_opts = {
-            **get_yt_search_opts(),
-            'extract_flat': True,
-            'skip_download': True,
-            'ignoreerrors': True,
-            **get_cookie_opts()
-        }
-        with YoutubeDL(ydl_opts) as ydl:
-            # ytsearch12 returns top 12 results (perfect for 3-column grid)
-            search_result = ydl.extract_info(f"ytsearch12:{q}", download=False)
-        videos = []
-        for entry in search_result.get('entries', []):
-            videos.append({
-                'id': entry.get('id'),
-                'title': entry.get('title'),
-                'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
-                'thumbnail': entry.get('thumbnail'),
-                'duration': entry.get('duration'),
-                'uploader': entry.get('uploader'),
-                'views': entry.get('view_count'),
-            })
-        return {"results": videos}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-# --- Endpoint: Get video details (by URL) ---
+  try:
+    ydl_opts = {
+      **get_yt_search_opts(),
+      'extract_flat': True,
+      'skip_download': True,
+      'ignoreerrors': True,
+      **get_cookie_opts()
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+      # ytsearch12 returns top 12 results (perfect for 3-column grid)
+      search_result = ydl.extract_info(f"ytsearch12:{q}", download=False)
+    videos = []
+    for entry in search_result.get('entries', []):
+      videos.append({
+        'id': entry.get('id'),
+        'title': entry.get('title'),
+        'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
+        'thumbnail': entry.get('thumbnail'),
+        'duration': entry.get('duration'),
+        'uploader': entry.get('uploader'),
+        'views': entry.get('view_count'),
+      })
+    return {"results": videos}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
+# Endpoint: Get video details (by URL)
 @app.get("/api/video")
 def get_video_details(url: str):
-    try:
-        ydl_opts = {
-            **get_yt_opts(),
-            'skip_download': True,
-            'extract_flat': False,
-            'ignoreerrors': True,
-            **get_cookie_opts()
-        }
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            
-        if not info:
-            return JSONResponse({"error": "Failed to extract video info. The video may require sign-in, be unavailable, or the format is unsupported by the current client."}, status_code=400)
-            
-        # Build deduplicated, quality-grouped format list
-        # Collect all unique heights from real video formats
-        seen_heights = {}
-        audio_formats = []
+  try:
+    ydl_opts = {
+      **get_yt_opts(),
+      'skip_download': True,
+      'extract_flat': False,
+      'ignoreerrors': True,
+      **get_cookie_opts()
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+      info = ydl.extract_info(url, download=False)
+      
+    if not info:
+      return JSONResponse({"error": "Failed to extract video info. The video may require sign-in, be unavailable, or the format is unsupported by the current client."}, status_code=400)
+      
+    # Build deduplicated, quality-grouped format list
+    # Collect all unique heights from real video formats
+    seen_heights = {}
+    audio_formats = []
+    
+    for f in info.get('formats', []):
+      height = f.get('height')
+      vcodec = f.get('vcodec', 'none')
+      acodec = f.get('acodec', 'none')
+      ext = f.get('ext', '')
+      
+      # Collect best audio-only formats
+      if vcodec == 'none' and acodec != 'none':
+        abr = f.get('abr') or 0
+        if not audio_formats or abr > (audio_formats[0].get('abr') or 0):
+          audio_formats = [f]
+        continue
+      
+      # Only include real video formats with a height
+      if not height or vcodec == 'none':
+        continue
+      
+      # Keep only the best format per height (prefer highest bitrate/filesize)
+      existing = seen_heights.get(height)
+      if existing is None:
+        seen_heights[height] = f
+      else:
+        # Compare by total bitrate (tbr) or approximate filesize
+        curr_size = f.get('tbr') or f.get('filesize') or f.get('filesize_approx') or 0
+        prev_size = existing.get('tbr') or existing.get('filesize') or existing.get('filesize_approx') or 0
         
-        for f in info.get('formats', []):
-            height = f.get('height')
-            vcodec = f.get('vcodec', 'none')
-            acodec = f.get('acodec', 'none')
-            ext = f.get('ext', '')
-            
-            # Collect best audio-only formats
-            if vcodec == 'none' and acodec != 'none':
-                abr = f.get('abr') or 0
-                if not audio_formats or abr > (audio_formats[0].get('abr') or 0):
-                    audio_formats = [f]
-                continue
-            
-            # Only include real video formats with a height
-            if not height or vcodec == 'none':
-                continue
-            
-            # Keep only the best format per height (prefer highest bitrate/filesize)
-            existing = seen_heights.get(height)
-            if existing is None:
-                seen_heights[height] = f
-            else:
-                # Compare by total bitrate (tbr) or approximate filesize
-                curr_size = f.get('tbr') or f.get('filesize') or f.get('filesize_approx') or 0
-                prev_size = existing.get('tbr') or existing.get('filesize') or existing.get('filesize_approx') or 0
-                
-                # If sizes are roughly equal, slightly prefer mp4 container
-                if curr_size > prev_size * 1.05 or (curr_size >= prev_size * 0.95 and f.get('ext') == 'mp4' and existing.get('ext') != 'mp4'):
-                    seen_heights[height] = f
-        
-        # Sort heights descending (8K → 144p)
-        sorted_heights = sorted(seen_heights.keys(), reverse=True)
-        
-        # Build quality label map
-        height_labels = {
-            4320: '8K',  2160: '4K',  1440: '2K',
-            1080: '1080p', 720: '720p', 480: '480p',
-            360: '360p',  240: '240p', 144: '144p',
-        }
-        
-        formats = []
-        for h in sorted_heights:
-            f = seen_heights[h]
-            label = height_labels.get(h) or f'{h}p'
-            formats.append({
-                'format_id': f.get('format_id'),
-                'quality': label,
-                'height': h,
-                'ext': f.get('ext', 'mp4'),
-                'resolution': f'{f.get("width", "?")}x{h}',
-                'filesize': f.get('filesize') or f.get('filesize_approx'),
-                'vcodec': f.get('vcodec', 'none'),
-                'acodec': f.get('acodec', 'none'),
-                'fps': f.get('fps'),
-                'type': 'video',
-            })
-        
-        # Add best audio option
-        if audio_formats:
-            af = audio_formats[0]
-            formats.append({
-                'format_id': af.get('format_id'),
-                'quality': 'Audio Only',
-                'height': 0,
-                'ext': 'mp3',
-                'resolution': 'audio',
-                'filesize': af.get('filesize') or af.get('filesize_approx'),
-                'vcodec': 'none',
-                'acodec': af.get('acodec', 'none'),
-                'abr': af.get('abr'),
-                'type': 'audio',
-            })
-        
-        video = {
-            'id': info.get('id'),
-            'title': info.get('title'),
-            'thumbnail': info.get('thumbnail'),
-            'duration': info.get('duration'),
-            'uploader': info.get('uploader'),
-            'description': info.get('description'),
-            'view_count': info.get('view_count'),
-            'upload_date': info.get('upload_date'),
-            'formats': formats,
-            'max_quality': height_labels.get(sorted_heights[0], f'{sorted_heights[0]}p') if sorted_heights else 'Unknown',
-        }
-        return {"video": video}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        # If sizes are roughly equal, slightly prefer mp4 container
+        if curr_size > prev_size * 1.05 or (curr_size >= prev_size * 0.95 and f.get('ext') == 'mp4' and existing.get('ext') != 'mp4'):
+          seen_heights[height] = f
+    
+    # Sort heights descending (8K → 144p)
+    sorted_heights = sorted(seen_heights.keys(), reverse=True)
+    
+    # Build quality label map
+    height_labels = {
+      4320: '8K', 2160: '4K', 1440: '2K',
+      1080: '1080p', 720: '720p', 480: '480p',
+      360: '360p', 240: '240p', 144: '144p',
+    }
+    
+    formats = []
+    for h in sorted_heights:
+      f = seen_heights[h]
+      label = height_labels.get(h) or f'{h}p'
+      formats.append({
+        'format_id': f.get('format_id'),
+        'quality': label,
+        'height': h,
+        'ext': f.get('ext', 'mp4'),
+        'resolution': f'{f.get("width", "?")}x{h}',
+        'filesize': f.get('filesize') or f.get('filesize_approx'),
+        'vcodec': f.get('vcodec', 'none'),
+        'acodec': f.get('acodec', 'none'),
+        'fps': f.get('fps'),
+        'type': 'video',
+      })
+    
+    # Add best audio option
+    if audio_formats:
+      af = audio_formats[0]
+      formats.append({
+        'format_id': af.get('format_id'),
+        'quality': 'Audio Only',
+        'height': 0,
+        'ext': 'mp3',
+        'resolution': 'audio',
+        'filesize': af.get('filesize') or af.get('filesize_approx'),
+        'vcodec': 'none',
+        'acodec': af.get('acodec', 'none'),
+        'abr': af.get('abr'),
+        'type': 'audio',
+      })
+    
+    video = {
+      'id': info.get('id'),
+      'title': info.get('title'),
+      'thumbnail': info.get('thumbnail'),
+      'duration': info.get('duration'),
+      'uploader': info.get('uploader'),
+      'description': info.get('description'),
+      'view_count': info.get('view_count'),
+      'upload_date': info.get('upload_date'),
+      'formats': formats,
+      'max_quality': height_labels.get(sorted_heights[0], f'{sorted_heights[0]}p') if sorted_heights else 'Unknown',
+    }
+    return {"video": video}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
-# --- Endpoint: Stream video (with quality selection) ---
+# Endpoint: Stream video (with quality selection)
 @app.get("/api/stream")
 def stream_video(request: Request, url: str, quality: Optional[str] = None, download: bool = False):
-    try:
-        # Map quality to yt-dlp format string
-        quality_map = {
-            '1080p': 'best[height<=1080]',
-            '720p': 'best[height<=720]',
-            '480p': 'best[height<=480]',
-            '360p': 'best[height<=360]',
-            '144p': 'best[height<=144]',
-            'audio': 'bestaudio/best',
+  try:
+    # Map quality to yt-dlp format string
+    quality_map = {
+      '1080p': 'best[height<=1080]',
+      '720p': 'best[height<=720]',
+      '480p': 'best[height<=480]',
+      '360p': 'best[height<=360]',
+      '144p': 'best[height<=144]',
+      'audio': 'bestaudio/best',
+    }
+    
+    # Default to best quality if not specified or invalid
+    format_string = quality_map.get(quality, 'best')
+    
+    ydl_opts = {
+      **get_yt_opts(),
+      'skip_download': True,
+      'format': format_string,
+      'ignoreerrors': True,
+      **get_cookie_opts()
+    }
+    
+    with YoutubeDL(ydl_opts) as ydl:
+      info = ydl.extract_info(url, download=False)
+      
+      # Get the best format that matches our criteria
+      formats = info.get('formats', [])
+      best_format = None
+      
+      for f in formats:
+        if quality == 'audio':
+          # Look for audio-only formats
+          if f.get('acodec') != 'none' and f.get('vcodec') == 'none':
+            if best_format is None or f.get('abr', 0) > best_format.get('abr', 0):
+              best_format = f
+        else:
+          # Look for video+audio formats
+          if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+            if best_format is None or f.get('height', 0) > best_format.get('height', 0):
+              best_format = f
+      
+      if best_format and best_format.get('url'):
+        video_url = best_format['url']
+        
+        # Get the headers from yt-dlp to bypass 403
+        headers = best_format.get('http_headers', {})
+        if not headers:
+          headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Referer': 'https://www.youtube.com/'
+          }
+        
+        # Pass down range header for seeking support
+        range_header = request.headers.get('Range')
+        if range_header:
+          headers['Range'] = range_header
+        
+        # Stream the video content
+        response = requests.get(video_url, stream=True, headers=headers)
+        
+        # Status code may be 206 Partial Content
+        status_code = response.status_code
+        
+        response.raise_for_status()
+        
+        disposition_type = "attachment" if download else "inline"
+        
+        # Create filename, stripping non-ascii if necessary/helpful
+        filename = info.get("title", "audio" if quality == "audio" else "video")
+        safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        ext = "mp3" if quality == "audio" else "mp4"
+        content_disposition = f'{disposition_type}; filename="{safe_filename}.{ext}"'
+        
+        response_headers = {
+          'Accept-Ranges': 'bytes',
+          'Content-Disposition': content_disposition,
+          'Access-Control-Expose-Headers': 'Content-Disposition'
         }
         
-        # Default to best quality if not specified or invalid
-        format_string = quality_map.get(quality, 'best')
+        if 'Content-Range' in response.headers:
+          response_headers['Content-Range'] = response.headers['Content-Range']
+        if 'Content-Length' in response.headers:
+          response_headers['Content-Length'] = response.headers['Content-Length']
         
-        ydl_opts = {
-            **get_yt_opts(),
-            'skip_download': True,
-            'format': format_string,
-            'ignoreerrors': True,
-            **get_cookie_opts()
-        }
+        media_type = response.headers.get('Content-Type')
+        if not media_type:
+          media_type = 'audio/mpeg' if quality == 'audio' else 'video/mp4'
         
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            
-            # Get the best format that matches our criteria
-            formats = info.get('formats', [])
-            best_format = None
-            
-            for f in formats:
-                if quality == 'audio':
-                    # Look for audio-only formats
-                    if f.get('acodec') != 'none' and f.get('vcodec') == 'none':
-                        if best_format is None or f.get('abr', 0) > best_format.get('abr', 0):
-                            best_format = f
-                else:
-                    # Look for video+audio formats
-                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
-                        if best_format is None or f.get('height', 0) > best_format.get('height', 0):
-                            best_format = f
-            
-            if best_format and best_format.get('url'):
-                video_url = best_format['url']
-                
-                # Get the headers from yt-dlp to bypass 403
-                headers = best_format.get('http_headers', {})
-                if not headers:
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                        'Referer': 'https://www.youtube.com/'
-                    }
-                
-                # Pass down range header for seeking support
-                range_header = request.headers.get('Range')
-                if range_header:
-                    headers['Range'] = range_header
-                
-                # Stream the video content
-                response = requests.get(video_url, stream=True, headers=headers)
-                
-                # Status code may be 206 Partial Content
-                status_code = response.status_code
-                
-                response.raise_for_status()
-                
-                disposition_type = "attachment" if download else "inline"
-                
-                # Create filename, stripping non-ascii if necessary/helpful
-                filename = info.get("title", "audio" if quality == "audio" else "video")
-                safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
-                ext = "mp3" if quality == "audio" else "mp4"
-                content_disposition = f'{disposition_type}; filename="{safe_filename}.{ext}"'
-                
-                response_headers = {
-                    'Accept-Ranges': 'bytes',
-                    'Content-Disposition': content_disposition,
-                    'Access-Control-Expose-Headers': 'Content-Disposition'
-                }
-                
-                if 'Content-Range' in response.headers:
-                    response_headers['Content-Range'] = response.headers['Content-Range']
-                if 'Content-Length' in response.headers:
-                    response_headers['Content-Length'] = response.headers['Content-Length']
-                
-                media_type = response.headers.get('Content-Type')
-                if not media_type:
-                    media_type = 'audio/mpeg' if quality == 'audio' else 'video/mp4'
-                
-                return StreamingResponse(
-                    response.iter_content(chunk_size=8192),
-                    status_code=status_code,
-                    media_type=media_type,
-                    headers=response_headers
-                )
-            else:
-                raise HTTPException(status_code=404, detail="No suitable video format found")
-                
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return StreamingResponse(
+          response.iter_content(chunk_size=8192),
+          status_code=status_code,
+          media_type=media_type,
+          headers=response_headers
+        )
+      else:
+        raise HTTPException(status_code=404, detail="No suitable video format found")
+        
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
-# --- Endpoint: Download video/audio (with options) ---
+# Endpoint: Download video/audio (with options)
 @app.post("/api/download")
 def download_video(
-    url: str = Form(...),
-    quality: Optional[str] = Form(None),
-    format: Optional[str] = Form(None),
-    format_id: Optional[str] = Form(None),   # ← exact YouTube stream ID (preferred)
-    trim_start: Optional[float] = Form(None),
-    trim_end: Optional[float] = Form(None),
-    rename: Optional[str] = Form(None),
-    background_tasks: BackgroundTasks = None
+  url: str = Form(...),
+  quality: Optional[str] = Form(None),
+  format: Optional[str] = Form(None),
+  format_id: Optional[str] = Form(None),  # ← exact YouTube stream ID (preferred)
+  trim_start: Optional[float] = Form(None),
+  trim_end: Optional[float] = Form(None),
+  rename: Optional[str] = Form(None),
+  background_tasks: BackgroundTasks = None
 ):
-    try:
-        task_id = str(uuid.uuid4())
-        download_tasks[task_id] = {
-            "status": "pending",
-            "progress": 0,
-            "url": url,
-            "filename": None,
-            "error": None,
-            "started_at": datetime.now().isoformat()
-        }
-
-        
-        # Start background download task
-        background_tasks.add_task(
-            download_worker, 
-            task_id, url, quality, format,
-            trim_start, trim_end, rename, format_id
-        )
-        
-        return {"task_id": task_id, "message": "Download started successfully."}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-# --- Helper: build common cookie options for yt-dlp ---
-def get_cookie_opts():
-    """
-    Returns the best available cookie source for yt-dlp.
-    Only uses a local cookies.txt file if it exists and is >2KB.
-    (We no longer use cookiesfrombrowser because it crashes yt-dlp when Chrome is open).
-    """
-    import os
-    cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
-    if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 2048:
-        return {'cookiefile': cookie_path}
-
-    return {}
-
-def schedule_deletion(filepath: str, delay: int = 600):
-    def delete_task():
-        time.sleep(delay)
-        try:
-            if os.path.exists(filepath):
-                os.remove(filepath)
-                print(f"Auto-deleted {filepath}")
-        except Exception as e:
-            print(f"Error deleting {filepath}: {e}")
-            
-    threading.Thread(target=delete_task, daemon=True).start()
-
-# --- Download worker function ---
-def download_worker(task_id: str, url: str, quality: str = None, 
-                   format: str = None, trim_start: float = None, 
-                   trim_end: float = None, rename: str = None,
-                   format_id: str = None):
-    try:
-        download_tasks[task_id]["status"] = "downloading"
-        
-        # Get video info first (needed for title and format metadata)
-        ydl_opts_info = {
-            'js_runtimes': {'node': {}},
-            'quiet': True,
-            'skip_download': True,
-            'nocheckcertificate': True,
-        }
-        with YoutubeDL(ydl_opts_info) as ydl:
-            info = ydl.extract_info(url, download=False)
-        
-        # Determine output filename
-        if rename:
-            base_filename = rename
-        else:
-            base_filename = info.get('title', 'video')
-        
-        # Clean filename for filesystem
-        base_filename = "".join(c for c in base_filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        
-        # ── Determine format spec ─────────────────────────────────────
-        cookie_opts = get_cookie_opts()
-        
-        if format_id and format != 'mp3':
-            # ── FORMAT_ID BASED DOWNLOAD (highest quality, reliable) ──────
-            # Detect if this format is video-only (needs audio merge)
-            all_formats = info.get('formats', [])
-            selected_fmt = next(
-                (f for f in all_formats if f.get('format_id') == format_id), None
-            )
-            needs_audio = (
-                selected_fmt is not None and
-                selected_fmt.get('vcodec', 'none') != 'none' and
-                selected_fmt.get('acodec', 'none') == 'none'
-            )
-            
-            if needs_audio:
-                fmt_spec = f"{format_id}+bestaudio"
-            else:
-                fmt_spec = format_id
-            
-            output_template = f"tempfiles/{base_filename}.%(ext)s"
-            ydl_opts = {
-                **get_yt_opts(),
-                'outtmpl': output_template,
-                'format': fmt_spec,
-                'merge_output_format': 'mp4',
-                'progress_hooks': [lambda d: progress_hook(d, task_id)],
-                'retries': 10,
-                'fragment_retries': 10,
-                **cookie_opts,
-            }
-        
-        elif format == "mp3":
-            output_template = f"tempfiles/{base_filename}.%(ext)s"
-            ydl_opts = {
-                **get_yt_opts(),
-                'outtmpl': output_template,
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }],
-                'progress_hooks': [lambda d: progress_hook(d, task_id)],
-                'retries': 10,
-                'fragment_retries': 10,
-                'ignoreerrors': True,
-                **cookie_opts,
-            }
-        else:
-            # Video download — strip 'p' from quality (e.g. "1080p" → "1080")
-            if quality:
-                # Handle labels like "1080p", "4K", "2K", "8K", "720p", etc.
-                quality_height_map = {
-                    '8k': '4320', '8K': '4320',
-                    '4k': '2160', '4K': '2160',
-                    '2k': '1440', '2K': '1440',
-                }
-                if quality in quality_height_map:
-                    height_val = quality_height_map[quality]
-                else:
-                    # Strip 'p' suffix and any non-digit chars to get numeric height
-                    height_val = ''.join(filter(str.isdigit, quality))
-                
-                if height_val:
-                    # Use bestvideo+bestaudio for proper DASH stream merging
-                    # This is critical for 1080p+ on YouTube which are always DASH
-                    format_spec = (
-                        f"bestvideo[height<={height_val}][ext=mp4]+bestaudio[ext=m4a]"
-                        f"/bestvideo[height<={height_val}]+bestaudio"
-                        f"/best[height<={height_val}]"
-                        f"/best"
-                    )
-                else:
-                    format_spec = "bestvideo+bestaudio/best"
-            else:
-                format_spec = "bestvideo+bestaudio/best"
-            
-            output_template = f"tempfiles/{base_filename}.%(ext)s"
-            ydl_opts = {
-                **get_yt_opts(),
-                'outtmpl': output_template,
-                'format': format_spec,
-                'merge_output_format': 'mp4',
-                'progress_hooks': [lambda d: progress_hook(d, task_id)],
-                # Apply valid cookies.txt if available
-                **cookie_opts,
-                'retries': 10,
-                'fragment_retries': 10,
-            }
-        
-        # Get list of files before download to detect new files
-        existing_files = set(os.listdir("tempfiles")) if os.path.exists("tempfiles") else set()
-        
-        # Download the file
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        
-        # Find the downloaded file
-        # Method 1: Match by base_filename (case-insensitive startswith)
-        downloaded_files = [
-            f for f in os.listdir("tempfiles")
-            if f.lower().startswith(base_filename.lower()[:50])  # Use first 50 chars for matching
-        ]
-        
-        # Method 2: Fallback - find new files added to tempfiles folder
-        if not downloaded_files:
-            current_files = set(os.listdir("tempfiles"))
-            new_files = current_files - existing_files
-            if new_files:
-                downloaded_files = list(new_files)
-        
-        # Method 3: Fallback - find most recently modified file
-        if not downloaded_files:
-            all_files = os.listdir("tempfiles")
-            if all_files:
-                all_files_with_time = [
-                    (f, os.path.getmtime(os.path.join("tempfiles", f)))
-                    for f in all_files
-                ]
-                all_files_with_time.sort(key=lambda x: x[1], reverse=True)
-                # Check if the most recent file was modified in the last 60 seconds
-                import time
-                if time.time() - all_files_with_time[0][1] < 60:
-                    downloaded_files = [all_files_with_time[0][0]]
-        
-        if downloaded_files:
-            filename = downloaded_files[0]
-            filepath = os.path.join("tempfiles", filename)
-            
-            # Apply trimming if specified
-            if trim_start is not None or trim_end is not None:
-                trimmed_filename = f"trimmed_{filename}"
-                trimmed_filepath = os.path.join("tempfiles", trimmed_filename)
-                
-                # Use ffmpeg to trim
-                cmd = ["ffmpeg", "-i", filepath, "-y"]
-                if trim_start:
-                    cmd.extend(["-ss", str(trim_start)])
-                if trim_end:
-                    cmd.extend(["-t", str(trim_end - (trim_start or 0))])
-                cmd.append(trimmed_filepath)
-                
-                subprocess.run(cmd, check=True)
-                
-                # Replace original with trimmed version
-                os.remove(filepath)
-                filename = trimmed_filename
-                filepath = trimmed_filepath
-                
-            # Schedule auto-deletion after 10 minutes
-            schedule_deletion(filepath, 600)
-            
-            # Update task status
-            download_tasks[task_id].update({
-                "status": "completed",
-                "progress": 100,
-                "filename": filename,
-                "filepath": filepath,
-                "completed_at": datetime.now().isoformat()
-            })
-            
-            # Update batch progress if this is part of a batch
-            batch_id = download_tasks[task_id].get("batch_id")
-            if batch_id and batch_id in download_tasks:
-                batch_task = download_tasks[batch_id]
-                batch_task["completed_urls"] += 1
-                batch_progress = (batch_task["completed_urls"] / batch_task["total_urls"]) * 100
-                batch_task["progress"] = batch_progress
-                
-                if batch_task["completed_urls"] == batch_task["total_urls"]:
-                    batch_task["status"] = "completed"
-                    batch_task["completed_at"] = datetime.now().isoformat()
-            
-            # Add to history
-            history_entry = {
-                "id": task_id,
-                "title": info.get('title', 'Unknown'),
-                "url": url,
-                "filename": filename,
-                "downloaded_at": datetime.now().isoformat(),
-                "file_size": os.path.getsize(filepath) if os.path.exists(filepath) else 0,
-                "batch_id": batch_id
-            }
-            download_history.append(history_entry)
-            save_history()
-            
-        else:
-            download_tasks[task_id].update({
-                "status": "error",
-                "error": "Downloaded file not found"
-            })
-            
-            # Update batch progress if this is part of a batch
-            batch_id = download_tasks[task_id].get("batch_id")
-            if batch_id and batch_id in download_tasks:
-                batch_task = download_tasks[batch_id]
-                batch_task["failed_urls"] += 1
-            
-    except Exception as e:
-        download_tasks[task_id].update({
-            "status": "error",
-            "error": str(e)
-        })
-        
-        # Update batch progress if this is part of a batch
-        batch_id = download_tasks[task_id].get("batch_id")
-        if batch_id and batch_id in download_tasks:
-            batch_task = download_tasks[batch_id]
-            batch_task["failed_urls"] += 1
-
-# --- Progress hook for yt-dlp ---
-def progress_hook(d, task_id):
-    if task_id in download_tasks:
-        if d['status'] == 'downloading':
-            # Calculate progress percentage
-            if 'total_bytes' in d and d['total_bytes']:
-                progress = (d['downloaded_bytes'] / d['total_bytes']) * 100
-                speed = d.get('speed', 0)
-                eta = d.get('eta', 0)
-            elif 'total_bytes_estimate' in d and d['total_bytes_estimate']:
-                progress = (d['downloaded_bytes'] / d['total_bytes_estimate']) * 100
-                speed = d.get('speed', 0)
-                eta = d.get('eta', 0)
-            else:
-                progress = download_tasks[task_id].get('progress', 0)
-                speed = download_tasks[task_id].get('speed', 0)
-                eta = download_tasks[task_id].get('eta', 0)
-            
-            # Update task with accurate progress information
-            download_tasks[task_id].update({
-                "progress": round(progress, 2),  # Round to 2 decimal places for more precision
-                "speed": speed,                 # Download speed in bytes per second
-                "eta": eta,                     # Estimated time remaining in seconds
-                "downloaded_bytes": d.get('downloaded_bytes', 0),
-                "total_bytes": d.get('total_bytes') or d.get('total_bytes_estimate', 0)
-            })
-
-# --- Endpoint: Download progress ---
-@app.get("/api/progress/{task_id}")
-def get_progress(task_id: str):
-    task = download_tasks.get(task_id)
-    if not task:
-        return JSONResponse({"error": "Task not found"}, status_code=404)
-    
-    return {
-        "task_id": task_id,
-        "status": task.get("status"),
-        "progress": task.get("progress", 0),
-        "filename": task.get("filename"),
-        "error": task.get("error"),
-        "started_at": task.get("started_at"),
-        "completed_at": task.get("completed_at"),
-        "speed": task.get("speed", 0),
-        "eta": task.get("eta", 0),
-        "downloaded_bytes": task.get("downloaded_bytes", 0),
-        "total_bytes": task.get("total_bytes", 0)
+  try:
+    task_id = str(uuid.uuid4())
+    download_tasks[task_id] = {
+      "status": "pending",
+      "progress": 0,
+      "url": url,
+      "filename": None,
+      "error": None,
+      "started_at": datetime.now().isoformat()
     }
 
-# --- Save history to file ---
+    
+    # Start background download task
+    background_tasks.add_task(
+      download_worker, 
+      task_id, url, quality, format,
+      trim_start, trim_end, rename, format_id
+    )
+    
+    return {"task_id": task_id, "message": "Download started successfully."}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
+# Helper: build common cookie options for ytdlp ---
+def get_cookie_opts():
+  """
+  Returns the best available cookie source for yt-dlp.
+  Only uses a local cookies.txt file if it exists and is >2KB.
+  (We no longer use cookiesfrombrowser because it crashes yt-dlp when Chrome is open).
+  """
+  import os
+  cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+  if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 2048:
+    return {'cookiefile': cookie_path}
+
+  return {}
+
+def schedule_deletion(filepath: str, delay: int = 600):
+  def delete_task():
+    time.sleep(delay)
+    try:
+      if os.path.exists(filepath):
+        os.remove(filepath)
+        print(f"Auto-deleted {filepath}")
+    except Exception as e:
+      print(f"Error deleting {filepath}: {e}")
+      
+  threading.Thread(target=delete_task, daemon=True).start()
+
+# Download worker function
+def download_worker(task_id: str, url: str, quality: str = None, 
+          format: str = None, trim_start: float = None, 
+          trim_end: float = None, rename: str = None,
+          format_id: str = None):
+  try:
+    download_tasks[task_id]["status"] = "downloading"
+    
+    # Get video info first (needed for title and format metadata)
+    ydl_opts_info = {
+      'js_runtimes': {'node': {}},
+      'quiet': True,
+      'skip_download': True,
+      'nocheckcertificate': True,
+    }
+    with YoutubeDL(ydl_opts_info) as ydl:
+      info = ydl.extract_info(url, download=False)
+    
+    # Determine output filename
+    if rename:
+      base_filename = rename
+    else:
+      base_filename = info.get('title', 'video')
+    
+    # Clean filename for filesystem
+    base_filename = "".join(c for c in base_filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    
+    # Determine format spec
+    cookie_opts = get_cookie_opts()
+    
+    if format_id and format != 'mp3':
+      # FORMAT_ID BASED DOWNLOAD (highest quality, reliable)
+      # Detect if this format is video-only (needs audio merge)
+      all_formats = info.get('formats', [])
+      selected_fmt = next(
+        (f for f in all_formats if f.get('format_id') == format_id), None
+      )
+      needs_audio = (
+        selected_fmt is not None and
+        selected_fmt.get('vcodec', 'none') != 'none' and
+        selected_fmt.get('acodec', 'none') == 'none'
+      )
+      
+      if needs_audio:
+        fmt_spec = f"{format_id}+bestaudio"
+      else:
+        fmt_spec = format_id
+      
+      output_template = f"tempfiles/{base_filename}.%(ext)s"
+      ydl_opts = {
+        **get_yt_opts(),
+        'outtmpl': output_template,
+        'format': fmt_spec,
+        'merge_output_format': 'mp4',
+        'progress_hooks': [lambda d: progress_hook(d, task_id)],
+        'retries': 10,
+        'fragment_retries': 10,
+        **cookie_opts,
+      }
+    
+    elif format == "mp3":
+      output_template = f"tempfiles/{base_filename}.%(ext)s"
+      ydl_opts = {
+        **get_yt_opts(),
+        'outtmpl': output_template,
+        'format': 'bestaudio/best',
+        'postprocessors': [{
+          'key': 'FFmpegExtractAudio',
+          'preferredcodec': 'mp3',
+          'preferredquality': '192',
+        }],
+        'progress_hooks': [lambda d: progress_hook(d, task_id)],
+        'retries': 10,
+        'fragment_retries': 10,
+        'ignoreerrors': True,
+        **cookie_opts,
+      }
+    else:
+      # Video download — strip 'p' from quality (e.g. "1080p" → "1080")
+      if quality:
+        # Handle labels like "1080p", "4K", "2K", "8K", "720p", etc.
+        quality_height_map = {
+          '8k': '4320', '8K': '4320',
+          '4k': '2160', '4K': '2160',
+          '2k': '1440', '2K': '1440',
+        }
+        if quality in quality_height_map:
+          height_val = quality_height_map[quality]
+        else:
+          # Strip 'p' suffix and any non-digit chars to get numeric height
+          height_val = ''.join(filter(str.isdigit, quality))
+        
+        if height_val:
+          # Use bestvideo+bestaudio for proper DASH stream merging
+          # This is critical for 1080p+ on YouTube which are always DASH
+          format_spec = (
+            f"bestvideo[height<={height_val}][ext=mp4]+bestaudio[ext=m4a]"
+            f"/bestvideo[height<={height_val}]+bestaudio"
+            f"/best[height<={height_val}]"
+            f"/best"
+          )
+        else:
+          format_spec = "bestvideo+bestaudio/best"
+      else:
+        format_spec = "bestvideo+bestaudio/best"
+      
+      output_template = f"tempfiles/{base_filename}.%(ext)s"
+      ydl_opts = {
+        **get_yt_opts(),
+        'outtmpl': output_template,
+        'format': format_spec,
+        'merge_output_format': 'mp4',
+        'progress_hooks': [lambda d: progress_hook(d, task_id)],
+        # Apply valid cookies.txt if available
+        **cookie_opts,
+        'retries': 10,
+        'fragment_retries': 10,
+      }
+    
+    # Get list of files before download to detect new files
+    existing_files = set(os.listdir("tempfiles")) if os.path.exists("tempfiles") else set()
+    
+    # Download the file
+    with YoutubeDL(ydl_opts) as ydl:
+      ydl.download([url])
+    
+    # Find the downloaded file
+    # Method 1: Match by base_filename (case-insensitive startswith)
+    downloaded_files = [
+      f for f in os.listdir("tempfiles")
+      if f.lower().startswith(base_filename.lower()[:50]) # Use first 50 chars for matching
+    ]
+    
+    # Method 2: Fallback - find new files added to tempfiles folder
+    if not downloaded_files:
+      current_files = set(os.listdir("tempfiles"))
+      new_files = current_files - existing_files
+      if new_files:
+        downloaded_files = list(new_files)
+    
+    # Method 3: Fallback - find most recently modified file
+    if not downloaded_files:
+      all_files = os.listdir("tempfiles")
+      if all_files:
+        all_files_with_time = [
+          (f, os.path.getmtime(os.path.join("tempfiles", f)))
+          for f in all_files
+        ]
+        all_files_with_time.sort(key=lambda x: x[1], reverse=True)
+        # Check if the most recent file was modified in the last 60 seconds
+        import time
+        if time.time() - all_files_with_time[0][1] < 60:
+          downloaded_files = [all_files_with_time[0][0]]
+    
+    if downloaded_files:
+      filename = downloaded_files[0]
+      filepath = os.path.join("tempfiles", filename)
+      
+      # Apply trimming if specified
+      if trim_start is not None or trim_end is not None:
+        trimmed_filename = f"trimmed_{filename}"
+        trimmed_filepath = os.path.join("tempfiles", trimmed_filename)
+        
+        # Use ffmpeg to trim
+        cmd = ["ffmpeg", "-i", filepath, "-y"]
+        if trim_start:
+          cmd.extend(["-ss", str(trim_start)])
+        if trim_end:
+          cmd.extend(["-t", str(trim_end - (trim_start or 0))])
+        cmd.append(trimmed_filepath)
+        
+        subprocess.run(cmd, check=True)
+        
+        # Replace original with trimmed version
+        os.remove(filepath)
+        filename = trimmed_filename
+        filepath = trimmed_filepath
+        
+      # Schedule auto-deletion after 10 minutes
+      schedule_deletion(filepath, 600)
+      
+      # Update task status
+      download_tasks[task_id].update({
+        "status": "completed",
+        "progress": 100,
+        "filename": filename,
+        "filepath": filepath,
+        "completed_at": datetime.now().isoformat()
+      })
+      
+      # Update batch progress if this is part of a batch
+      batch_id = download_tasks[task_id].get("batch_id")
+      if batch_id and batch_id in download_tasks:
+        batch_task = download_tasks[batch_id]
+        batch_task["completed_urls"] += 1
+        batch_progress = (batch_task["completed_urls"] / batch_task["total_urls"]) * 100
+        batch_task["progress"] = batch_progress
+        
+        if batch_task["completed_urls"] == batch_task["total_urls"]:
+          batch_task["status"] = "completed"
+          batch_task["completed_at"] = datetime.now().isoformat()
+      
+      # Add to history
+      history_entry = {
+        "id": task_id,
+        "title": info.get('title', 'Unknown'),
+        "url": url,
+        "filename": filename,
+        "downloaded_at": datetime.now().isoformat(),
+        "file_size": os.path.getsize(filepath) if os.path.exists(filepath) else 0,
+        "batch_id": batch_id
+      }
+      download_history.append(history_entry)
+      save_history()
+      
+    else:
+      download_tasks[task_id].update({
+        "status": "error",
+        "error": "Downloaded file not found"
+      })
+      
+      # Update batch progress if this is part of a batch
+      batch_id = download_tasks[task_id].get("batch_id")
+      if batch_id and batch_id in download_tasks:
+        batch_task = download_tasks[batch_id]
+        batch_task["failed_urls"] += 1
+      
+  except Exception as e:
+    download_tasks[task_id].update({
+      "status": "error",
+      "error": str(e)
+    })
+    
+    # Update batch progress if this is part of a batch
+    batch_id = download_tasks[task_id].get("batch_id")
+    if batch_id and batch_id in download_tasks:
+      batch_task = download_tasks[batch_id]
+      batch_task["failed_urls"] += 1
+
+# Progress hook for ytdlp ---
+def progress_hook(d, task_id):
+  if task_id in download_tasks:
+    if d['status'] == 'downloading':
+      # Calculate progress percentage
+      if 'total_bytes' in d and d['total_bytes']:
+        progress = (d['downloaded_bytes'] / d['total_bytes']) * 100
+        speed = d.get('speed', 0)
+        eta = d.get('eta', 0)
+      elif 'total_bytes_estimate' in d and d['total_bytes_estimate']:
+        progress = (d['downloaded_bytes'] / d['total_bytes_estimate']) * 100
+        speed = d.get('speed', 0)
+        eta = d.get('eta', 0)
+      else:
+        progress = download_tasks[task_id].get('progress', 0)
+        speed = download_tasks[task_id].get('speed', 0)
+        eta = download_tasks[task_id].get('eta', 0)
+      
+      # Update task with accurate progress information
+      download_tasks[task_id].update({
+        "progress": round(progress, 2), # Round to 2 decimal places for more precision
+        "speed": speed,         # Download speed in bytes per second
+        "eta": eta,           # Estimated time remaining in seconds
+        "downloaded_bytes": d.get('downloaded_bytes', 0),
+        "total_bytes": d.get('total_bytes') or d.get('total_bytes_estimate', 0)
+      })
+
+# Endpoint: Download progress
+@app.get("/api/progress/{task_id}")
+def get_progress(task_id: str):
+  task = download_tasks.get(task_id)
+  if not task:
+    return JSONResponse({"error": "Task not found"}, status_code=404)
+  
+  return {
+    "task_id": task_id,
+    "status": task.get("status"),
+    "progress": task.get("progress", 0),
+    "filename": task.get("filename"),
+    "error": task.get("error"),
+    "started_at": task.get("started_at"),
+    "completed_at": task.get("completed_at"),
+    "speed": task.get("speed", 0),
+    "eta": task.get("eta", 0),
+    "downloaded_bytes": task.get("downloaded_bytes", 0),
+    "total_bytes": task.get("total_bytes", 0)
+  }
+
+# Save history to file
 def save_history():
-    try:
-        with open("download_history.json", "w") as f:
-            json.dump(download_history, f, indent=2)
-    except Exception as e:
-        print(f"Error saving history: {e}")
+  try:
+    with open("download_history.json", "w") as f:
+      json.dump(download_history, f, indent=2)
+  except Exception as e:
+    print(f"Error saving history: {e}")
 
-# --- Load history from file ---
+# Load history from file
 def load_history():
-    try:
-        if os.path.exists("download_history.json"):
-            with open("download_history.json", "r") as f:
-                return json.load(f)
-    except Exception as e:
-        print(f"Error loading history: {e}")
-    return []
+  try:
+    if os.path.exists("download_history.json"):
+      with open("download_history.json", "r") as f:
+        return json.load(f)
+  except Exception as e:
+    print(f"Error loading history: {e}")
+  return []
 
-# --- Endpoint: Download history ---
+# Endpoint: Download history
 @app.get("/api/history")
 def get_history():
-    return {"history": download_history}
+  return {"history": download_history}
 
-# --- Initialize history on startup ---
+# Initialize history on startup
 download_history = load_history()
 
-# --- Endpoint: Batch download ---
+# Endpoint: Batch download
 @app.post("/api/batch-download")
 def batch_download(
-    urls: List[str] = Form(...),
-    quality: Optional[str] = Form(None),
-    format: Optional[str] = Form(None),
-    background_tasks: BackgroundTasks = None
+  urls: List[str] = Form(...),
+  quality: Optional[str] = Form(None),
+  format: Optional[str] = Form(None),
+  background_tasks: BackgroundTasks = None
 ):
-    try:
-        batch_id = str(uuid.uuid4())
-        
-        # Create batch tracking
-        download_tasks[batch_id] = {
-            "status": "batch_pending",
-            "progress": 0,
-            "total_urls": len(urls),
-            "completed_urls": 0,
-            "failed_urls": 0,
-            "urls": urls,
-            "started_at": datetime.now().isoformat(),
-            "batch_tasks": []
-        }
-        
-        # Start individual downloads for each URL
-        for i, url in enumerate(urls):
-            task_id = f"{batch_id}_{i}"
-            download_tasks[task_id] = {
-                "status": "pending",
-                "progress": 0,
-                "url": url,
-                "filename": None,
-                "error": None,
-                "started_at": datetime.now().isoformat(),
-                "batch_id": batch_id
-            }
-            
-            # Add to batch tasks list
-            download_tasks[batch_id]["batch_tasks"].append(task_id)
-            
-            # Start background download task
-            background_tasks.add_task(
-                download_worker, 
-                task_id, url, quality, format, 
-                None, None, None  # No trim/rename for batch
-            )
-        
-        return {"batch_id": batch_id, "message": f"Batch download started for {len(urls)} videos."}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+  try:
+    batch_id = str(uuid.uuid4())
+    
+    # Create batch tracking
+    download_tasks[batch_id] = {
+      "status": "batch_pending",
+      "progress": 0,
+      "total_urls": len(urls),
+      "completed_urls": 0,
+      "failed_urls": 0,
+      "urls": urls,
+      "started_at": datetime.now().isoformat(),
+      "batch_tasks": []
+    }
+    
+    # Start individual downloads for each URL
+    for i, url in enumerate(urls):
+      task_id = f"{batch_id}_{i}"
+      download_tasks[task_id] = {
+        "status": "pending",
+        "progress": 0,
+        "url": url,
+        "filename": None,
+        "error": None,
+        "started_at": datetime.now().isoformat(),
+        "batch_id": batch_id
+      }
+      
+      # Add to batch tasks list
+      download_tasks[batch_id]["batch_tasks"].append(task_id)
+      
+      # Start background download task
+      background_tasks.add_task(
+        download_worker, 
+        task_id, url, quality, format, 
+        None, None, None # No trim/rename for batch
+      )
+    
+    return {"batch_id": batch_id, "message": f"Batch download started for {len(urls)} videos."}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
-# --- Endpoint: Feedback submission ---
+# Endpoint: Feedback submission
 @app.post("/api/feedback")
 def submit_feedback(feedback: str = Form(...)):
-    try:
-        feedback_list.append({
-            "feedback": feedback,
-            "timestamp": datetime.now().isoformat()
-        })
-        # Save feedback to file
-        with open("feedback.json", "w") as f:
-            json.dump(feedback_list, f, indent=2)
-        return {"message": "Feedback received. Thank you!"}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+  try:
+    feedback_list.append({
+      "feedback": feedback,
+      "timestamp": datetime.now().isoformat()
+    })
+    # Save feedback to file
+    with open("feedback.json", "w") as f:
+      json.dump(feedback_list, f, indent=2)
+    return {"message": "Feedback received. Thank you!"}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
-# --- Endpoint: Legal disclaimer ---
+# Endpoint: Legal disclaimer
 @app.get("/api/legal")
 def get_legal():
-    disclaimer = "This tool is for personal use only. Downloading copyrighted content may violate YouTube's terms of service. Use responsibly."
-    return {"disclaimer": disclaimer}
+  disclaimer = "This tool is for personal use only. Downloading copyrighted content may violate YouTube's terms of service. Use responsibly."
+  return {"disclaimer": disclaimer}
 
-# --- Static file serving for downloads (optional) ---
+# Static file serving for downloads (optional)
 @app.get("/api/downloads/{filename}")
 def serve_download(filename: str):
-    file_path = os.path.join("downloads", filename)
-    if os.path.exists(file_path):
-        response = FileResponse(file_path, filename=filename)
-        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
-        return response
-    return JSONResponse({"error": "File not found."}, status_code=404)
+  file_path = os.path.join("downloads", filename)
+  if os.path.exists(file_path):
+    response = FileResponse(file_path, filename=filename)
+    response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+    return response
+  return JSONResponse({"error": "File not found."}, status_code=404)
 
 @app.get("/api/tempfiles/{filename}")
 def serve_tempfile(filename: str):
-    file_path = os.path.join("tempfiles", filename)
-    if os.path.exists(file_path):
-        response = FileResponse(file_path, filename=filename)
-        response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
-        return response
-    return JSONResponse({"error": "File not found or expired."}, status_code=404)
+  file_path = os.path.join("tempfiles", filename)
+  if os.path.exists(file_path):
+    response = FileResponse(file_path, filename=filename)
+    response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+    return response
+  return JSONResponse({"error": "File not found or expired."}, status_code=404)
 
-# --- Main entry point ---
+# Main entry point
 if __name__ == "__main__":
-    import uvicorn
-    print("🚀 Starting YT Deluxe Backend...")
-    print("📡 API available at: http://localhost:8000")
-    print("📚 API docs at: http://localhost:8000/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+  import uvicorn
+  print(" Starting YT Deluxe Backend...")
+  print(" API available at: http://localhost:8000")
+  print(" API docs at: http://localhost:8000/docs")
+  uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
 
