@@ -11,8 +11,89 @@ import json
 import requests
 import threading
 import time
+import atexit
+
+bgutil_process = None
 
 app = FastAPI(title="YT Deluxe Backend")
+
+@app.on_event("startup")
+def startup_event():
+    global bgutil_process
+    server_path = os.path.join(os.path.dirname(__file__), 'bgutil-ytdlp-pot-provider', 'server', 'build', 'main.js')
+    if os.path.exists(server_path):
+        try:
+            print("Starting PO Token Generator Server on port 4416...")
+            bgutil_process = subprocess.Popen(["node", server_path, "-p", "4416"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            print(f"Failed to start bgutil token server: {e}")
+
+@app.on_event("shutdown")
+def shutdown_event():
+    global bgutil_process
+    if bgutil_process:
+        print("Shutting down PO Token Generator Server...")
+        bgutil_process.terminate()
+        bgutil_process.wait()
+
+
+def get_cookie_opts():
+    import base64
+    env_cookie_b64 = os.environ.get('YOUTUBE_COOKIES_BASE64')
+    env_cookie_path = 'tempfiles/youtube_cookies.txt'
+    if env_cookie_b64:
+        try:
+            with open(env_cookie_path, 'w', encoding='utf-8') as f:
+                f.write(base64.b64decode(env_cookie_b64).decode('utf-8'))
+            return {'cookiefile': env_cookie_path}
+        except Exception as e:
+            print(f"Failed to decode environment cookies: {e}")
+
+    cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+    if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 200:
+        return {'cookiefile': cookie_path}
+    return {}
+
+def get_yt_opts():
+    return {
+        'js_runtimes': {'node': {}},
+        'extractor_args': {
+            'youtubepot-bgutilhttp': {
+                'base_url': ['http://127.0.0.1:4416']
+            },
+            'youtube': {
+                'player_client': ['mweb', 'default'],
+                'formats': ['missing_pot']
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
+        'nocheckcertificate': True,
+        'no_warnings': True,
+        'quiet': True,
+    }
+
+def get_yt_search_opts():
+    return {
+        'js_runtimes': {'node': {}},
+        'extractor_args': {
+            'youtubepot-bgutilhttp': {
+                'base_url': ['http://127.0.0.1:4416']
+            },
+            'youtube': {
+                'player_client': ['web_creator', 'default'],
+                'formats': ['missing_pot']
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
+        'nocheckcertificate': True,
+        'quiet': True,
+    }
 
 if not os.path.exists("tempfiles"):
     os.makedirs("tempfiles")
@@ -36,25 +117,11 @@ feedback_list = []
 def search_videos(q: str):
     try:
         ydl_opts = {
-            'js_runtimes': {'node': {}},
-            'quiet': True,
+            **get_yt_search_opts(),
             'extract_flat': True,
             'skip_download': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['web', 'android'],
-                    'formats': ['missing_pot']
-                }
-            },
-            'nocheckcertificate': True,
             'ignoreerrors': True,
-            'no_warnings': True,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Sec-Fetch-Mode': 'navigate',
-            }
+            **get_cookie_opts()
         }
         with YoutubeDL(ydl_opts) as ydl:
             # ytsearch12 returns top 12 results (perfect for 3-column grid)
@@ -78,16 +145,18 @@ def search_videos(q: str):
 def get_video_details(url: str):
     try:
         ydl_opts = {
-            'js_runtimes': {'node': {}},
-            'quiet': True,
+            **get_yt_opts(),
             'skip_download': True,
             'extract_flat': False,
-            'nocheckcertificate': True,
             'ignoreerrors': True,
-            'no_warnings': True,
+            **get_cookie_opts()
         }
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+            
+        if not info:
+            return JSONResponse({"error": "Failed to extract video info. The video may require sign-in, be unavailable, or the format is unsupported by the current client."}, status_code=400)
+            
         # Build deduplicated, quality-grouped format list
         # Collect all unique heights from real video formats
         seen_heights = {}
@@ -200,25 +269,11 @@ def stream_video(request: Request, url: str, quality: Optional[str] = None, down
         format_string = quality_map.get(quality, 'best')
         
         ydl_opts = {
-            'js_runtimes': {'node': {}},
-            'quiet': True,
+            **get_yt_opts(),
             'skip_download': True,
             'format': format_string,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['web', 'android', 'mobile'],
-                    'formats': ['missing_pot']
-                }
-            },
-            'nocheckcertificate': True,
             'ignoreerrors': True,
-            'no_warnings': True,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Sec-Fetch-Mode': 'navigate',
-            }
+            **get_cookie_opts()
         }
         
         with YoutubeDL(ydl_opts) as ydl:
@@ -409,22 +464,20 @@ def download_worker(task_id: str, url: str, quality: str = None,
             
             output_template = f"tempfiles/{base_filename}.%(ext)s"
             ydl_opts = {
-                'js_runtimes': {'node': {}},
+                **get_yt_opts(),
                 'outtmpl': output_template,
                 'format': fmt_spec,
                 'merge_output_format': 'mp4',
                 'progress_hooks': [lambda d: progress_hook(d, task_id)],
                 'retries': 10,
                 'fragment_retries': 10,
-                'no_warnings': True,
-                'nocheckcertificate': True,
                 **cookie_opts,
             }
         
         elif format == "mp3":
             output_template = f"tempfiles/{base_filename}.%(ext)s"
             ydl_opts = {
-                'js_runtimes': {'node': {}},
+                **get_yt_opts(),
                 'outtmpl': output_template,
                 'format': 'bestaudio/best',
                 'postprocessors': [{
@@ -436,8 +489,6 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 'retries': 10,
                 'fragment_retries': 10,
                 'ignoreerrors': True,
-                'no_warnings': True,
-                'nocheckcertificate': True,
                 **cookie_opts,
             }
         else:
@@ -471,7 +522,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
             
             output_template = f"tempfiles/{base_filename}.%(ext)s"
             ydl_opts = {
-                'js_runtimes': {'node': {}},
+                **get_yt_opts(),
                 'outtmpl': output_template,
                 'format': format_spec,
                 'merge_output_format': 'mp4',
@@ -480,8 +531,6 @@ def download_worker(task_id: str, url: str, quality: str = None,
                 **cookie_opts,
                 'retries': 10,
                 'fragment_retries': 10,
-                'no_warnings': True,
-                'nocheckcertificate': True,
             }
         
         # Get list of files before download to detect new files

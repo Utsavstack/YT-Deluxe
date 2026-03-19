@@ -1,7 +1,12 @@
 FROM python:3.11-slim
 
-# Install ffmpeg (required for video merging and MP3 conversion)
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# Install ffmpeg (required for video merging and MP3 conversion) and nodejs for PO token generation
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    nodejs \
+    npm \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -10,8 +15,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Create downloads directory
-RUN mkdir -p downloads
+# Compile the token generator locally on container
+RUN git clone --single-branch --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git && \
+    cd bgutil-ytdlp-pot-provider/server && \
+    npm ci && \
+    npx tsc
+
+# Create downloads directory (fallback if not auto-generated)
+RUN mkdir -p tempfiles
 
 EXPOSE 10000
 

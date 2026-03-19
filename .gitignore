@@ -24,6 +24,7 @@ backend/cookies.txt
 backend/download_history.json
 backend/feedback.json
 backend/check_thumbnail.py
+backend/bgutil-ytdlp-pot-provider/
 
 
 # Test and diagnostic files

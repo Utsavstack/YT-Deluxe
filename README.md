@@ -114,6 +114,7 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 2. **WebSocket/Polling Progress**: Frontend seamlessly pulls download speed, ETA, and progress from the backend without heavy page reloads, showing a smooth in-app progress bar.
 3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, a hidden `<a download>` tag silently triggers the browser's native file saving window (no new tab redirects).
 4. **Auto-Cleanup**: A background threading daemon in Python automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
+5. **Anti-Bot Engine (PO Tokens)**: Deeply integrates a Node.js-based HTTP server inside the container alongside FastAPI that silently negotiates Proof-of-Origin limits with YouTube via mobile web API profiles, effectively avoiding `HTTP 403 Forbidden` and `429 Too Many Requests` bans globally.
 
 ---
 
