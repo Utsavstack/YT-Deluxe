@@ -86,18 +86,13 @@ def get_cookie_opts():
 
 def get_yt_opts():
   return {
-    'js_runtimes': {'node': {}},
     'extractor_args': {
-      'youtubepot-bgutilhttp': {
-        'base_url': ['http://127.0.0.1:4416']
-      },
       'youtube': {
-        'player_client': ['mweb', 'default'],
-        'formats': ['missing_pot']
+        'player_client': ['web', 'default'],
       }
     },
     'http_headers': {
-      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
     },
     'nocheckcertificate': True,
@@ -107,18 +102,13 @@ def get_yt_opts():
 
 def get_yt_search_opts():
   return {
-    'js_runtimes': {'node': {}},
     'extractor_args': {
-      'youtubepot-bgutilhttp': {
-        'base_url': ['http://127.0.0.1:4416']
-      },
       'youtube': {
-        'player_client': ['web_creator', 'default'],
-        'formats': ['missing_pot']
+        'player_client': ['web', 'default'],
       }
     },
     'http_headers': {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       'Accept-Language': 'en-US,en;q=0.9',
     },
     'nocheckcertificate': True,

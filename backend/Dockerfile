@@ -1,10 +1,9 @@
 FROM python:3.11-slim
 
-# Install ffmpeg (for video merging and MP3 conversion) and wget (for downloading binaries)
+# Install ffmpeg (for video merging and MP3 conversion) and wget (for downloading Rust binary)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     wget \
-    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,20 +14,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Download pre-compiled Rust PO Token provider binary
+# NOTE: No external yt-dlp plugin needed — yt-dlp 2026.3.17+ has built-in PO token support
+# The binary runs as HTTP server on port 4416, yt-dlp auto-detects it
 RUN wget -q -O /usr/local/bin/bgutil-pot \
     https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/bgutil-pot-linux-x86_64 && \
     chmod +x /usr/local/bin/bgutil-pot
 
-# Download and install the Rust PO Token provider's yt-dlp plugin
-RUN wget -q -O /tmp/pot-plugin.zip \
-    https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/bgutil-ytdlp-pot-provider-rs.zip && \
-    mkdir -p /app/yt_dlp_plugins/extractor && \
-    cd /tmp && unzip -o pot-plugin.zip -d pot-plugin && \
-    cp -r /tmp/pot-plugin/yt_dlp_plugins/extractor/*.py /app/yt_dlp_plugins/extractor/ && \
-    rm -rf /tmp/pot-plugin /tmp/pot-plugin.zip
-
-# Create downloads directory (fallback if not auto-generated)
-RUN mkdir -p tempfiles
+# Create required directories
+RUN mkdir -p tempfiles secrets_runtime
 
 EXPOSE 10000
 
