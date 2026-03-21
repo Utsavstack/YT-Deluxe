@@ -1,11 +1,10 @@
 FROM python:3.11-slim
 
-# Install ffmpeg (required for video merging and MP3 conversion) and nodejs for PO token generation
+# Install ffmpeg (for video merging and MP3 conversion) and wget (for downloading binaries)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
-    nodejs \
-    npm \
-    git \
+    wget \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,13 +14,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Compile the token generator locally on container
-RUN git clone --single-branch --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git && \
-    cd bgutil-ytdlp-pot-provider/server && \
-    npm ci && \
-    npx tsc && \
-    cd .. && \
-    rm -rf plugin yt_dlp_plugins
+# Download pre-compiled Rust PO Token provider binary
+RUN wget -q -O /usr/local/bin/bgutil-pot \
+    https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/bgutil-pot-linux-x86_64 && \
+    chmod +x /usr/local/bin/bgutil-pot
+
+# Download and install the Rust PO Token provider's yt-dlp plugin
+RUN wget -q -O /tmp/pot-plugin.zip \
+    https://github.com/jim60105/bgutil-ytdlp-pot-provider-rs/releases/latest/download/bgutil-ytdlp-pot-provider-rs.zip && \
+    mkdir -p /app/yt_dlp_plugins/extractor && \
+    cd /tmp && unzip -o pot-plugin.zip -d pot-plugin && \
+    cp -r /tmp/pot-plugin/yt_dlp_plugins/extractor/*.py /app/yt_dlp_plugins/extractor/ && \
+    rm -rf /tmp/pot-plugin /tmp/pot-plugin.zip
 
 # Create downloads directory (fallback if not auto-generated)
 RUN mkdir -p tempfiles

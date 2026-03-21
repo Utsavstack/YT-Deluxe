@@ -25,6 +25,7 @@ backend/download_history.json
 backend/feedback.json
 backend/check_thumbnail.py
 backend/bgutil-ytdlp-pot-provider/
+backend/secrets_runtime/
 temp_deploy_to_render.py
 
 

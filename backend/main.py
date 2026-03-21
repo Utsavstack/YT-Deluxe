@@ -20,13 +20,27 @@ app = FastAPI(title="YT Deluxe Backend")
 @app.on_event("startup")
 def startup_event():
   global bgutil_process
-  server_path = os.path.join(os.path.dirname(__file__), 'bgutil-ytdlp-pot-provider', 'server', 'build', 'main.js')
-  if os.path.exists(server_path):
+  # Try Rust binary first (Docker/Render), then fall back to Node.js (local dev)
+  rust_path = '/usr/local/bin/bgutil-pot'
+  node_path = os.path.join(os.path.dirname(__file__), 'bgutil-ytdlp-pot-provider', 'server', 'build', 'main.js')
+  
+  if os.path.exists(rust_path):
     try:
-      print("Starting PO Token Generator Server on port 4416...")
-      bgutil_process = subprocess.Popen(["node", server_path, "-p", "4416"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+      print("Starting PO Token Generator Server (Rust) on port 4416...")
+      bgutil_process = subprocess.Popen(
+        [rust_path, "server", "--host", "127.0.0.1", "--port", "4416"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+      )
     except Exception as e:
-      print(f"Failed to start bgutil token server: {e}")
+      print(f"Failed to start Rust bgutil token server: {e}")
+  elif os.path.exists(node_path):
+    try:
+      print("Starting PO Token Generator Server (Node.js) on port 4416...")
+      bgutil_process = subprocess.Popen(["node", node_path, "-p", "4416"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+      print(f"Failed to start Node.js bgutil token server: {e}")
+  else:
+    print("WARNING: No PO Token Generator found. YouTube may block requests.")
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -39,19 +53,35 @@ def shutdown_event():
 
 def get_cookie_opts():
   import base64
+  # Priority 1: Base64-encoded cookies from Render environment variable
   env_cookie_b64 = os.environ.get('YOUTUBE_COOKIES_BASE64')
-  env_cookie_path = 'tempfiles/youtube_cookies.txt'
+  # Use a separate folder that is NOT targeted by the 10-minute cleanup task
+  env_cookie_dir = 'secrets_runtime'
+  env_cookie_path = os.path.join(env_cookie_dir, 'youtube_cookies.txt')
+  
   if env_cookie_b64:
     try:
+      os.makedirs(env_cookie_dir, exist_ok=True)
       with open(env_cookie_path, 'w', encoding='utf-8') as f:
         f.write(base64.b64decode(env_cookie_b64).decode('utf-8'))
+      print(f"[cookies] Persisted Base64 cookies to {env_cookie_path}")
       return {'cookiefile': env_cookie_path}
     except Exception as e:
-      print(f"Failed to decode environment cookies: {e}")
+      print(f"[cookies] Failed to decode environment cookies: {e}")
 
+  # Priority 2: cookies.txt in backend directory
   cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
   if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 200:
+    print(f"[cookies] Using local cookies.txt ({os.path.getsize(cookie_path)} bytes)")
     return {'cookiefile': cookie_path}
+  
+  # Priority 3: cookies.txt in temp directory (user-exported)
+  temp_cookie_path = os.path.join(os.path.dirname(__file__), '..', 'temp', 'cookies.txt')
+  if os.path.exists(temp_cookie_path) and os.path.getsize(temp_cookie_path) >= 200:
+    print(f"[cookies] Using temp/cookies.txt ({os.path.getsize(temp_cookie_path)} bytes)")
+    return {'cookiefile': temp_cookie_path}
+  
+  print("[cookies] No cookies available — YouTube may block requests on cloud")
   return {}
 
 def get_yt_opts():
@@ -388,19 +418,7 @@ def download_video(
     return {"task_id": task_id, "message": "Download started successfully."}
   except Exception as e:
     return JSONResponse({"error": str(e)}, status_code=500)
-# Helper: build common cookie options for ytdlp ---
-def get_cookie_opts():
-  """
-  Returns the best available cookie source for yt-dlp.
-  Only uses a local cookies.txt file if it exists and is >2KB.
-  (We no longer use cookiesfrombrowser because it crashes yt-dlp when Chrome is open).
-  """
-  import os
-  cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
-  if os.path.exists(cookie_path) and os.path.getsize(cookie_path) >= 2048:
-    return {'cookiefile': cookie_path}
-
-  return {}
+# (duplicate get_cookie_opts removed — using the one at top of file)
 
 def schedule_deletion(filepath: str, delay: int = 600):
   def delete_task():
@@ -424,10 +442,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
     
     # Get video info first (needed for title and format metadata)
     ydl_opts_info = {
-      'js_runtimes': {'node': {}},
-      'quiet': True,
+      **get_yt_opts(),
       'skip_download': True,
-      'nocheckcertificate': True,
+      **get_cookie_opts(),
     }
     with YoutubeDL(ydl_opts_info) as ydl:
       info = ydl.extract_info(url, download=False)
