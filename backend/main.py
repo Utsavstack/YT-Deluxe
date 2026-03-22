@@ -68,6 +68,11 @@ def get_cookie_opts():
       return {'cookiefile': env_cookie_path}
     except Exception as e:
       print(f"[cookies] Failed to decode environment cookies: {e}")
+  
+  # Priority 1b: If the file already exists (e.g., copied manually for local testing)
+  if os.path.exists(env_cookie_path) and os.path.getsize(env_cookie_path) >= 200:
+    print(f"[cookies] Using existing secrets_runtime cookies ({os.path.getsize(env_cookie_path)} bytes)")
+    return {'cookiefile': env_cookie_path}
 
   # Priority 2: cookies.txt in backend directory
   cookie_path = os.path.join(os.path.dirname(__file__), 'cookies.txt')
