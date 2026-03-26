@@ -78,6 +78,21 @@ def wait_for_backend(timeout=30):
     return False
 
 
+class AppApi:
+    def read_clipboard(self):
+        try:
+            # Using PowerShell instead of ctypes to avoid GUI thread deadlocks 
+            # and hard crashes with pywebview on Edge Chromium.
+            import subprocess
+            out = subprocess.check_output(
+                ["powershell", "-command", "Get-Clipboard"],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            return out.decode("utf-8", errors="ignore").strip()
+        except Exception:
+            return ""
+
+
 def main():
     # ── Step 1: Start Backend ─────────────────────────────────────────────
     print("[YT Deluxe] Starting backend...")
@@ -109,9 +124,11 @@ def main():
     print(f"[YT Deluxe] Loading: {url}")
 
     # ── Step 3: Create Window ─────────────────────────────────────────────
+    api = AppApi()
     window = webview.create_window(
         title='YT Deluxe',
         url=url,
+        js_api=api,
         width=1280,
         height=800,
         min_size=(900, 600),
