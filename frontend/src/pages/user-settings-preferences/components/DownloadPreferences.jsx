@@ -7,7 +7,15 @@ import Button from '../../../components/ui/Button';
 
 
 const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
- const [downloadPrefs, setDownloadPrefs] = useState(preferences);
+ const [downloadPrefs, setDownloadPrefs] = useState(() => {
+  const savedPath = localStorage.getItem('ytdeluxe_download_path');
+  if (savedPath && (!preferences || !preferences.downloadPath)) {
+      return { ...preferences, downloadPath: savedPath };
+  }
+  return preferences || {};
+ });
+
+ const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
 
  const qualityOptions = [
   { value: '2160p', label: '4K (2160p)', description: 'Ultra HD quality' },
@@ -43,7 +51,12 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
  const handlePreferenceChange = (key, value) => {
   const updated = { ...downloadPrefs, [key]: value };
   setDownloadPrefs(updated);
-  onPreferencesChange(updated);
+  if (typeof onPreferencesChange === 'function') {
+   onPreferencesChange(updated);
+  }
+  if (key === 'downloadPath') {
+   localStorage.setItem('ytdeluxe_download_path', value);
+  }
  };
 
  return (
@@ -133,52 +146,54 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
      </div>
     </div>
    </div>
-   {/* Storage Location */}
-   <div className="glass-card p-6">
-    <div className="mb-4">
-     <h3 className="text-lg font-semibold text-foreground">Storage Location</h3>
-     <p className="text-sm text-muted-foreground">Choose where to save downloaded files</p>
-    </div>
-
-    <div className="space-y-4">
-     <div className="flex items-center space-x-3">
-      <Input
-       label="Download Folder"
-       value={downloadPrefs?.downloadPath}
-       onChange={(e) => handlePreferenceChange('downloadPath', e?.target?.value)}
-       className="flex-1"
-       placeholder="/Users/username/Downloads"
-      />
-      <Button
-       variant="outline"
-       iconName="FolderOpen"
-       className="mt-6"
-       onClick={() => {
-        // File picker logic would go here
-        console.log('Open folder picker');
-       }}
-      >
-       Browse
-      </Button>
+   {/* Storage Location - Desktop Only */}
+   {isDesktop && (
+    <div className="glass-card p-6">
+     <div className="mb-4">
+      <h3 className="text-lg font-semibold text-foreground">Storage Location</h3>
+      <p className="text-sm text-muted-foreground">Choose where to save downloaded files</p>
      </div>
 
-     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Checkbox
-       label="Create subfolders by channel"
-       description="Organize downloads by channel name"
-       checked={downloadPrefs?.createChannelFolders}
-       onChange={(e) => handlePreferenceChange('createChannelFolders', e?.target?.checked)}
-      />
+     <div className="space-y-4">
+      <div className="flex items-center space-x-3">
+       <Input
+        label="Download Folder"
+        value={downloadPrefs?.downloadPath || ''}
+        onChange={(e) => handlePreferenceChange('downloadPath', e?.target?.value)}
+        className="flex-1"
+        placeholder="/Users/username/Downloads"
+       />
+       <Button
+        variant="outline"
+        iconName="FolderOpen"
+        className="mt-6"
+        onClick={() => {
+         // File picker logic would go here
+         console.log('Open folder picker');
+        }}
+       >
+        Browse
+       </Button>
+      </div>
 
-      <Checkbox
-       label="Create subfolders by date"
-       description="Organize downloads by download date"
-       checked={downloadPrefs?.createDateFolders}
-       onChange={(e) => handlePreferenceChange('createDateFolders', e?.target?.checked)}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+       <Checkbox
+        label="Create subfolders by channel"
+        description="Organize downloads by channel name"
+        checked={downloadPrefs?.createChannelFolders}
+        onChange={(e) => handlePreferenceChange('createChannelFolders', e?.target?.checked)}
+       />
+
+       <Checkbox
+        label="Create subfolders by date"
+        description="Organize downloads by download date"
+        checked={downloadPrefs?.createDateFolders}
+        onChange={(e) => handlePreferenceChange('createDateFolders', e?.target?.checked)}
+       />
+      </div>
      </div>
     </div>
-   </div>
+   )}
    {/* Advanced Options */}
    <div className="glass-card p-6">
     <div className="mb-4">

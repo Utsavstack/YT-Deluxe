@@ -27,6 +27,7 @@ const DownloadHistoryManagement = () => {
  const [isLoading, setIsLoading] = useState(false);
  const [downloadHistory, setDownloadHistory] = useState([]);
  const [error, setError] = useState(null);
+ const [storageStats, setStorageStats] = useState({ totalSize: 0, availableSpace: 0, itemCount: 0 });
 
  useEffect(() => {
   loadDownloadHistory();
@@ -37,11 +38,16 @@ const DownloadHistoryManagement = () => {
   setError(null);
   try {
    const response = await YTDeluxeAPI.getDownloadHistory();
-   if (response.history) {
+   
+   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+   
+   if (isDesktop && response.history) {
     // Transform backend data to match UI expectations
     const transformed = response.history.map((item, idx) => ({
      id: item.id || idx,
      title: item.title,
+     filename: item.filename,
+     filepath: item.filepath,
      channel: item.channel || 'Unknown Channel',
      thumbnail: item.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=225&fit=crop',
      duration: item.duration || 0,
@@ -53,12 +59,34 @@ const DownloadHistoryManagement = () => {
      type: 'all',
     }));
     setDownloadHistory(transformed);
-   } else {
-    setDownloadHistory([]);
+    
+    // Fetch Storage Space
+    const dlPath = localStorage.getItem('ytdeluxe_download_path');
+    const storageData = await YTDeluxeAPI.getStorageInfo(dlPath);
+    if (storageData) {
+     const totalSize = transformed.reduce((sum, item) => sum + item.fileSize, 0);
+     setStorageStats({
+       totalSize: totalSize,
+       availableSpace: storageData.free,
+       itemCount: transformed.length
+     });
+    }
+   } else if (!isDesktop) {
+    // Web Mode: Use local storage to prevent all web users from sharing the server's history database
+    const localHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
+    setDownloadHistory(localHistory.map(item => ({
+      ...item,
+      downloadDate: new Date(item.downloadDate || Date.now())
+    })));
+    
+    // Mock Web Storage space since browser cannot read system storage
+    const totalSize = localHistory.reduce((sum, item) => sum + (item.fileSize || 0), 0);
+    setStorageStats({ totalSize: totalSize, availableSpace: 10737418240, itemCount: localHistory.length });
    }
   } catch (error) {
    setError('Failed to load download history.');
    setDownloadHistory([]);
+   setStorageStats({ totalSize: 0, availableSpace: 0, itemCount: 0 });
   } finally {
    setIsLoading(false);
   }
@@ -149,18 +177,7 @@ const DownloadHistoryManagement = () => {
   bookmarks: 0
  }), [downloadHistory]);
 
- // Calculate storage usage
- const storageStats = useMemo(() => {
-  const totalSize = downloadHistory?.reduce((sum, item) => sum + item?.fileSize, 0);
-  const availableSpace = 10737418240; // 10GB mock available space
-  
-  return {
-   totalSize,
-   availableSpace,
-   itemCount: downloadHistory?.length
-  };
- }, [downloadHistory]);
-
+ // Storage logic moved to API directly
  const handleItemSelect = (itemId) => {
   setSelectedItems(prev => {
    const isSelected = prev?.some(item => item?.id === itemId);
@@ -206,9 +223,23 @@ const DownloadHistoryManagement = () => {
   });
  };
 
- const handleOpenLocation = (item) => {
+ const handleOpenLocation = async (item) => {
+  const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+  if (!isDesktop) {
+   alert("History downloaded to your browser's default download folder.");
+   return;
+  }
+  
   console.log('Opening file location for:', item?.title);
-  // Implement file location opening logic
+  try {
+    await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/desktop/open-file`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: item.filename, filepath: item.filepath })
+    });
+  } catch (e) {
+    console.error(e);
+  }
  };
 
  const handleShare = (item) => {
@@ -241,11 +272,28 @@ const DownloadHistoryManagement = () => {
  const handleConfirmAction = async () => {
   setIsLoading(true);
   try {
-   console.log('Deleting items:', confirmModal?.data);
-   // Implement deletion logic
-   await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate deletion
+   const idsToDelete = confirmModal.data.map(item => item.id);
+   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+   
+   if (isDesktop) {
+     if (idsToDelete.length === 1) {
+         await YTDeluxeAPI.deleteHistoryItem(idsToDelete[0]);
+     } else if (idsToDelete.length > 1) {
+         await YTDeluxeAPI.batchDeleteHistory(idsToDelete);
+     }
+   } else {
+     // Web Mode: Delete from local storage
+     const currentHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
+     const remaining = currentHistory.filter(h => !idsToDelete.includes(h.id));
+     localStorage.setItem('ytdeluxe_web_history', JSON.stringify(remaining));
+   }
+   
+   await loadDownloadHistory();
+   
    setSelectedItems([]);
    setConfirmModal({ isOpen: false, type: '', data: null });
+  } catch (error) {
+   setError('Failed to delete items.');
   } finally {
    setIsLoading(false);
   }

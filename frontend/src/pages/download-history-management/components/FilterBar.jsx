@@ -63,7 +63,7 @@ const FilterBar = ({
  };
 
  return (
-  <div className="glass-card mb-6">
+  <div className="glass-card mb-6" style={{ position: "relative", zIndex: 100 }}>
    <div className="p-4">
     {/* Search and Sort Row */}
     <div className="flex flex-col lg:flex-row gap-4 mb-4">

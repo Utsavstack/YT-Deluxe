@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import NotFound from "pages/NotFound";
@@ -10,9 +10,12 @@ import UserSettingsPreferences from './pages/user-settings-preferences';
 import UserAuthentication from './pages/user-authentication';
 import VideoDetailsDownload from './pages/video-details-download';
 
+// Use HashRouter for desktop (file://) to prevent pushState origin errors that crash the app
+const AppRouter = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+
 const Routes = () => {
  return (
-  <BrowserRouter>
+  <AppRouter>
    <ErrorBoundary>
    <ScrollToTop />
    <RouterRoutes>
@@ -27,7 +30,7 @@ const Routes = () => {
     <Route path="*" element={<NotFound />} />
    </RouterRoutes>
    </ErrorBoundary>
-  </BrowserRouter>
+  </AppRouter>
  );
 };
 

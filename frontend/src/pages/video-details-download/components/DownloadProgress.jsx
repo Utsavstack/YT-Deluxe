@@ -172,8 +172,16 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {
             className="w-6 h-6"
             onClick={() => {
              if (download?.filename) {
-              const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/downloads/${encodeURIComponent(download.filename)}`;
-              window.location.assign(downloadUrl);
+              const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+              if (isDesktop) {
+               fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/desktop/open-file`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: download.filename, filepath: download.filepath })
+               }).catch(e => console.error(e));
+              } else {
+               alert("File downloaded to your browser's default download folder. Please check your browser's downloads.");
+              }
              }
             }}
            >

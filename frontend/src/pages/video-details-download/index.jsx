@@ -124,26 +124,6 @@ const VideoDetailsDownload = () => {
  };
 
  const handleDownload = async (downloadConfig) => {
-  // Quick handle for thumbnail download to match HomeSearchDashboard
-  if (downloadConfig?.type === 'thumbnail') {
-   try {
-    const response = await fetch(videoData.thumbnail);
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = `${videoData.title || 'thumbnail'}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-   } catch (e) {
-    // Fallback
-    window.open(videoData.thumbnail, '_blank');
-   }
-   return;
-  }
 
   const newDownload = {
    id: Date.now() + Math.random(),
@@ -171,7 +151,8 @@ const VideoDetailsDownload = () => {
     format: downloadConfig.format,
     rename: downloadConfig.filename,
     trim_start: trimSettings?.startTime,
-    trim_end: trimSettings?.endTime
+    trim_end: trimSettings?.endTime,
+    type: downloadConfig.type
    };
 
    // Start download via API
@@ -280,7 +261,8 @@ const VideoDetailsDownload = () => {
        speed: progress.speed || 0,
        timeRemaining: progress.eta || 0,
        downloaded_bytes: progress.downloaded_bytes || 0,
-       total_bytes: progress.total_bytes || 0
+       total_bytes: progress.total_bytes || 0,
+       filepath: progress.filepath || download.filepath
       }
       : download
     ));
@@ -291,17 +273,47 @@ const VideoDetailsDownload = () => {
      setIsDownloading(false);
 
      if (progress.status === 'completed') {
-      // Update the download with 100% progress
-      setDownloads(prev => prev.map(download =>
-       download.id === downloadId
-        ? {
-         ...download,
-         progress: 100,
-         status: 'completed',
-         completedAt: new Date().toISOString()
-        }
-        : download
-      ));
+       // Update the download with 100% progress
+       setDownloads(prev => {
+         const newDownloads = prev.map(download =>
+          download.id === downloadId
+           ? {
+            ...download,
+            progress: 100,
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            filepath: progress.filepath || download.filepath
+           }
+           : download
+         );
+         
+         const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+         if (!isDesktop) {
+           const completedDownload = newDownloads.find(d => d.id === downloadId);
+           if (completedDownload) {
+             const historyItem = {
+               id: completedDownload.id,
+               title: completedDownload.title || 'Downloaded Media',
+               filename: progress.filename || completedDownload.filename,
+               filepath: progress.filepath,
+               channel: completedDownload.channel || 'Unknown Channel',
+               thumbnail: completedDownload.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=225&fit=crop',
+               duration: completedDownload.duration || 0,
+               format: completedDownload.format || 'mp4',
+               quality: completedDownload.quality || 'Auto',
+               fileSize: progress.total_bytes || 0,
+               downloadDate: new Date().toISOString(),
+               type: completedDownload.type || 'video'
+             };
+             const currentHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
+             if (!currentHistory.some(h => h.id === historyItem.id)) {
+               currentHistory.unshift(historyItem);
+               localStorage.setItem('ytdeluxe_web_history', JSON.stringify(currentHistory));
+             }
+           }
+         }
+         return newDownloads;
+       });
 
       // Show success notification
       if (Notification.permission === 'granted') {
@@ -319,18 +331,23 @@ const VideoDetailsDownload = () => {
 
       // Actually trigger the browser download by navigating to the file URL
       if (progress.filename) {
-       try {
-        // Create hidden anchor to download silently without redirecting main page
-        const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/tempfiles/${encodeURIComponent(progress.filename)}`;
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = downloadUrl;
-        a.download = progress.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-       } catch (e) {
-        console.error("Failed to trigger download", e);
+       if (window.location.protocol !== 'file:') {
+        try {
+         // Create hidden anchor to download silently without redirecting main page
+         const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/tempfiles/${encodeURIComponent(progress.filename)}`;
+         const a = document.createElement('a');
+         a.style.display = 'none';
+         a.href = downloadUrl;
+         a.download = progress.filename;
+         document.body.appendChild(a);
+         a.click();
+         document.body.removeChild(a);
+        } catch (e) {
+         console.error("Failed to trigger download", e);
+        }
+       } else {
+        // In PyInstaller Desktop, backend successfully places it into native 'Downloads' folder already!
+        console.log("Desktop Native DL skipped browser fall-through.");
        }
       }
      }

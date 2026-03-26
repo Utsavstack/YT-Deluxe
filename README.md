@@ -1,203 +1,313 @@
 # YT Deluxe
 
-A full-stack, feature-rich YouTube downloader and media management web application with a modern glassmorphism UI. Built with a cutting-edge React frontend and a robust FastAPI backend, YT Deluxe empowers users to search, preview, and download YouTube videos and audio with advanced options.
+[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+[![pywebview](https://img.shields.io/badge/pywebview-FFD43B?style=for-the-badge&logo=python&logoColor=blue)](https://pywebview.flowrl.com)
+[![yt-dlp](https://img.shields.io/github/v/release/yt-dlp/yt-dlp?label=yt-dlp&logo=youtube&logoColor=red&style=for-the-badge)](https://github.com/yt-dlp/yt-dlp)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
+[![PO Token Provider](https://img.shields.io/github/v/release/Brainicism/bgutil-ytdlp-pot-provider?label=PO%20Token%20Provider&style=for-the-badge)](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
+
+**YT Deluxe** is a Free & OpenSource, Full-stack, Feature-rich YouTube Downloader and Media Management Web Application with a modern glassmorphism UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to search, preview, and download YouTube videos and audio with advanced options.
+
+It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Hosted **Web App** (browser-based) or as a Native **Windows App** (.exe), sharing the exact same codebase.
 
 ---
 
-## Key Features
+## 1. Features Overview
 
-### Frontend
+### 1.1 Frontend (Modern UI)
 
-- **React 18**: Modern, concurrent UI with hooks and functional components.
-- **Vite**: Ultra-fast development and build tool.
-- **Redux Toolkit**: Simplified, scalable state management.
-- **TailwindCSS**: Utility-first, highly customizable styling.
-- **React Router v6**: Seamless, declarative routing.
-- **D3.js & Recharts**: Powerful, interactive data visualizations.
-- **React Hook Form**: Efficient, scalable form management.
-- **Framer Motion**: Smooth, delightful UI animations.
-- **Jest & React Testing Library**: Robust testing setup.
-- **Responsive Design**: Mobile-first, fluid layouts.
+- **React 18 & Vite**: Ultra-fast, responsive UI leveraging modern concurrent rendering and hooks.
+- **Glassmorphism Design**: High-end, transparent, and minimalist styling via TailwindCSS.
+- **Dynamic Mode Detection**: React automatically switches UI features (like local paths) based on the `isDesktop` environment flag.
+- **Framer Motion**: Smooth, high-performance UI animations for transitions and state changes.
+- **Lucide Icons**: Clean, light-weight, and professional-grade icon library.
 
-### Backend
+### 1.2 Backend (Advanced Engine)
 
-- **FastAPI**: High-performance, async Python API.
-- **yt-dlp**: Advanced YouTube video/audio extraction.
-- **FFmpeg**: Video/audio processing and trimming.
-- **YouTube Search**: Search videos by keyword with smart suggestions.
-- **Video Details**: Get comprehensive video information and available formats.
-- **Download Management**: Download videos/audio with quality/format options.
-- **Video Trimming**: Trim videos using ffmpeg.
-- **Batch Downloads**: Batch download endpoint (disabled on free tier to conserve bandwidth).
-- **Progress Tracking**: Real-time download progress UI with seamless background browser native download handling.
-- **Download History**: Local storage of download history.
-- **File Renaming**: Custom filename support.
-- **Format Conversion**: MP4, MP3, and other format support.
-- **CORS Enabled**: Secure frontend-backend communication.
+- **FastAPI Core**: Blazing fast asynchronous processing with comprehensive endpoint management.
+- **Advanced yt-dlp Extractor**: Robust video/audio fetching with **PO Token** (Proof of Origin) support to bypass bot detection.
+- **Integrated FFmpeg Merge**: Seamlessly merges high-res (1080p+) DASH video/audio streams into a single high-quality file.
+- **Native Download Manager**: On Windows Desktop, files are natively routed to your `Downloads` folder, with an "Open Folder" feature.
+- **Precision Trimming**: Trim specific segments from your downloads with no quality re-encoding loss.
+- **Progress Tracking**: Real-time download speed, percentage, and ETA polling.
+- **History Persistence**: User downloads are logged and persist across sessions (JSON on Desktop, LocalStorage on Web).
+- **Auto-Cleanup Daemon**: Server-side temp files are wiped after delivery to ensure data privacy and prevent bloating.
+- **CORS Enabled**: Secure communication between frontend and backend.
 
 ---
 
-## Demo
+## 2. Demo
 
 > _Add screenshots or a GIF here to showcase the UI and features!_
 
 ---
 
-## Project Structure
+## 3. Project Structure
 
-```
+```text
 yt-deluxe/
 ├── .env            # Environment variables
 ├── .gitignore         # Git ignore rules
-├── .nvmrc           # Node version config
 ├── README.md          # This file
 │
 ├── frontend/          # React app (Vite + TailwindCSS)
-│  ├── index.html       # HTML entry point
 │  ├── package.json      # NPM dependencies & scripts
 │  ├── vite.config.mjs     # Vite build config
-│  ├── tailwind.config.js   # Tailwind theme & plugins
-│  ├── postcss.config.js    # PostCSS config
-│  ├── jsconfig.json      # JS path aliases
-│  ├── public/         # Static assets
-│  │  ├── assets/       # Public assets
-│  │  ├── favicon.ico
-│  │  ├── manifest.json
-│  │  └── robots.txt
 │  └── src/
-│    ├── index.jsx      # Entry point
-│    ├── App.jsx       # Main app component
-│    ├── Routes.jsx     # App routes
-│    ├── components/     # Reusable UI components
-│    │  ├── AppIcon.jsx
-│    │  ├── AppImage.jsx
-│    │  ├── ErrorBoundary.jsx
-│    │  ├── ScrollToTop.jsx
-│    │  └── ui/       # Core UI components
-│    │    ├── Button.jsx
-│    │    ├── Checkbox.jsx
-│    │    ├── Header.jsx
-│    │    ├── Input.jsx
-│    │    ├── ProgressNotification.jsx
-│    │    └── Select.jsx
-│    ├── pages/       # Feature pages
-│    │  ├── NotFound.jsx
-│    │  ├── home-search-dashboard/
-│    │  ├── video-details-download/
-│    │  ├── batch-download-manager/
-│    │  ├── download-history-management/
-│    │  ├── user-authentication/
-│    │  └── user-settings-preferences/
-│    ├── styles/       # Global styles & assets
-│    │  ├── index.css
-│    │  ├── tailwind.css
-│    │  └── YT-Deluxe_logo.png
-│    └── utils/       # Utility functions
-│      ├── api.js     # API client
-│      └── cn.js      # Classname helper
+│    ├── pages/       # Core UI (Search, Details, History, Settings)
+│    ├── components/     # Reusable UI parts
+│    └── utils/api.js    # Backend communication client
 │
-└── backend/          # FastAPI backend
-  ├── main.py         # API entry point (all endpoints)
-  ├── requirements.txt    # Python dependencies
-  ├── cookies.txt       # YouTube auth cookies
-  ├── tempfiles/       # Auto-deleting download processing directory
-  ├── download_history.json  # Download history (auto-generated)
-  └── feedback.json      # User feedback (auto-generated)
+├── backend/          # FastAPI application
+│  ├── main.py         # Routes, FFmpeg execution, Background Tasks
+│  ├── requirements.txt    # Python module dependencies
+│  └── tempfiles/       # Ephemeral processing directory
+│
+└── desktop/          # Native Windows Wrappers
+   ├── launcher.py       # Spawns Backend & PyWebView window
+   ├── build.spec       # PyInstaller build config
+   └── installer/       # Inno Setup 6 Distribution Scripts
+       └── setup.iss     # Builds the final .exe Windows Installer
 ```
 
 ---
 
-## Download Architecture
+## 4. Architecture & Workflows
 
-The application uses a sophisticated **Server-Merged Tempfile Architecture** to ensure the smoothest user experience without browser redirects:
+### 4.1 Unified Download Flow (yt-dlp to User Output)
+
+_How a video converts from a YouTube URL into a file on your device._
+
+```mermaid
+flowchart TD
+    UI[User Clicks Download] --> API[Backend API Receives Request]
+    API --> YTDLP[yt-dlp fetches Metadata & Streams]
+    
+    YTDLP -- Resolution <= 720p --> Stream[Direct Single Stream File]
+    YTDLP -- Resolution >= 1080p / Trimming --> Split[Separate Video & Audio Streams]
+    
+    Split --> FFMPEG[FFmpeg Processes & Merges Streams]
+    FFMPEG --> Temp[Temporary Multiplexed .mp4/.mp3 File]
+    Stream --> Temp
+    
+    Temp --> Output{Environment Check \n isDesktop flag}
+    Output -- Web App Mode --> Web[Browser Triggers Download \n File Saves to Default Downloads]
+    Output -- Windows Desktop Mode --> PC[File Moves to Local \n YT Deluxe Downloads/Videos]
+```
+
+**Detailed Step-by-Step Flow Explanation:**
+
+1. **Request Initiation**: When a user selects a format and clicks Download, the React frontend sends a `POST` request to the `/api/download` endpoint with the video URL and selected quality parameters.
+2. **Metadata Extraction**: The FastAPI backend invokes `yt-dlp` to fetch metadata. If a "PO Token" is required to bypass bot detection, it is automatically generated and injected into the request.
+3. **Stream Selection Logic**:
+   - **Standard Quality (<= 720p)**: YouTube provides these as "progressive" streams (Video and Audio combined). The app downloads this as a single coherent file directly to the temporary processing directory.
+   - **High Quality (>= 1080p) & MP3**: YouTube serves these as separate "DASH" streams. The background task downloads the high-res video (without audio) and the high-bitrate audio (without video) as two distinct temporary files.
+4. **Processing & Merging (FFmpeg)**:
+   - If streams were split (High Quality), `FFmpeg` is automatically triggered to multiplex (merge) the video and audio into a single `.mp4` container.
+   - If "Trimming" was requested, `FFmpeg` cuts the file at the specified `start` and `end` timestamps without re-encoding when possible, ensuring zero quality loss.
+5. **Environment Check (`isDesktop` Flag)**:
+   - **Web Mode**: Once the file is ready in the `tempfiles/` folder, the backend returns a success status. The frontend then uses a hidden `<a>` tag to trigger a native browser download, saving the file to the user's default browser downloads folder.
+   - **Desktop Mode**: The `isDesktop` flag tells the backend to handle the file writes natively. The file is downloaded directly to the user's local `YT Deluxe Downloads/` subdirectories (Videos, Music, or Thumbnails) instead of a temporary folder. The user can then click "Open in Explorer" in the UI to trigger a background API call that natively highlights the file in Windows Explorer.
+6. **Auto-Cleanup**: After the user receives the file, a self-destruct timer wipes the file from the server's temporary storage to keep it lightweight.
+
+---
+
+### 4.2 Download Architecture Details
+
+The application uses a sophisticated **Server-Merged Tempfile Architecture** to ensure the smoothest user experience:
+
 1. **Background Tasks**: All extraction (including `<720p` progressive and `1080p+` DASH formats) occurs in a robust background worker inside the FastAPI backend.
 2. **WebSocket/Polling Progress**: Frontend seamlessly pulls download speed, ETA, and progress from the backend without heavy page reloads, showing a smooth in-app progress bar.
-3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, a hidden `<a download>` tag silently triggers the browser's native file saving window (no new tab redirects).
-4. **Auto-Cleanup**: A background threading daemon in Python automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
-5. **Anti-Bot Engine (PO Tokens)**: Deeply integrates a Node.js-based HTTP server inside the container alongside FastAPI that silently negotiates Proof-of-Origin limits with YouTube via mobile web API profiles, effectively avoiding `HTTP 403 Forbidden` and `429 Too Many Requests` bans globally.
+3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, the UI assesses the `{Environment Check}` via the `isDesktop` flag.
+    - **Web Form**: A hidden `<a download>` tag silently triggers the browser's native file saving window.
+    - **Desktop Form**: FastAPI natively saves the file directly to your Custom Download Directory. An "Open Folder" button in the UI can execute a foreground Windows Explorer window to highlight the file.
+4. **Auto-Cleanup**: A background threading daemon automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
+5. **Anti-Bot Engine (PO Tokens)**: Deeply integrates a Node.js-based HTTP server inside the container alongside FastAPI that silently negotiates Proof-of-Origin limits with YouTube via mobile web profiles, effectively avoiding `HTTP 403 Forbidden` bans.
+6. **Hybrid Architecture (`isDesktop`)**: Automatically detects if it's running in a browser or as an installed Windows app. This single flag dictates the **{Environment Check}** step in the workflow — altering features (like hiding Storage Settings on the Web) seamlessly.
+7. **Hybrid Storage & History Handling**:
+   - `tempfiles/`: Used internally by the backend for processing FFmpeg merges.
+   - `localStorage`: Fast, isolated history storage specifically for Web deployments.
+   - `~/.yt-deluxe/`: Persistent local JSON for Desktop installations.
+
+### 4.3 End-to-End System Structure
+
+_How the entire platform communicates during a download lifecycle._
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant YouTube (yt-dlp)
+    
+    User->>Frontend: Submit URL
+    Frontend->>Backend: Request Download Status
+    Backend->>YouTube: Validate URL & Fetch Formats
+    YouTube-->>Backend: Return Available Audio/Video
+    Backend-->>Frontend: Send Formats to UI
+    User->>Frontend: Select 1080p & Hit Download
+    Frontend->>Backend: POST /api/download
+    Backend-->>Frontend: Return Progress Tracking ID
+    Backend->>YouTube: Download Raw Streams to Temp Folder
+    Backend->>Backend: FFmpeg Merges Audio/Video
+    Backend-->>Frontend: Progress Reaches 100%
+    Frontend->>User: Deliver Media File
+```
+
+**End-to-End Sequence Breakdown:**
+
+1. **Discovery**: The user enters a search term or URL. The frontend calls the backend which uses `yt-dlp` to fetch all available metadata (resolutions, formats, thumbnails).
+2. **Configuration**: The backend sends the available formats back to the UI. The user selects their desired quality (e.g., 1080p MP4) and optional settings like "Trimming".
+3. **Task Initiation**: Clicking "Download" sends a `POST` request. The backend initializes a `Background Task`, generates a unique `task_id`, and returns it immediately to the frontend.
+4. **Active Processing**: While the backend is busy downloading and merging streams using FFmpeg, the frontend uses the `task_id` to poll for real-time progress updates.
+5. **Final Delivery**: Once progress reaches 100%, the backend prepares the final file. The frontend then triggers the final download/move logic based on the detected environment.
 
 ---
 
-## Getting Started
+### 4.4 Hosted Web Application Architecture
 
-### Prerequisites
+_How the platform operates when hosted on cloud servers._
 
-- **nvm**: 1.2.2
-- **Node.js**: v20.20.0 (LTS)
-- **npm**: (bundled with Node.js)
-- **Python**: 3.11+ (3.8+ for local dev)
-- **FFmpeg**: Required for video/audio processing
-- **Docker**: Required for Render deployment
+```mermaid
+flowchart LR
+    subgraph Client Browser
+        UI[React Frontend]
+        Local[localStorage / History]
+    end
+    
+    subgraph Cloud Server Infrastructure
+        API[FastAPI Backend]
+        Temp[Volatile tempfiles/ Dir]
+        YTDLP[yt-dlp + FFmpeg Core]
+    end
+    
+    UI <--> |API Requests / Polling| API
+    API --> YTDLP
+    YTDLP --> Temp
+    Temp -- Final Media Stream --> UI
+    UI -- Log Action --> Local
+```
 
----
+**Web Deployment Workflow:**
 
-## Tech Stack & Dependencies
-
-### Frontend Dependencies
-
-| Package | Version | Purpose |
-|---|---|---|
-| react | ^18.2.0 | UI library |
-| react-dom | ^18.2.0 | React DOM renderer |
-| react-router-dom | 6.0.2 | Client-side routing |
-| @reduxjs/toolkit | ^2.6.1 | State management |
-| redux | ^5.0.1 | State container |
-| axios | ^1.8.4 | HTTP client |
-| framer-motion | ^10.16.4 | UI animations |
-| d3 | ^7.9.0 | Data visualization |
-| recharts | ^2.15.2 | Chart components |
-| react-hook-form | ^7.55.0 | Form handling |
-| react-helmet | ^6.1.0 | Document head manager |
-| lucide-react | ^0.484.0 | Icon library |
-| clsx | ^2.1.1 | Classname utility |
-| class-variance-authority | ^0.7.1 | Component variants |
-| tailwind-merge | ^3.3.1 | Tailwind class merging |
-| date-fns | ^4.1.0 | Date utilities |
-
-### Frontend Dev Dependencies
-
-| Package | Version | Purpose |
-|---|---|---|
-| vite | ^6.4.1 | Build tool |
-| @vitejs/plugin-react | ^4.7.0 | React plugin for Vite |
-| tailwindcss | 3.4.6 | Utility-first CSS |
-| autoprefixer | 10.4.2 | CSS vendor prefixing |
-| postcss | ^8.5.6 | CSS transformations |
-| @tailwindcss/typography | ^0.5.16 | Typography plugin |
-| @tailwindcss/forms | ^0.5.7 | Form styles plugin |
-| @tailwindcss/aspect-ratio | ^0.4.2 | Aspect ratio plugin |
-| @tailwindcss/container-queries | ^0.1.1 | Container queries |
-| tailwindcss-animate | ^1.0.7 | Animation utilities |
-| tailwindcss-fluid-type | ^2.0.7 | Fluid typography |
-| tailwindcss-elevation | ^2.0.0 | Elevation/shadow utilities |
-
-### Backend Dependencies
-
-| Package | Version | Purpose |
-|---|---|---|
-| fastapi | 0.133.0 | High-performance async API |
-| uvicorn[standard] | 0.41.0 | ASGI server |
-| yt-dlp | >=2026.2.21 | YouTube video/audio extraction |
-| bgutil-ytdlp-pot-provider | latest | Automatic PO token generation |
-| python-multipart | 0.0.22 | Form data parsing |
-| aiofiles | 25.1.0 | Async file operations |
-| requests | 2.32.5 | HTTP requests (video streaming) |
+- **Client Layer**: The React frontend is served as static assets. It uses `localStorage` for local persistence of history and settings, ensuring that user data stays private and localized to their browser.
+- **API Layer**: The FastAPI backend handles heavy lifting. It must be hosted on a service that supports persistent or scale-to-zero compute with `FFmpeg` installed.
+- **Volatile Storage**: The `tempfiles/` directory acts as a high-speed workspace for stream merging. Files here are ephemeral and auto-deleted after 10 minutes to maintain server health.
+- **Streaming**: The final file is streamed back to the user via an HTTP `FileResponse`, allowing the browser to handle the bitstream as a standard file download.
 
 ---
 
-### Frontend Setup
+### 4.5 Native Windows Desktop Architecture
+
+_How the platform operates when installed locally as an .exe via the Launcher._
+
+```mermaid
+flowchart TD
+    subgraph User PC
+        Exe[YT-Deluxe-Setup.exe]
+        Launcher[launcher.py Spawns Processes]
+        WebView[PyWebView Chromium Window]
+        API[Locally Bundled Backend server]
+        
+        Disk[(YT Deluxe Downloads / \n Videos, Music, Thumbnails)]
+        Hist[(~/.yt-deluxe/download_history.json)]
+    end
+    
+    Exe --> |Installs| Launcher
+    Launcher --> |Starts Background| API
+    Launcher --> |Opens Foreground| WebView
+    WebView <--> |Localhost Requests| API
+    API -- Saves Raw Files --> Disk
+    API -- Read/Writes --> Hist
+```
+
+**Desktop Integration Workflow:**
+
+- **Backend Engine**: The localized `main.exe` (FastAPI) runs as a background process on the user's PC, allowing for extremely low-latency communication.
+- **Frontend Container**: `pywebview` acts as a dedicated application window (powered by WebView2), providing a high-performance interface without needing a separate browser tab.
+- **Deep OS Access**:
+  - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
+  - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
+- **One-Click Launch**: The `launcher.py` entry point ensures that both the server and the UI window open and close together gracefully.
+
+---
+
+## 5. Installation and Setup (Local Development)
+
+Follow this setup to run both servers (React + FastAPI) locally on any development machine.
+
+### 5.1 Frontend Dependencies
+
+| Package | Version | Purpose |
+|---|---|---|
+| react | `^18.2.0` | UI library |
+| react-router-dom | `6.0.2` | Client-side routing |
+| @reduxjs/toolkit | `^2.6.1` | State management |
+| tailwindcss | `3.4.6` | Utility-first CSS |
+| framer-motion | `^10.16.4` | UI animations |
+| axios | `^1.8.4` | Backend API communication |
+
+### 5.2 Backend Dependencies
+
+| Package | Version | Purpose |
+|---|---|---|
+| fastapi | `0.133.0` | High-performance async API |
+| uvicorn[standard] | `0.41.0` | ASGI server |
+| yt-dlp | `>=2026.3.17` | YouTube video/audio extraction |
+| ffmpeg | `>=2025-09-25` | Video merging and MP3 conversion |
+| bgutil-pot-provider | `latest` | Automatic PO token generation |
+| requests | `2.32.5` | HTTP requests & Streaming |
+| python-multipart | `0.0.22` | Form-data parsing for FastAPI |
+| aiofiles | `25.1.0` | Async file operations |
+
+### 5.3 Desktop Dependencies
+
+| Package | Version | Purpose |
+|---|---|---|
+| pywebview | `>=4.4.1` | Native OS window encapsulation (Chromium Edge) |
+| pyinstaller | `>=6.4.0` | Bundling Python application to `.exe` |
+
+### 5.4 Prerequisites
+
+- **Node.js**: `v18 or LTS`
+- **Python**: `3.10+ (Tested on 3.13)`
+- **yt-dlp** `>=2026.3.17 (keep as soon as possible updated)` _for YouTube Downloads_
+
+- **FFmpeg**: `>=2025-09-25 (keep as soon as possible updated)` _for Merging Videos_
+
+### 5.5 Frontend Setup (Local)
+
+Open your first terminal window:
 
 ```bash
 cd frontend
 npm install
-npm run dev     # or: npm start
+npm run dev     # Starts Vite Server on http://localhost:5848
 ```
 
-### Backend Setup
+#### Frontend Files Structure
+
+```text
+├── frontend/          # React app (Vite + TailwindCSS)
+│  ├── package.json      # NPM dependencies & scripts
+│  ├── vite.config.mjs     # Vite build config
+│  └── src/
+│    ├── pages/       # Core UI (Search, Details, History, Settings)
+│    ├── components/     # Reusable UI parts
+│    └── utils/api.js    # Backend communication client
+```
+
+### 5.6 Backend Setup (Local)
+
+Open a second terminal window:
 
 ```bash
 cd backend
 python -m venv .venv
+
 # Activate the venv:
 # Windows:
 .venv\Scripts\activate
@@ -205,85 +315,108 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-# Make sure FFmpeg is installed and in your PATH
+
+# Make sure FFmpeg is installed and added to your System's Environment Variables PATH
 # Install FFmpeg:
-#  Windows: Download from https://ffmpeg.org/download.html
-#  macOS: brew install ffmpeg
-#  Ubuntu/Debian: sudo apt install ffmpeg
+# Windows: Download from https://ffmpeg.org/download.html OR
+# https://www.gyan.dev/ffmpeg/builds/
+# macOS: brew install ffmpeg
+# Ubuntu/Debian: sudo apt install ffmpeg
+
+# Starts FastAPI Dev server on http://localhost:8000
 uvicorn main:app --reload  # Dev mode
-# or for production:
+
+# Check the API documentation at /docs
+http://localhost:8000/docs
+
+# for production:
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
----
+### Backend Files Structure
 
-## Connecting Frontend & Backend
+```text
+├── backend/          # FastAPI application
+│  ├── main.py         # Routes, FFmpeg execution, Background Tasks
+│  ├── requirements.txt    # Python module dependencies
+│  └── tempfiles/       # Ephemeral processing directory
+```
 
-- By default, the frontend expects the backend API at `http://localhost:8000`.
-- CORS is enabled for local development.
-- Adjust API endpoints in the frontend if your backend runs on a different host/port.
-
----
-
-## Usage Guide
-
-### Search for Videos
-
-- Enter keywords in the search bar to get YouTube results with thumbnails, titles, and durations.
-- API: `GET /api/search?q=search_term`
-
-### View Video Details
-
-- Click a video to see all available formats, resolutions, and metadata.
-- API: `GET /api/video?url=youtube_url`
-
-### Download Options
-
-- Choose format (mp4, mp3, etc.), quality, and optionally trim the video.
-- Batch download: Paste multiple URLs.
-- Rename files before downloading.
-- API: `POST /api/download` and `POST /api/batch-download`
-
-### Track Progress
-
-- Real-time progress bars for each download.
-- View download history and re-download files.
-- API: `GET /api/progress/{task_id}` and `GET /api/history`
-
-### Submit Feedback
-
-- Use the feedback form to send suggestions or report issues.
-- API: `POST /api/feedback`
+_By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API_BASE_URL` in your `.env` if this differs._
 
 ---
 
-## API Reference
+## 6. API Reference
 
-| Endpoint        | Method | Description            |
-|-------------------------|--------|------------------------------------|
-| `/api/search`     | GET    | Search YouTube by keyword         |
-| `/api/video`     | GET    | Get video details and available formats  |
-| `/api/download`    | POST   | Download video/audio with quality options |
-| `/api/stream`     | GET    | Stream video directly to browser     |
-| `/api/batch-download` | POST   | Download multiple videos         |
-| `/api/progress/{id}` | GET    | Get download progress           |
-| `/api/history`     | GET  | List download history       |
-| `/api/feedback`     | POST  | Submit user feedback        |
-| `/api/legal`      | GET  | Get legal disclaimer        |
-| `/api/tempfiles/{file}` | GET  | Download a processed temp file   |
+| Endpoint                           | Method | Description                                      |
+|------------------------------------|--------|--------------------------------------------------|
+| `/api/search`                      | GET    | Search YouTube by keyword                        |
+| `/api/video`                       | GET    | Get video details and available formats          |
+| `/api/stream`                      | GET    | Stream video/audio content with range support    |
+| `/api/download`                    | POST   | Download video/audio with quality options        |
+| `/api/batch-download`              | POST   | Download multiple videos simultaneously          |
+| `/api/progress/{id}`               | GET    | Get real-time download progress and ETA          |
+| `/api/history`                     | GET    | List local download history                      |
+| `/api/history/{id}`                | DELETE | Delete a single history tracking item            |
+| `/api/history/delete`              | POST   | Batch delete multiple history tracking items     |
+| `/api/desktop/open-file`           | POST   | Natively open Windows Explorer highlighting file |
+| `/api/desktop/open-folder`         | POST   | Natively open Windows Explorer at folder         |
+| `/api/system/storage`              | POST   | Get local disk usage statistics                  |
+| `/api/feedback`                    | POST   | Submit user feedback via application forms       |
 
-### API Usage Examples
+---
+
+## 7. Usage Guide
+
+### 7.1 Search and Discovery
+
+- Enter keywords in the search bar to fetch top YouTube results including thumbnails, durations, and channel metadata.
+- **REST API**: `GET /api/search?q=search_term`
+
+### 7.2 Format Selection, Metadata & Streaming
+
+- Click any search result to extract all available DASH (High-Def) and Progressive (Standard-Def) formats directly from YouTube. You can also stream content directly without downloading.
+- **REST API**: `GET /api/video?url=youtube_url` | `GET /api/stream?url=youtube_url&quality=1080p`
+
+### 7.3 Download Management
+
+- Configure your download with quality options (144p to 8K), format selection (MP4, MP3), and precision trimming.
+- Integrated automatic PO Token negotiation ensures your IP remains safe from 403 blocks.
+- **REST API**: `POST /api/download`
+
+### 7.4 Batch Processing
+
+- Paste multiple YouTube URLs into the Batch Manager to download entire playlists or series simultaneously.
+- **REST API**: `POST /api/batch-download`
+
+### 7.5 Real-time Performance Tracking
+
+- Monitor download speed (MB/s), percentage completed, and estimated time remaining (ETA) via a circular or linear visual progress bar.
+- **REST API**: `GET /api/progress/{task_id}`
+
+### 7.6 History and Storage Management
+
+- Access your download history to re-download files, delete single entries, or clear multiple items at once. You can also monitor your local disk usage statistics.
+- **REST API**: `GET /api/history` (List all), `DELETE /api/history/{id}` (Remove single entry), `POST /api/history/delete` (Batch remove), and `POST /api/system/storage` (Check disk availability).
+
+### 7.7 Native Desktop Integrations
+
+- For users on the Windows Desktop App, file exploration is deeply integrated. You can click to open specific files or their parent folders seamlessly inside Windows Explorer.
+- **REST API**: `POST /api/desktop/open-file` and `POST /api/desktop/open-folder`
+
+### 7.8 User Feedback
+
+- Submit bug reports or suggestions directly from the application UI.
+- **REST API**: `POST /api/feedback`
+
+---
+
+### 7.9 API Usage Examples (CLI/cURL)
 
 #### Search for Videos
 
 ```bash
 curl "http://localhost:8000/api/search?q=python+tutorial"
-```
-
-#### Get Video Details
-
-```bash
-curl "http://localhost:8000/api/video?url=https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 #### Download Video
@@ -295,121 +428,102 @@ curl -X POST "http://localhost:8000/api/download" \
  -F "format=mp4"
 ```
 
-#### Download with Trimming
-
-```bash
-curl -X POST "http://localhost:8000/api/download" \
- -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
- -F "trim_start=30" \
- -F "trim_end=120" \
- -F "rename=my_video"
-```
-
-#### Batch Download
-
-```bash
-curl -X POST "http://localhost:8000/api/batch-download" \
- -F "urls=[\"https://www.youtube.com/watch?v=ID1\",\"https://www.youtube.com/watch?v=ID2\"]" \
- -F "quality=720" \
- -F "format=mp4"
-```
-
 #### Download Progress
 
 ```bash
 curl "http://localhost:8000/api/progress/{task_id}"
 ```
 
-#### Download History
+---
 
-```bash
-curl "http://localhost:8000/api/history"
-```
+## 8. Building & Deploying the Web App
 
-#### Submit Feedback
+To host YT Deluxe publicly on the internet (Vercel, Render, Heroku):
 
-```bash
-curl -X POST "http://localhost:8000/api/feedback" -F "feedback=Great app!"
-```
+### 8.1 Backend (Cloud Web Service)
 
-#### Legal Disclaimer
+- Deploy the `backend/` directory as a standard Python Web Service.
+- **Critical Build Logic**: The server _must_ install FFmpeg alongside Python.
+  - Build Command: `pip install -r requirements.txt && apt-get update && apt-get install -y ffmpeg`
+- **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+                        OR
 
-```bash
-curl "http://localhost:8000/api/legal"
-```
+- **Use `Dockerfile` in backend folder to build and deploy.**
+`yt-deluxe\backend\Dockerfile`
 
-#### Download a File
+### 8.2 Frontend (Static Hosted App)
 
-```bash
-curl -O "http://localhost:8000/api/tempfiles/{filename}"
-```
+- Deploy the `frontend/` directory to any static hosting provider.
+- **Build Command**: `npm run build`
+- **Environment Variable**: Ensure you add `VITE_API_BASE_URL` pointing to your automatically deployed Backend URL (e.g., `https://my-backend-domain.com`).
+
+### 8.3 Connecting Frontend & Backend
+
+- By default, the frontend expects the backend API at `http://localhost:8000`.
+- CORS is enabled for local development.
+- Adjust API endpoints in the frontend if your backend runs on a different host/port.
 
 ---
 
-## Backend Configuration
+## 9. Building for Desktop (Windows .exe)
 
-### Environment Variables
+To bundle the entire project into a completely standalone Windows application, follow this sequence:
 
-**Backend (Render):**
-- `YOUTUBE_COOKIES_BASE64`: Base64 encoded YouTube cookies for bot detection bypass (optional but recommended)
-
-**Frontend (Vercel):**
-- `VITE_API_BASE_URL`: Backend API URL (e.g. `https://your-backend.onrender.com`)
-
-### Backend File Structure
-
-```
-backend/
-├── main.py         # FastAPI application (port 10000)
-├── requirements.txt     # Python dependencies
-├── Dockerfile        # Docker config with FFmpeg + Node.js + bgutil
-├── cookies.txt       # YouTube cookies (local dev fallback)
-├── tempfiles/        # Auto-deleting download processing directory
-├── download_history.json  # Download history (auto-generated)
-└── feedback.json      # User feedback (auto-generated)
-```
-
----
-
-## Styling & Customization
-
-- **TailwindCSS**: Easily customize themes, breakpoints, and animations.
-- **Plugins**: Forms, typography, aspect ratio, container queries, and more.
-- **Fluid Typography**: Responsive text scaling.
-
----
-
-## Deployment
-
-### Frontend
+### 9.1 Build Static Frontend
 
 ```bash
 cd frontend
-npm run build    # Output in build/ (not dist/)
-npm run serve    # Preview production build
+npm run build 
 ```
 
-### Backend
+_(Packages React into optimized HTML/JS inside `frontend/build`)_
+
+### 9.2 Bundle Backend via PyInstaller
 
 ```bash
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 10000
+.venv\Scripts\pyinstaller.exe main.spec --clean -y
 ```
 
-### Quick Reference Commands
+_(Packages Python, FastAPI, and your system `ffmpeg.exe` into a headless `backend/dist/main.exe`)_
 
-| Action | Command |
-|---|---|
-| Frontend dev server | `npm run dev` or `npm start` |
-| Frontend build | `npm run build` |
-| Frontend build output | `build/` directory (not `dist/`) |
-| Frontend preview | `npm run serve` |
-| Backend dev server | `uvicorn main:app --reload` |
-| Backend production | `uvicorn main:app --host 0.0.0.0 --port 10000` |
+### 9.3 Build UI Launcher via PyInstaller
+
+```bash
+cd desktop
+python -m PyInstaller build.spec --clean -y
+```
+
+_(Creates the massive `desktop/dist/YT-Deluxe` folder containing the PyWebView edge browser, the bundled backend, and the static frontend assets)_
+
+### 9.4 Create the Final Setup Installer (Inno Setup)
+
+To generate the distribution `.exe` that users can install on any Windows machine:
+
+1. **Install Compiler**: Download and install [Inno Setup 6 (Unicode)](https://jrsoftware.org/isinfo.php).
+2. **Dependency Prep**: Download the **Microsoft Edge WebView2 Evergreen Bootstrapper** (`MicrosoftEdgeWebview2Setup.exe`) from Microsoft and place it inside the `desktop/installer/` directory.
+3. **Compile via GUI**:
+   - Open Inno Setup Compiler.
+   - Open the file `desktop/installer/setup.iss`.
+   - Click **Build > Compile** (or press `Ctrl+F9`).
+
+4. **Compile via CLI (Optional)**:
+
+   ```powershell
+   & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "desktop/installer/setup.iss"
+   ```
+
+**What `setup.iss` does (Deep-Dive):**
+
+- **UAC Elevation**: Requests Administrator privileges to install into `C:\Program Files\YT Deluxe\`.
+- **WebView2 Silent Fix**: Automatically checks the Windows Registry. If the runtime is missing, it triggers a silent installation of the bundled bootstrapper (`/silent /install`) before the app first launches, preventing `.NET/WinForms` dependency crashes.
+- **Path Verification**: Bundles the `backend/dist/main` and `desktop/dist/YT-Deluxe` assets into a single compressed package (~84MB).
+- **Permission Hardening**: Configures the app to redirect all write operations (temp files and history) to the user's `%TEMP%` and `%USERPROFILE%` directories, dodging `WinError 5: Access Denied` errors common in installed apps.
+- **Standardized Deployment**: Creates Start Menu and Desktop shortcuts with the high-res app icon, and includes a clean uninstaller.
 
 ---
 
-## Contributing
+## 10. Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -419,29 +533,37 @@ uvicorn main:app --host 0.0.0.0 --port 10000
 
 ---
 
-## Legal Notice
+## 11. Legal Notice
 
 This tool is for personal use only. Downloading copyrighted content may violate YouTube’s terms of service. Use responsibly and respect copyright laws.
 
 ---
 
-## License
+## 12. License
 
 This project is for educational purposes. Please respect YouTube’s terms of service and copyright laws.
 
 ---
 
-## Support
+## 13. Support & Maintenance
 
 For issues and questions:
 
 1. Check the API documentation at `/docs`
 2. Review the error logs
 3. Ensure FFmpeg is properly installed
-4. Verify YouTube URLs are accessible
+4. Update yt-dlp to the latest version & documentations
+5. Update PO token provider
+6. Rotate Cookies file if needed.
 
 ---
 
-**Made With UP7**
+**Built with as a Free & Open Source Project.**
+
+👨‍💻 **Developer:** Utsav Parmar  
+🔗 **LinkedIn:** [www.linkedin.com/in/utsavparmar-full-stack-dev](https://www.linkedin.com/in/utsavparmar-full-stack-dev)  
+🐙 **GitHub:** [https://github.com/Utsavstack](https://github.com/Utsavstack)  
+
+**Made With❤️UP7**
 
 _Last Updated: March 2026_

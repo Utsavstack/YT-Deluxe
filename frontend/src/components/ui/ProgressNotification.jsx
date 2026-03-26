@@ -35,7 +35,8 @@ const ProgressNotification = ({ downloads = [] }) => {
      progress: download.progress,
      status: download.status === 'downloading' ? 'in-progress' : download.status,
      timestamp: download.startedAt ? new Date(download.startedAt) : new Date(),
-     filename: download.filename
+     filename: download.filename,
+     filepath: download.filepath
     };
    });
 
@@ -176,8 +177,16 @@ const ProgressNotification = ({ downloads = [] }) => {
            className="text-xs h-6 px-2"
            onClick={() => {
             if (notification?.filename) {
-             const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/downloads/${encodeURIComponent(notification.filename)}`;
-             window.location.assign(downloadUrl);
+             const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+             if (isDesktop) {
+              fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/desktop/open-file`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({ filename: notification.filename, filepath: notification.filepath })
+              }).catch(e => console.error(e));
+             } else {
+              alert("File downloaded to your browser's default download folder. Please check your browser's downloads.");
+             }
             }
            }}
           >

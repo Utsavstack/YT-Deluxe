@@ -37,8 +37,10 @@ class YTDeluxeAPI {
  // Download video with options
  static async downloadVideo(downloadConfig) {
   try {
+   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
    const formData = new FormData();
    formData.append('url', downloadConfig.url);
+   formData.append('is_desktop', isDesktop);
 
    if (downloadConfig.format_id) {
     formData.append('format_id', downloadConfig.format_id);
@@ -57,6 +59,13 @@ class YTDeluxeAPI {
    }
    if (downloadConfig.rename) {
     formData.append('rename', downloadConfig.rename);
+   }
+   if (downloadConfig.type) {
+    formData.append('type', downloadConfig.type);
+   }
+   const downloadPath = localStorage.getItem('ytdeluxe_download_path');
+   if (downloadPath) {
+    formData.append('download_path', downloadPath);
    }
 
    const response = await fetch(`${API_BASE_URL}/api/download`, {
@@ -85,7 +94,9 @@ class YTDeluxeAPI {
  // Batch download multiple videos
  static async batchDownload(urls, options = {}) {
   try {
+   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
    const formData = new FormData();
+   formData.append('is_desktop', isDesktop);
 
    // Add URLs
    urls.forEach(url => {
@@ -98,6 +109,10 @@ class YTDeluxeAPI {
    }
    if (options.format) {
     formData.append('format', options.format);
+   }
+   const downloadPath = localStorage.getItem('ytdeluxe_download_path');
+   if (downloadPath) {
+    formData.append('download_path', downloadPath);
    }
 
    const response = await fetch(`${API_BASE_URL}/api/batch-download`, {
@@ -120,6 +135,21 @@ class YTDeluxeAPI {
   } catch (error) {
    console.error('History API error:', error);
    throw error;
+  }
+ }
+
+ // Get storage info
+ static async getStorageInfo(downloadPath = null) {
+  try {
+   const response = await fetch(`${API_BASE_URL}/api/system/storage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ download_path: downloadPath })
+   });
+   return await handleResponse(response);
+  } catch (error) {
+   console.error('Storage API error:', error);
+   return null;
   }
  }
 

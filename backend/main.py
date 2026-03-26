@@ -5,6 +5,7 @@ from typing import List, Optional
 import uuid
 import os
 import subprocess
+import sys
 from yt_dlp import YoutubeDL
 from datetime import datetime
 import json
@@ -12,6 +13,30 @@ import requests
 import threading
 import time
 import atexit
+
+def get_ffmpeg_path():
+    """
+    Returns correct ffmpeg binary path.
+    - In PyInstaller .exe: ffmpeg.exe is in sys._MEIPASS/
+    - In dev/Render: 'ffmpeg' must be in system PATH
+    """
+    if getattr(sys, 'frozen', False):
+        return os.path.join(sys._MEIPASS, 'ffmpeg.exe')
+    return 'ffmpeg'
+
+def get_downloads_folder():
+    if os.name == 'nt':
+        import winreg
+        try:
+            sub_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+            downloads_guid = "{374DE290-123F-4565-9164-39C4925E467B}"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
+                location = winreg.QueryValueEx(key, downloads_guid)[0]
+            return location
+        except Exception:
+            pass
+    from pathlib import Path
+    return os.path.join(str(Path.home()), "Downloads")
 
 bgutil_process = None
 
@@ -122,20 +147,52 @@ def get_yt_search_opts():
     'quiet': True,
   }
 
-if not os.path.exists("tempfiles"):
-  os.makedirs("tempfiles")
+# Determine a writable temp directory for web-mode downloads
+# In frozen (installed) mode, CWD may be C:\Program Files which is read-only
+# So we use the system TEMP folder instead
+if getattr(sys, 'frozen', False):
+  TEMPFILES_DIR = os.path.join(os.environ.get('TEMP', os.path.expanduser('~')), 'yt-deluxe-tempfiles')
+else:
+  TEMPFILES_DIR = "tempfiles"
 
-# Allow CORS for frontend (adjust origins as needed)
+os.makedirs(TEMPFILES_DIR, exist_ok=True)
+
+# Also make active_tasks.json writable
+if getattr(sys, 'frozen', False):
+  TASKS_FILE = os.path.join(os.environ.get('TEMP', os.path.expanduser('~')), 'yt-deluxe-active-tasks.json')
+else:
+  TASKS_FILE = "active_tasks.json"
+
+# Set by desktop/launcher.py when running as Windows app
+DESKTOP_MODE = os.environ.get("YTDELUXE_DESKTOP", "false").lower() == "true"
+
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=["*"],
+  allow_origins=["*"] if not DESKTOP_MODE else ["http://127.0.0.1", "http://localhost", "null", "file://"],
+  allow_origin_regex=".*" if DESKTOP_MODE else None,
   allow_credentials=True,
   allow_methods=["*"],
   allow_headers=["*"],
 )
 
-# Inmemory stores for demo (replace with persistent storage as needed) ---
-download_tasks = {}
+
+def _load_tasks():
+    try:
+        if os.path.exists(TASKS_FILE):
+            with open(TASKS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_tasks():
+    try:
+        with open(TASKS_FILE, 'w') as f:
+            json.dump(download_tasks, f)
+    except Exception:
+        pass
+
+download_tasks = _load_tasks()
 download_history = []
 feedback_list = []
 
@@ -391,6 +448,9 @@ def download_video(
   trim_start: Optional[float] = Form(None),
   trim_end: Optional[float] = Form(None),
   rename: Optional[str] = Form(None),
+  is_desktop: bool = Form(False),
+  download_path: Optional[str] = Form(None),
+  type: Optional[str] = Form(None),
   background_tasks: BackgroundTasks = None
 ):
   try:
@@ -409,7 +469,7 @@ def download_video(
     background_tasks.add_task(
       download_worker, 
       task_id, url, quality, format,
-      trim_start, trim_end, rename, format_id
+      trim_start, trim_end, rename, format_id, is_desktop, download_path, type
     )
     
     return {"task_id": task_id, "message": "Download started successfully."}
@@ -433,9 +493,30 @@ def schedule_deletion(filepath: str, delay: int = 600):
 def download_worker(task_id: str, url: str, quality: str = None, 
           format: str = None, trim_start: float = None, 
           trim_end: float = None, rename: str = None,
-          format_id: str = None):
+          format_id: str = None, is_desktop: bool = False,
+          download_path: str = None, type: str = None):
   try:
+    if is_desktop:
+      if download_path and os.path.exists(download_path):
+        base_dir = os.path.join(download_path, "YT Deluxe Downloads")
+      else:
+        base_dir = os.path.join(get_downloads_folder(), "YT Deluxe Downloads")
+        
+      if format == "mp3" or quality == "audio" or "audio" in str(quality).lower() or type == "audio":
+        subfolder = "Music"
+      elif type == "thumbnail" or format == "jpg":
+        subfolder = "Thumbnails"
+      else:
+        subfolder = "Videos"
+        
+      TARGET_DIR = os.path.join(base_dir, subfolder)
+      os.makedirs(TARGET_DIR, exist_ok=True)
+    else:
+      TARGET_DIR = TEMPFILES_DIR
+      os.makedirs(TARGET_DIR, exist_ok=True)
+
     download_tasks[task_id]["status"] = "downloading"
+    _save_tasks()
     
     # Get video info first (needed for title and format metadata)
     ydl_opts_info = {
@@ -455,6 +536,44 @@ def download_worker(task_id: str, url: str, quality: str = None,
     # Clean filename for filesystem
     base_filename = "".join(c for c in base_filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
     
+    # Check for direct thumbnail download
+    if type == "thumbnail":
+      thumbnail_url = info.get('thumbnail')
+      if thumbnail_url:
+        filename = f"{base_filename}.jpg"
+        filepath = os.path.join(TARGET_DIR, filename)
+        import requests
+        r = requests.get(thumbnail_url)
+        with open(filepath, 'wb') as f:
+          f.write(r.content)
+        
+        download_tasks[task_id].update({
+          "status": "completed",
+          "progress": 100,
+          "filename": filename,
+          "filepath": filepath,
+          "completed_at": datetime.now().isoformat()
+        })
+        _save_tasks()
+        
+        history_entry = {
+          "id": task_id,
+          "title": info.get('title', 'Unknown Thumbnail'),
+          "url": url,
+          "filename": filename,
+          "filepath": filepath,
+          "downloaded_at": datetime.now().isoformat(),
+          "file_size": os.path.getsize(filepath),
+          "format": "jpg",
+          "quality": "Thumbnail",
+          "batch_id": download_tasks[task_id].get("batch_id")
+        }
+        download_history.append(history_entry)
+        save_history()
+        return
+      else:
+        raise Exception("Thumbnail URL not found")
+        
     # Determine format spec
     cookie_opts = get_cookie_opts()
     
@@ -476,7 +595,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
       else:
         fmt_spec = format_id
       
-      output_template = f"tempfiles/{base_filename}.%(ext)s"
+      output_template = f"{TARGET_DIR}/{base_filename}.%(ext)s"
       ydl_opts = {
         **get_yt_opts(),
         'outtmpl': output_template,
@@ -489,7 +608,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
       }
     
     elif format == "mp3":
-      output_template = f"tempfiles/{base_filename}.%(ext)s"
+      output_template = f"{TARGET_DIR}/{base_filename}.%(ext)s"
       ydl_opts = {
         **get_yt_opts(),
         'outtmpl': output_template,
@@ -534,7 +653,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
       else:
         format_spec = "bestvideo+bestaudio/best"
       
-      output_template = f"tempfiles/{base_filename}.%(ext)s"
+      output_template = f"{TARGET_DIR}/{base_filename}.%(ext)s"
       ydl_opts = {
         **get_yt_opts(),
         'outtmpl': output_template,
@@ -548,7 +667,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
       }
     
     # Get list of files before download to detect new files
-    existing_files = set(os.listdir("tempfiles")) if os.path.exists("tempfiles") else set()
+    existing_files = set(os.listdir(TARGET_DIR)) if os.path.exists(TARGET_DIR) else set()
     
     # Download the file
     with YoutubeDL(ydl_opts) as ydl:
@@ -557,23 +676,23 @@ def download_worker(task_id: str, url: str, quality: str = None,
     # Find the downloaded file
     # Method 1: Match by base_filename (case-insensitive startswith)
     downloaded_files = [
-      f for f in os.listdir("tempfiles")
+      f for f in os.listdir(TARGET_DIR)
       if f.lower().startswith(base_filename.lower()[:50]) # Use first 50 chars for matching
     ]
     
     # Method 2: Fallback - find new files added to tempfiles folder
     if not downloaded_files:
-      current_files = set(os.listdir("tempfiles"))
+      current_files = set(os.listdir(TARGET_DIR))
       new_files = current_files - existing_files
       if new_files:
         downloaded_files = list(new_files)
     
     # Method 3: Fallback - find most recently modified file
     if not downloaded_files:
-      all_files = os.listdir("tempfiles")
+      all_files = os.listdir(TARGET_DIR)
       if all_files:
         all_files_with_time = [
-          (f, os.path.getmtime(os.path.join("tempfiles", f)))
+          (f, os.path.getmtime(os.path.join(TARGET_DIR, f)))
           for f in all_files
         ]
         all_files_with_time.sort(key=lambda x: x[1], reverse=True)
@@ -584,15 +703,15 @@ def download_worker(task_id: str, url: str, quality: str = None,
     
     if downloaded_files:
       filename = downloaded_files[0]
-      filepath = os.path.join("tempfiles", filename)
+      filepath = os.path.join(TARGET_DIR, filename)
       
       # Apply trimming if specified
       if trim_start is not None or trim_end is not None:
         trimmed_filename = f"trimmed_{filename}"
-        trimmed_filepath = os.path.join("tempfiles", trimmed_filename)
+        trimmed_filepath = os.path.join(TARGET_DIR, trimmed_filename)
         
         # Use ffmpeg to trim
-        cmd = ["ffmpeg", "-i", filepath, "-y"]
+        cmd = [get_ffmpeg_path(), "-i", filepath, "-y"]
         if trim_start:
           cmd.extend(["-ss", str(trim_start)])
         if trim_end:
@@ -606,8 +725,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
         filename = trimmed_filename
         filepath = trimmed_filepath
         
-      # Schedule auto-deletion after 10 minutes
-      schedule_deletion(filepath, 600)
+      # Schedule auto-deletion after 10 minutes only for web
+      if not is_desktop:
+        schedule_deletion(filepath, 600)
       
       # Update task status
       download_tasks[task_id].update({
@@ -617,6 +737,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
         "filepath": filepath,
         "completed_at": datetime.now().isoformat()
       })
+      _save_tasks()
       
       # Update batch progress if this is part of a batch
       batch_id = download_tasks[task_id].get("batch_id")
@@ -636,8 +757,11 @@ def download_worker(task_id: str, url: str, quality: str = None,
         "title": info.get('title', 'Unknown'),
         "url": url,
         "filename": filename,
+        "filepath": filepath,
         "downloaded_at": datetime.now().isoformat(),
         "file_size": os.path.getsize(filepath) if os.path.exists(filepath) else 0,
+        "format": format or ('mp3' if quality == 'audio' else 'mp4'),
+        "quality": quality or '1080p',
         "batch_id": batch_id
       }
       download_history.append(history_entry)
@@ -660,6 +784,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
       "status": "error",
       "error": str(e)
     })
+    _save_tasks()
     
     # Update batch progress if this is part of a batch
     batch_id = download_tasks[task_id].get("batch_id")
@@ -693,6 +818,7 @@ def progress_hook(d, task_id):
         "downloaded_bytes": d.get('downloaded_bytes', 0),
         "total_bytes": d.get('total_bytes') or d.get('total_bytes_estimate', 0)
       })
+      _save_tasks()
 
 # Endpoint: Download progress
 @app.get("/api/progress/{task_id}")
@@ -706,6 +832,7 @@ def get_progress(task_id: str):
     "status": task.get("status"),
     "progress": task.get("progress", 0),
     "filename": task.get("filename"),
+    "filepath": task.get("filepath"),
     "error": task.get("error"),
     "started_at": task.get("started_at"),
     "completed_at": task.get("completed_at"),
@@ -715,10 +842,15 @@ def get_progress(task_id: str):
     "total_bytes": task.get("total_bytes", 0)
   }
 
+def get_history_file_path():
+  history_dir = os.path.join(os.path.expanduser("~"), ".yt-deluxe")
+  os.makedirs(history_dir, exist_ok=True)
+  return os.path.join(history_dir, "download_history.json")
+
 # Save history to file
 def save_history():
   try:
-    with open("download_history.json", "w") as f:
+    with open(get_history_file_path(), "w") as f:
       json.dump(download_history, f, indent=2)
   except Exception as e:
     print(f"Error saving history: {e}")
@@ -726,8 +858,9 @@ def save_history():
 # Load history from file
 def load_history():
   try:
-    if os.path.exists("download_history.json"):
-      with open("download_history.json", "r") as f:
+    path = get_history_file_path()
+    if os.path.exists(path):
+      with open(path, "r") as f:
         return json.load(f)
   except Exception as e:
     print(f"Error loading history: {e}")
@@ -738,6 +871,22 @@ def load_history():
 def get_history():
   return {"history": download_history}
 
+@app.delete("/api/history/{task_id}")
+def delete_history_item(task_id: str):
+  global download_history
+  download_history = [item for item in download_history if item.get("id") != task_id]
+  save_history()
+  return {"status": "success"}
+
+@app.post("/api/history/delete")
+async def batch_delete_history(request: Request):
+  global download_history
+  data = await request.json()
+  ids = data.get("ids", [])
+  download_history = [item for item in download_history if str(item.get("id")) not in [str(i) for i in ids]]
+  save_history()
+  return {"status": "success"}
+
 # Initialize history on startup
 download_history = load_history()
 
@@ -747,6 +896,7 @@ def batch_download(
   urls: List[str] = Form(...),
   quality: Optional[str] = Form(None),
   format: Optional[str] = Form(None),
+  is_desktop: bool = Form(False),
   background_tasks: BackgroundTasks = None
 ):
   try:
@@ -784,7 +934,7 @@ def batch_download(
       background_tasks.add_task(
         download_worker, 
         task_id, url, quality, format, 
-        None, None, None # No trim/rename for batch
+        None, None, None, None, is_desktop # No trim/rename for batch
       )
     
     return {"batch_id": batch_id, "message": f"Batch download started for {len(urls)} videos."}
@@ -815,7 +965,7 @@ def get_legal():
 # Static file serving for downloads (optional)
 @app.get("/api/downloads/{filename}")
 def serve_download(filename: str):
-  file_path = os.path.join("downloads", filename)
+  file_path = os.path.join(TEMPFILES_DIR, filename)
   if os.path.exists(file_path):
     response = FileResponse(file_path, filename=filename)
     response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
@@ -824,12 +974,89 @@ def serve_download(filename: str):
 
 @app.get("/api/tempfiles/{filename}")
 def serve_tempfile(filename: str):
-  file_path = os.path.join("tempfiles", filename)
+  file_path = os.path.join(TEMPFILES_DIR, filename)
   if os.path.exists(file_path):
     response = FileResponse(file_path, filename=filename)
     response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
     return response
   return JSONResponse({"error": "File not found or expired."}, status_code=404)
+
+# Desktop operations
+from fastapi import Request
+
+@app.post("/api/desktop/open-file")
+async def open_desktop_file(request: Request):
+  data = await request.json()
+  filepath = data.get("filepath")
+  
+  if not filepath or not os.path.exists(filepath):
+    filename = data.get("filename")
+    if not filename:
+      return JSONResponse({"error": "File path or name required"}, status_code=400)
+    
+    # Fallback to recursively searching the YT Deluxe Downloads folder
+    TARGET_DIR = os.path.join(get_downloads_folder(), "YT Deluxe Downloads")
+    filepath = os.path.join(TARGET_DIR, filename)
+    
+    if not os.path.exists(filepath):
+      # Try searching in subfolders (Videos, Music, Thumbnails)
+      found = False
+      for root, dirs, files in os.walk(TARGET_DIR):
+        if filename in files:
+          filepath = os.path.join(root, filename)
+          found = True
+          break
+      
+      if not found:
+        return JSONResponse({"error": "File not found"}, status_code=404)
+
+  if os.path.exists(filepath):
+    try:
+      subprocess.Popen(['explorer', '/select,', os.path.normpath(filepath)])
+      return {"status": "success"}
+    except Exception as e:
+      return JSONResponse({"error": f"Could not open file: {e}"}, status_code=500)
+  return JSONResponse({"error": "File not found"}, status_code=404)
+
+@app.post("/api/desktop/open-folder")
+async def open_desktop_folder(request: Request):
+  data = await request.json()
+  download_path = data.get("download_path")
+  if download_path and os.path.exists(download_path):
+    TARGET_DIR = os.path.join(download_path, "YT Deluxe Downloads")
+  else:
+    TARGET_DIR = os.path.join(get_downloads_folder(), "YT Deluxe Downloads")
+    
+  os.makedirs(TARGET_DIR, exist_ok=True)
+  if os.path.exists(TARGET_DIR):
+    try:
+      subprocess.Popen(['explorer', os.path.normpath(TARGET_DIR)])
+      return {"status": "success"}
+    except Exception as e:
+      return JSONResponse({"error": str(e)}, status_code=500)
+  return JSONResponse({"error": "Folder not found"}, status_code=404)
+
+import shutil
+
+@app.post("/api/system/storage")
+async def get_storage_info(request: Request):
+  try:
+    data = await request.json()
+    download_path = data.get("download_path")
+    if download_path and os.path.exists(download_path):
+      target_path = download_path
+    else:
+      target_path = get_downloads_folder()
+      
+    total, used, free = shutil.disk_usage(target_path)
+    return {
+      "total": total,
+      "used": used,
+      "free": free,
+      "target_path": target_path
+    }
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
 # Main entry point
 if __name__ == "__main__":
@@ -837,5 +1064,6 @@ if __name__ == "__main__":
   print(" Starting YT Deluxe Backend...")
   print(" API available at: http://localhost:8000")
   print(" API docs at: http://localhost:8000/docs")
-  uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+  is_packaged = getattr(sys, 'frozen', False)
+  uvicorn.run(app, host="0.0.0.0", port=8000, reload=not is_packaged)
 
