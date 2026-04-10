@@ -14,6 +14,7 @@ const VideoPlayer = ({ videoData, onQualityChange }) => {
  const [playbackSpeed, setPlaybackSpeed] = useState(1);
  const [showControls, setShowControls] = useState(true);
  const [isFullscreen, setIsFullscreen] = useState(false);
+ const [isBuffering, setIsBuffering] = useState(false);
 
  const videoRef = useRef(null);
  const containerRef = useRef(null);
@@ -35,15 +36,27 @@ const VideoPlayer = ({ videoData, onQualityChange }) => {
 
   const updateTime = () => setCurrentTime(video?.currentTime);
   const updateDuration = () => setDuration(video?.duration);
+  const handleWaiting = () => setIsBuffering(true);
+  const handlePlaying = () => setIsBuffering(false);
+  const handleSeeking = () => setIsBuffering(true);
+  const handleSeeked = () => setIsBuffering(false);
 
   video?.addEventListener('timeupdate', updateTime);
   video?.addEventListener('loadedmetadata', updateDuration);
   video?.addEventListener('ended', () => setIsPlaying(false));
+  video?.addEventListener('waiting', handleWaiting);
+  video?.addEventListener('playing', handlePlaying);
+  video?.addEventListener('seeking', handleSeeking);
+  video?.addEventListener('seeked', handleSeeked);
 
   return () => {
    video?.removeEventListener('timeupdate', updateTime);
    video?.removeEventListener('loadedmetadata', updateDuration);
    video?.removeEventListener('ended', () => setIsPlaying(false));
+   video?.removeEventListener('waiting', handleWaiting);
+   video?.removeEventListener('playing', handlePlaying);
+   video?.removeEventListener('seeking', handleSeeking);
+   video?.removeEventListener('seeked', handleSeeked);
   };
  }, []);
 
@@ -103,7 +116,10 @@ const VideoPlayer = ({ videoData, onQualityChange }) => {
  const handleVolumeChange = (e) => {
   const newVolume = parseFloat(e?.target?.value);
   setVolume(newVolume);
-  videoRef.current.volume = newVolume;
+  if (videoRef.current) {
+   videoRef.current.volume = newVolume;
+   videoRef.current.muted = newVolume === 0;
+  }
   setIsMuted(newVolume === 0);
  };
 
@@ -186,72 +202,97 @@ const VideoPlayer = ({ videoData, onQualityChange }) => {
     </div>
    )}
 
+   {/* Buffering Spinner - Always visible regardless of controls */}
+   {isBuffering && (
+     <div className="absolute inset-0 flex items-center justify-center z-[45] pointer-events-none">
+      <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin shadow-[0_0_15px_rgba(var(--primary),0.5)]"></div>
+     </div>
+   )}
+
    {/* Controls Overlay */}
    {hasStarted && (
     <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-     {/* Top Controls */}
-     <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-       <Button
-        variant="ghost"
-        size="icon"
-        className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60"
-        onClick={() => navigate(-1)}
-       >
-        <Icon name="ArrowLeft" size={20} color="white" />
-       </Button>
+     {/* Top Controls - Only show back arrow in fullscreen */}
+     {isFullscreen && (
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-30">
+       <div className="flex items-center space-x-2">
+        <Button
+         variant="ghost"
+         size="icon"
+         className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 shadow-glass-sm pointer-events-auto"
+         onClick={(e) => {
+          e.stopPropagation();
+          if (document.exitFullscreen) document.exitFullscreen();
+          setIsFullscreen(false);
+         }}
+        >
+         <Icon name="ArrowLeft" size={20} color="white" />
+        </Button>
+       </div>
       </div>
-     </div>
+     )}
 
-     {/* Center Controls */}
-     <div className="absolute inset-0 flex items-center justify-center">
-      <div className="flex items-center space-x-6">
-       <Button
-        variant="ghost"
-        size="icon"
-        className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 flex items-center justify-center relative"
-        onClick={() => skipTime(-10)}
-       >
-        <Icon name="RotateCcw" size={24} color="white" />
-        <span className="text-white font-bold absolute text-[10px] mt-0.5">10</span>
-       </Button>
+     {/* Center Controls - Hide when buffering */}
+     {!isBuffering && (
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+       <div className="flex items-center space-x-6 pointer-events-auto">
+        <Button
+         variant="ghost"
+         size="icon"
+         className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 flex items-center justify-center relative transition-all active:scale-90"
+         onClick={() => skipTime(-10)}
+        >
+         <Icon name="RotateCcw" size={24} color="white" />
+         <span className="text-white font-bold absolute text-[10px] mt-0.5">10</span>
+        </Button>
 
-       <Button
-        variant="ghost"
-        size="icon"
-        className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60"
-        onClick={togglePlay}
-       >
-        <Icon name={isPlaying ? "Pause" : "Play"} size={24} color="white" />
-       </Button>
+        <Button
+         variant="ghost"
+         size="icon"
+         className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-all active:scale-90"
+         onClick={togglePlay}
+        >
+         <Icon name={isPlaying ? "Pause" : "Play"} size={24} color="white" />
+        </Button>
 
-       <Button
-        variant="ghost"
-        size="icon"
-        className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 flex items-center justify-center relative"
-        onClick={() => skipTime(10)}
-       >
-        <Icon name="RotateCw" size={24} color="white" />
-        <span className="text-white font-bold absolute text-[10px] mt-0.5">10</span>
-       </Button>
+        <Button
+         variant="ghost"
+         size="icon"
+         className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 flex items-center justify-center relative transition-all active:scale-90"
+         onClick={() => skipTime(10)}
+        >
+         <Icon name="RotateCw" size={24} color="white" />
+         <span className="text-white font-bold absolute text-[10px] mt-0.5">10</span>
+        </Button>
+       </div>
       </div>
-     </div>
+     )}
 
      {/* Bottom Controls */}
      <div className="absolute bottom-4 left-4 right-4">
-      {/* Progress Bar */}
-      <div className="mb-4">
-       <div
-        className="w-full h-1 bg-white/30 rounded-full cursor-pointer group/progress"
-        onClick={handleSeek}
-       >
-        <div
-         className="h-full bg-primary rounded-full relative group-hover/progress:h-1.5 transition-all"
-         style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-        >
-         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity" />
-        </div>
-       </div>
+      {/* Progress Bar - Sync with VideoCard style */}
+      <div className="mb-4 relative h-[6px] group/slider hover:h-[8px] transition-all bg-white/20 rounded-full cursor-pointer flex items-center">
+       {/* Fill indicator */}
+       <div 
+        className="absolute top-0 left-0 h-full bg-primary pointer-events-none transition-all duration-150 ease-linear shadow-[0_0_10px_rgba(var(--primary),0.8)] rounded-full" 
+        style={{ width: `${duration ? (currentTime / duration) * 101 : 0}%` }} 
+       />
+       
+       {/* Transparent native range slider for interaction */}
+       <input 
+        type="range" 
+        min="0" 
+        max={duration || 100} 
+        step="0.1"
+        value={currentTime || 0} 
+        onChange={(e) => {
+         const video = videoRef.current;
+         if (video) video.currentTime = parseFloat(e.target.value);
+        }}
+        className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0
+        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_10px_2px_rgba(0,0,0,0.3)] group-hover/slider:[&::-webkit-slider-thumb]:w-3.5 group-hover/slider:[&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:transition-all
+        [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:shadow-[0_0_10px_2px_rgba(0,0,0,0.3)] group-hover/slider:[&::-moz-range-thumb]:w-3.5 group-hover/slider:[&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:transition-all"
+       />
       </div>
 
       {/* Control Bar */}
@@ -263,28 +304,37 @@ const VideoPlayer = ({ videoData, onQualityChange }) => {
         </span>
 
         {/* Volume Control */}
-        <div className="flex items-center space-x-2 group/volume">
+        <div className="flex items-center space-x-3 group/volume">
          <Button
           variant="ghost"
           size="icon"
-          className="w-8 h-8 rounded-full bg-transparent hover:bg-white/20"
+          className="w-8 h-8 rounded-full bg-transparent hover:bg-white/20 transition-all"
           onClick={toggleMute}
          >
           <Icon
            name={isMuted ? "VolumeX" : volume > 0.5 ? "Volume2" : "Volume1"}
-           size={16}
+           size={18}
            color="white"
           />
          </Button>
-         <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          value={isMuted ? 0 : volume}
-          onChange={handleVolumeChange}
-          className="w-20 h-1 bg-white/30 rounded-full appearance-none cursor-pointer opacity-0 group-hover/volume:opacity-100 transition-opacity"
-         />
+         <div className="w-24 relative h-[4.5px] bg-white/20 rounded-full flex items-center overflow-visible">
+           {/* Color fill */}
+           <div 
+             className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-75"
+             style={{ width: `${(isMuted ? 0 : volume) * 100}%` }}
+           />
+           <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isMuted ? 0 : volume}
+            onChange={handleVolumeChange}
+            className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:transition-all group-hover/volume:[&::-webkit-slider-thumb]:scale-125
+            [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:shadow-lg [&::-moz-range-thumb]:transition-all group-hover/volume:[&::-moz-range-thumb]:scale-125"
+           />
+         </div>
         </div>
 
         {/* Speed Control */}

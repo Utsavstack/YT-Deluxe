@@ -1063,23 +1063,28 @@ async def get_storage_info(request: Request):
 # When running as a PyInstaller exe, the backend also serves the React build
 # so the app loads via http://127.0.0.1:8000 instead of file:// protocol.
 # This gives YouTube embeds a valid HTTP origin (fixes Error 153).
-if getattr(sys, 'frozen', False):
-    _frontend_dir = os.path.join(sys._MEIPASS, 'frontend')
-    if os.path.isdir(_frontend_dir):
-        _index_html = os.path.join(_frontend_dir, 'index.html')
+#
+# NOTE: The frontend files are bundled with the LAUNCHER (desktop/build.spec),
+# not with the backend exe (which is --onefile). The launcher passes the
+# frontend path via the YTDELUXE_FRONTEND_DIR environment variable.
+_frontend_dir = os.environ.get('YTDELUXE_FRONTEND_DIR', '')
+if _frontend_dir and os.path.isdir(_frontend_dir):
+    _index_html = os.path.join(_frontend_dir, 'index.html')
 
-        # SPA catch-all: any route not starting with /api/ returns index.html
-        # so React Router can handle client-side navigation on page refresh
-        @app.get('/{path:path}')
-        async def _spa_fallback(path: str):
-            # If the path matches a real static file, serve it
-            file_path = os.path.join(_frontend_dir, path)
-            if path and os.path.isfile(file_path):
-                return FileResponse(file_path)
-            # Otherwise serve index.html for React Router
-            return FileResponse(_index_html)
-    else:
-        print(f'WARNING: Frontend directory not found at {_frontend_dir}')
+    # SPA catch-all: any route not starting with /api/ returns index.html
+    # so React Router can handle client-side navigation on page refresh
+    @app.get('/{path:path}')
+    async def _spa_fallback(path: str):
+        # If the path matches a real static file, serve it
+        file_path = os.path.join(_frontend_dir, path)
+        if path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Otherwise serve index.html for React Router
+        return FileResponse(_index_html)
+
+    print(f'[YT Deluxe] Serving frontend from: {_frontend_dir}')
+elif getattr(sys, 'frozen', False):
+    print(f'WARNING: YTDELUXE_FRONTEND_DIR not set or invalid. Frontend will not be served.')
 
 # Main entry point
 if __name__ == "__main__":

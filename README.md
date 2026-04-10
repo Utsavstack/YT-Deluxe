@@ -226,11 +226,11 @@ flowchart TD
 
 **Desktop Integration Workflow:**
 
-- **HTTP-Based Frontend Serving**: In packaged mode, the backend serves the React build as static files at `http://127.0.0.1:8000`. The PyWebView window loads this URL instead of a `file:///` path. This provides a valid HTTP origin, which is **critical** for YouTube iframe embeds (fixes Error 153: Video player configuration error) and enables proper `BrowserRouter` navigation.
-- **SPA Fallback**: The backend includes a catch-all route that serves `index.html` for any non-API path, ensuring React Router handles client-side navigation correctly even on page refresh.
-- **Backend Engine**: The localized `main.exe` (FastAPI) runs as a background process on the user's PC, allowing for extremely low-latency communication.
-- **Frontend Container**: `pywebview` acts as a dedicated application window (powered by WebView2), providing a high-performance interface without needing a separate browser tab.
-- **Desktop Detection**: The frontend detects desktop mode via `window.pywebview` (injected by PyWebView regardless of URL protocol), not via `file:` protocol checks. This ensures reliable detection in the HTTP-served environment.
+- **HTTP-Based Frontend Serving**: In packaged mode, the backend statically serves the React build at `http://127.0.0.1:8000`. The PyWebView wrapper loads this URL instead of a `file:///` path. This provides a valid HTTP origin, which is **critical** for YouTube iframe embeds (fixes Error 153: Video player configuration) and enables standard `BrowserRouter` routing.
+- **Dynamic Path Resolution (YTDELUXE_FRONTEND_DIR)**: `launcher.py` safely evaluates the bundled frontend location at runtime and proxies it to the isolated `--onefile` backend via standard environment variables (`os.environ.get('YTDELUXE_FRONTEND_DIR')`). This fundamentally replaces hardcoded or `sys._MEIPASS` dependency checking, enabling modular pyinstaller build strategies.
+- **Port Conflict Awareness**: If a developer launches the `YT-Deluxe.exe` application while their local Uvicorn dev server is active on `port 8000`, the bundled backend silently crashes (`winerror 10048 address already in use`), and the UI inadvertently communicates with the uncompiled dev server (resulting in a blank `{"detail":"Not Found"}` SPA fallback). Users must close dev shells before executing native wrapper tests.
+- **SPA Fallback Verification**: The backend initiates a catch-all route that renders `index.html` for any unmatched path request. 
+- **Desktop Detection**: The frontend detects desktop mode natively via the `window.pywebview` object (injected by the compiled GUI framework), disregarding archaic `file:` protocol checks. This ensures reliable native download triggers.
 - **Deep OS Access**:
   - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
   - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
@@ -470,36 +470,60 @@ To host YT Deluxe publicly on the internet (Vercel, Render, Heroku):
 
 ## 9. Building for Desktop (Windows .exe)
 
-To bundle the entire project into a completely standalone Windows application, follow this sequence:
+To bundle the entire project into a completely standalone Windows application, follow this exact sequential pipeline. Each step fundamentally depends on the compiled output of the previous step.
 
-### 9.1 Build Static Frontend
+### 9.1 Environment Preparation (Crucial)
 
-```bash
+Before building, **both** backend and desktop dependencies must be installed into the **backend's isolated `.venv`**. This ensures PyInstaller bundles everything cohesively without `ModuleNotFoundError` crashes.
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+pip install pyinstaller
+
+# Critical: Install desktop dependencies into the SAME backend .venv
+cd ..\desktop
+..\backend\.venv\Scripts\pip.exe install -r requirements.txt
+```
+
+### 9.2 Build Static Frontend
+
+```powershell
 cd frontend
 npm run build 
 ```
 
-_(Packages React into optimized HTML/JS inside `frontend/build`)_
+_(Packages React into optimized HTML/JS inside `frontend/build`. The desktop `build.spec` copies this folder into the final bundle)._
 
-### 9.2 Bundle Backend via PyInstaller
+### 9.3 Bundle Backend via PyInstaller
 
-```bash
+```powershell
 cd backend
 .venv\Scripts\pyinstaller.exe main.spec --clean -y
 ```
 
-_(Packages Python, FastAPI, and your system `ffmpeg.exe` into a headless `backend/dist/main.exe`)_
+_(Packages Python, FastAPI, and `ffmpeg.exe` into a headless `backend/dist/main.exe`)._ **Note:** You must re-run this step anytime `main.py` is edited so changes are included in the bundle.
 
-### 9.3 Build UI Launcher via PyInstaller
+### 9.4 Build UI Launcher via PyInstaller
 
-```bash
+```powershell
 cd desktop
-python -m PyInstaller build.spec --clean -y
+# MUST use the backend's PyInstaller to guarantee pywebview dependency inclusion
+..\backend\.venv\Scripts\pyinstaller.exe build.spec --clean -y
 ```
 
-_(Creates the massive `desktop/dist/YT-Deluxe` folder containing the PyWebView edge browser, the bundled backend, and the static frontend assets)_
+_(Creates the massive `desktop/dist/YT-Deluxe` application folder containing the PyWebView edge browser, the copied backend server, and the static frontend assets)._
 
-### 9.4 Create the Final Setup Installer (Inno Setup)
+### 9.5 Post-Build Testing (Port 8000 Conflict Awareness)
+
+Before distributing your app, you should manually run the generated wrapper at `desktop/dist/YT-Deluxe/YT-Deluxe.exe`. 
+
+⚠️ **CRITICAL WARNING:** You **MUST CLOSE** any running local development servers (`uvicorn main:app --reload`) before double-clicking the generated `.exe`. 
+If a dev server is active, it occupies `port 8000`. The bundled `.exe` will launch, silently crash in the background due to `winerror 10048 address already in use`, and the UI window will mistakenly hit your uncompiled Dev server resulting in a blank `{"detail":"Not Found"}` SPA response. 
+
+### 9.6 Create the Final Setup Installer (Inno Setup)
 
 To generate the distribution `.exe` that users can install on any Windows machine:
 
@@ -510,9 +534,15 @@ To generate the distribution `.exe` that users can install on any Windows machin
    - Open the file `desktop/installer/setup.iss`.
    - Click **Build > Compile** (or press `Ctrl+F9`).
 
-4. **Compile via CLI (Optional)**:
+4. **Compile via CLI / One-Shot Full Rebuild Command**:
 
    ```powershell
+   # Automate the entire 4-step build from terminal root:
+   cd "d:\MyProject Reserve\30-9-25_Experimental\yt-deluxe"
+   
+   cd frontend && npm run build && cd ..
+   cd backend && .venv\Scripts\pyinstaller.exe main.spec --clean -y && cd ..
+   cd desktop && ..\backend\.venv\Scripts\pyinstaller.exe build.spec --clean -y && cd ..
    & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "desktop/installer/setup.iss"
    ```
 

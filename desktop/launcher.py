@@ -35,6 +35,12 @@ def start_backend():
     env = os.environ.copy()
     env["YTDELUXE_DESKTOP"] = "true"  # Activates desktop CORS mode in main.py
 
+    # Tell the backend where the frontend build lives so it can serve it via HTTP
+    # (frontend is bundled with the launcher, not the backend exe)
+    frontend_dir = resource('frontend')
+    if os.path.isdir(frontend_dir):
+        env["YTDELUXE_FRONTEND_DIR"] = frontend_dir
+
     backend_exe = resource(os.path.join('backend', 'main.exe'))
 
     if os.path.exists(backend_exe):
