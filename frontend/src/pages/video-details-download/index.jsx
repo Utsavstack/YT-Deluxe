@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Header from '../../components/ui/Header';
 import ProgressNotification from '../../components/ui/ProgressNotification';
 import VideoPlayer from './components/VideoPlayer';
 import VideoMetadata from './components/VideoMetadata';
@@ -9,6 +8,7 @@ import VideoTrimmer from './components/VideoTrimmer';
 import DownloadProgress from './components/DownloadProgress';
 import YTDeluxeAPI from '../../utils/api';
 import Button from '../../components/ui/Button';
+import Header from '../../components/ui/Header';
 
 const VideoDetailsDownload = () => {
  const navigate = useNavigate();
@@ -331,7 +331,7 @@ const VideoDetailsDownload = () => {
 
       // Actually trigger the browser download by navigating to the file URL
       if (progress.filename) {
-       if (window.location.protocol !== 'file:') {
+       if (window.location.protocol !== 'file:' && !(typeof window !== 'undefined' && window.pywebview !== undefined)) {
         try {
          // Create hidden anchor to download silently without redirecting main page
          const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/tempfiles/${encodeURIComponent(progress.filename)}`;
@@ -444,7 +444,7 @@ const VideoDetailsDownload = () => {
        <p className="text-muted-foreground mb-6">{error}</p>
        <Button
         variant="default"
-        onClick={() => navigate('/home-search-dashboard')}
+        onClick={() => navigate(-1)}
        >
         Back to Search
        </Button>
@@ -465,7 +465,7 @@ const VideoDetailsDownload = () => {
      <div className="mb-6">
       <Button
        variant="ghost"
-       onClick={() => navigate('/home-search-dashboard')}
+       onClick={() => navigate(-1)}
        iconName="ArrowLeft"
        iconPosition="left"
        className="mb-4"

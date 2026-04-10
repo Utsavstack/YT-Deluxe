@@ -114,9 +114,10 @@ def main():
 
     # ── Step 2: Determine URL ─────────────────────────────────────────────
     if getattr(sys, 'frozen', False):
-        # Packaged: load React build from bundled files
-        index_path = resource(os.path.join('frontend', 'index.html'))
-        url = 'file:///' + index_path.replace(os.sep, '/')
+        # Packaged: serve frontend via backend's local HTTP server
+        # Using http:// instead of file:// gives YouTube embeds a valid origin
+        # (fixes Error 153: Video player configuration error)
+        url = 'http://127.0.0.1:8000/'
     else:
         # Dev: Vite dev server must be running separately on port 5848
         url = 'http://localhost:5848'

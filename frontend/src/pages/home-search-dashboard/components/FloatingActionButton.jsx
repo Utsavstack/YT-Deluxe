@@ -71,15 +71,13 @@ const FloatingActionButton = () => {
     </div>
    )}
    {/* Main FAB */}
-   <Button
-    variant="default"
-    size="icon"
+   <button
     onClick={handleMainAction}
-    className={`w-14 h-14 rounded-full shadow-glass-xl bg-primary hover:bg-primary/90 spring-bounce transition-transform duration-300 ${isExpanded ? 'rotate-45' : 'rotate-0'
+    className={`menu-glass-card w-14 h-14 flex items-center justify-center p-0 cursor-pointer shadow-glass-xl spring-bounce transition-transform duration-300 bg-transparent ${isExpanded ? 'rotate-45' : 'rotate-0'
      }`}
    >
-    <Icon name="Plus" size={24} />
-   </Button>
+    <Icon name="Plus" size={24} className="text-foreground relative z-10" />
+   </button>
    {/* Backdrop */}
    {isExpanded && (
     <div

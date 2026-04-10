@@ -94,6 +94,39 @@ const DownloadHistoryManagement = () => {
 
  // Filter and sort data
  const filteredAndSortedData = useMemo(() => {
+  // When watchLater tab is active, show watch later items instead of download history
+  if (activeTab === 'watchLater') {
+   let watchLaterItems = [];
+   try {
+    watchLaterItems = JSON.parse(localStorage.getItem('ytdeluxe_watch_later') || '[]').map(item => ({
+     id: item.id,
+     title: item.title,
+     channel: item.channel || 'Unknown Channel',
+     thumbnail: item.thumbnail,
+     duration: item.duration || 0,
+     format: '-',
+     quality: item.quality || '-',
+     fileSize: 0,
+     downloadDate: new Date(item.savedAt || Date.now()),
+     tags: [],
+     type: 'watchLater',
+     url: item.url,
+     views: item.views,
+     uploadDate: item.uploadDate
+    }));
+   } catch {}
+
+   // Apply search filter on watch later
+   if (searchQuery) {
+    const query = searchQuery?.toLowerCase();
+    watchLaterItems = watchLaterItems.filter(item =>
+     item?.title?.toLowerCase()?.includes(query) ||
+     item?.channel?.toLowerCase()?.includes(query)
+    );
+   }
+   return watchLaterItems;
+  }
+
   let filtered = downloadHistory;
 
   // Filter by tab
@@ -171,11 +204,17 @@ const DownloadHistoryManagement = () => {
  }, [downloadHistory, activeTab, searchQuery, filters, sortBy, sortOrder]);
 
  // Calculate counts for tabs
- const tabCounts = useMemo(() => ({
-  all: downloadHistory?.length,
-  watchLater: 0,
-  bookmarks: 0
- }), [downloadHistory]);
+ const tabCounts = useMemo(() => {
+  let watchLaterCount = 0;
+  try {
+   watchLaterCount = JSON.parse(localStorage.getItem('ytdeluxe_watch_later') || '[]').length;
+  } catch {}
+  return {
+   all: downloadHistory?.length,
+   watchLater: watchLaterCount,
+   bookmarks: 0
+  };
+ }, [downloadHistory]);
 
  // Storage logic moved to API directly
  const handleItemSelect = (itemId) => {

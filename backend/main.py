@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, BackgroundTasks, UploadFile, File, Form, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -1057,6 +1058,28 @@ async def get_storage_info(request: Request):
     }
   except Exception as e:
     return JSONResponse({"error": str(e)}, status_code=500)
+
+# ── Serve Frontend (packaged desktop mode only) ─────────────────────────────
+# When running as a PyInstaller exe, the backend also serves the React build
+# so the app loads via http://127.0.0.1:8000 instead of file:// protocol.
+# This gives YouTube embeds a valid HTTP origin (fixes Error 153).
+if getattr(sys, 'frozen', False):
+    _frontend_dir = os.path.join(sys._MEIPASS, 'frontend')
+    if os.path.isdir(_frontend_dir):
+        _index_html = os.path.join(_frontend_dir, 'index.html')
+
+        # SPA catch-all: any route not starting with /api/ returns index.html
+        # so React Router can handle client-side navigation on page refresh
+        @app.get('/{path:path}')
+        async def _spa_fallback(path: str):
+            # If the path matches a real static file, serve it
+            file_path = os.path.join(_frontend_dir, path)
+            if path and os.path.isfile(file_path):
+                return FileResponse(file_path)
+            # Otherwise serve index.html for React Router
+            return FileResponse(_index_html)
+    else:
+        print(f'WARNING: Frontend directory not found at {_frontend_dir}')
 
 # Main entry point
 if __name__ == "__main__":

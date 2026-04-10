@@ -1,13 +1,147 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
 
+// Watch Later localStorage helpers
+const WATCH_LATER_KEY = 'ytdeluxe_watch_later';
+
+const getWatchLaterList = () => {
+ try {
+  return JSON.parse(localStorage.getItem(WATCH_LATER_KEY) || '[]');
+ } catch { return []; }
+};
+
+const isInWatchLater = (videoId) => {
+ return getWatchLaterList().some(v => v.id === videoId);
+};
+
+const toggleWatchLater = (video) => {
+ const list = getWatchLaterList();
+ const exists = list.findIndex(v => v.id === (video?.originalId || video?.id));
+ if (exists !== -1) {
+  list.splice(exists, 1);
+  localStorage.setItem(WATCH_LATER_KEY, JSON.stringify(list));
+  return false; // removed
+ } else {
+  const item = {
+   id: video?.originalId || video?.id,
+   title: video?.title,
+   thumbnail: video?.thumbnail,
+   channel: video?.channel?.name || video?.uploader || 'Unknown Channel',
+   duration: video?.duration,
+   views: video?.views,
+   uploadDate: video?.uploadDate,
+   url: video?.url,
+   quality: video?.quality,
+   savedAt: new Date().toISOString()
+  };
+  list.unshift(item);
+  localStorage.setItem(WATCH_LATER_KEY, JSON.stringify(list));
+  return true; // added
+ }
+};
+
 const VideoCard = ({ video, onQuickDownload, onPreview }) => {
  const [isHovered, setIsHovered] = useState(false);
+ const [playVideo, setPlayVideo] = useState(false);
+ const [videoReady, setVideoReady] = useState(false);
  const [isLoading, setIsLoading] = useState(false);
+ const [embedError, setEmbedError] = useState(false);
+ const [isSaved, setIsSaved] = useState(false);
+ const [showSavedToast, setShowSavedToast] = useState(null); // 'saved' | 'removed' | null
  const navigate = useNavigate();
+ const iframeRef = React.useRef(null);
+
+ // Check watch later status on mount
+ useEffect(() => {
+  setIsSaved(isInWatchLater(video?.originalId || video?.id));
+ }, [video?.id, video?.originalId]);
+
+ // Handle hover delay
+ useEffect(() => {
+  let timer;
+  if (isHovered) {
+   setEmbedError(false);
+   timer = setTimeout(() => {
+    setPlayVideo(true);
+   }, 600);
+  } else {
+   setPlayVideo(false);
+   setVideoReady(false);
+  }
+  return () => clearTimeout(timer);
+ }, [isHovered]);
+
+ // Fallback to display iframe if autoplay is blocked or takes too long to load
+ useEffect(() => {
+  let fallbackTimer;
+  if (playVideo && !videoReady && !embedError) {
+   fallbackTimer = setTimeout(() => {
+    setVideoReady(true);
+   }, 1500); // Reveal iframe after 1.5s as a fallback
+  }
+  return () => clearTimeout(fallbackTimer);
+ }, [playVideo, videoReady, embedError]);
+
+ // Ping YouTube iframe to announce we are listening for events
+ useEffect(() => {
+  let intervalId;
+  if (playVideo && !embedError) {
+   intervalId = setInterval(() => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+     iframeRef.current.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1 }), '*');
+    }
+   }, 250);
+   setTimeout(() => clearInterval(intervalId), 3000);
+  }
+  return () => clearInterval(intervalId);
+ }, [playVideo, embedError]);
+
+ // Listen for YouTube iframe events
+ useEffect(() => {
+  const handleMessage = (e) => {
+   if (!e.origin.includes('youtube')) return;
+   try {
+    const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    
+    // Check for explicit error states
+    if (
+     data.event === 'onError' || 
+     data.event === 'error' || 
+     data.info === 150 || 
+     data.info === 101 ||
+     (data.event === 'infoDelivery' && data.info?.playerState === -1 && data.info?.error)
+    ) {
+     setEmbedError(true);
+     setPlayVideo(false);
+     setVideoReady(false);
+    }
+
+    // Check for playing/buffering states to reveal iframe smoothly
+    if (
+     (data.event === 'onStateChange' && (data.info === 1 || data.info === 3)) ||
+     (data.event === 'infoDelivery' && data.info && (data.info.playerState === 1 || data.info.playerState === 3))
+    ) {
+     setVideoReady(true);
+    }
+   } catch (err) {}
+  };
+
+  if (playVideo) {
+   window.addEventListener('message', handleMessage);
+   return () => window.removeEventListener('message', handleMessage);
+  }
+ }, [playVideo]);
+
+ // Auto-dismiss saved toast
+ useEffect(() => {
+  if (showSavedToast) {
+   const t = setTimeout(() => setShowSavedToast(null), 2500);
+   return () => clearTimeout(t);
+  }
+ }, [showSavedToast]);
 
  const formatDuration = (seconds) => {
   const hours = Math.floor(seconds / 3600);
@@ -29,19 +163,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   return `${views} views`;
  };
 
- const formatUploadTime = (uploadDate) => {
-  const now = new Date();
-  const uploaded = new Date(uploadDate);
-  const diffTime = Math.abs(now - uploaded);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 1) return '1 day ago';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-  return `${Math.floor(diffDays / 365)} years ago`;
- };
-
+ // VideoCard component rendering
  const handleCardClick = () => {
   navigate('/video-details-download', {
    state: { video }
@@ -66,68 +188,134 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   onPreview(video);
  };
 
+ const handleWatchLater = (e) => {
+  e?.stopPropagation();
+  const added = toggleWatchLater(video);
+  setIsSaved(added);
+  setShowSavedToast(added ? 'saved' : 'removed');
+ };
+
+ const handleShare = async (e) => {
+  e?.stopPropagation();
+  const videoUrl = video?.url || `https://www.youtube.com/watch?v=${video?.originalId || video?.id?.split('_')?.[0]}`;
+  
+  try {
+   if (navigator.share) {
+    await navigator.share({
+     title: video?.title,
+     text: video?.title,
+     url: videoUrl
+    });
+   } else {
+    await navigator.clipboard?.writeText(videoUrl);
+    alert('Link copied to clipboard!');
+   }
+  } catch (err) {
+   // User cancelled or failed to share
+  }
+ };
+
  return (
   <div
-   className="glass-card shadow-glass-md hover:shadow-glass-lg transition-all duration-300 spring-smooth cursor-pointer group"
+   className={`card-${video?.originalId || (video?.id?.split('_')?.[0])} glass-card shadow-glass-md hover:shadow-glass-lg transition-all duration-300 spring-smooth cursor-pointer group relative`}
    onMouseEnter={() => setIsHovered(true)}
    onMouseLeave={() => setIsHovered(false)}
    onClick={handleCardClick}
   >
+   {/* Fixed viewport toast so it's always perfectly visible */}
+   {showSavedToast && (
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-spring-up" style={{ animationDuration: '0.4s' }}>
+     <div className="bg-background/95 backdrop-blur-xl border border-border/50 px-4 py-2.5 rounded-full shadow-glass-xl flex items-center space-x-2 w-max">
+      <div className={`p-1 rounded-full ${showSavedToast === 'saved' ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
+       <Icon name={showSavedToast === 'saved' ? 'Check' : 'Trash2'} size={14} />
+      </div>
+      <span className="text-sm font-medium text-foreground">
+       {showSavedToast === 'saved' ? 'Added to Watch Later' : 'Removed from Watch Later'}
+      </span>
+     </div>
+    </div>
+   )}
+
    {/* Thumbnail Section */}
-   <div className="relative overflow-hidden rounded-t-xl">
+   <div className="relative overflow-hidden rounded-t-xl bg-black group-hover:bg-slate-900 border-b border-white/5">
     <Image
      src={video?.thumbnail}
      alt={video?.title}
-     className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+     className={`w-full h-52 object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : 'scale-100'}`}
     />
 
-    {/* Duration Badge */}
-    <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-     {formatDuration(video?.duration)}
-    </div>
+    {/* AutoPlay Hover Video Preview */}
+    {playVideo && !embedError && (
+     <div className={`absolute inset-0 z-10 transition-opacity duration-500 ease-in bg-black ${videoReady ? 'opacity-100' : 'opacity-0'}`}>
+      <iframe
+       ref={iframeRef}
+       width="100%"
+       height="100%"
+       src={`https://www.youtube.com/embed/${video?.originalId || (video?.id?.split('_')?.[0])}?autoplay=1&mute=0&controls=0&modestbranding=1&showinfo=0&rel=0&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${(window.location.origin.startsWith('file') || window.location.origin === 'null') ? 'https://www.youtube.com' : window.location.origin}`}
+       title={video?.title}
+       frameBorder="0"
+       allow="autoplay; encrypted-media"
+       referrerPolicy="strict-origin-when-cross-origin"
+       className="w-full h-full object-cover opacity-100"
+      />
+      {/* Click Catcher for Navigation */}
+      <div 
+        className="absolute top-0 left-0 w-[65%] h-[25%] cursor-pointer z-20" 
+        onClick={(e) => {
+         e.stopPropagation();
+         handleCardClick();
+        }}
+        title="View Video Details"
+      />
+      <div 
+       className="absolute top-0 left-0 right-0 h-[20%] bg-gradient-to-b from-black/60 to-transparent pointer-events-none z-10" 
+      />
+     </div>
+    )}
 
-    {/* Quality Badge */}
-    {video?.quality && (
-     <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded backdrop-blur-sm font-medium">
+    {/* Embed Restricted Notice Overlay */}
+    {isHovered && embedError && (
+     <div className="absolute inset-0 z-30 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center animate-fade-in pointer-events-none">
+      <div className="bg-white/20 p-3 rounded-full mb-2 shadow-lg backdrop-blur-md border border-white/10">
+       <Icon name="EyeOff" size={20} className="text-white opacity-90" />
+      </div>
+      <p className="text-white text-sm font-semibold px-4 text-center tracking-wide">Preview Restricted</p>
+      <p className="text-white/80 text-xs mt-0.5">Click to Open & View</p>
+     </div>
+    )}
+
+    {/* Duration Badge - Hides when preview plays */}
+    {!playVideo && (
+     <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm z-20 pointer-events-none">
+      {formatDuration(video?.duration)}
+     </div>
+    )}
+
+    {/* Quality Badge - Hides when preview plays */}
+    {!playVideo && video?.quality && (
+     <div className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded backdrop-blur-sm font-medium z-20 pointer-events-none shadow-sm">
       {video?.quality}
      </div>
     )}
 
-    {/* Hover Overlay */}
-    {isHovered && (
-     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center space-x-3 animate-fade-in">
-      <Button
-       variant="secondary"
-       size="sm"
-       onClick={handlePreview}
-       iconName="Play"
-       iconPosition="left"
-       className="glass-card"
-      >
-       Preview
-      </Button>
-      <Button
-       variant="default"
-       size="sm"
-       onClick={handleQuickDownload}
-       loading={isLoading}
-       iconName="Download"
-       iconPosition="left"
-      >
-       Download
-      </Button>
+    {/* Hover Loading Indicator (3-dots) */}
+    {isHovered && !videoReady && !embedError && (
+     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex space-x-1.5 bg-black/60 px-3 py-2 rounded-full backdrop-blur-sm pointer-events-none animate-fade-in shadow-lg border border-white/10">
+      <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '-0.3s' }}></div>
+      <div className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: '-0.15s' }}></div>
+      <div className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce"></div>
      </div>
     )}
    </div>
    {/* Content Section */}
    <div className="p-4">
     {/* Title */}
-    <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+    <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-3 group-hover:text-primary transition-colors">
      {video?.title}
     </h3>
 
-    {/* Channel Info */}
-    <div className="flex items-center justify-between mb-2 mt-3">
+    {/* Channel & Views Row */}
+    <div className="flex items-center justify-between">
      <div className="flex items-center space-x-2 overflow-hidden mr-2">
       {video?.channel?.avatar ? (
        <Image
@@ -138,15 +326,13 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
       ) : (
        (() => {
         const name = video?.channel?.name || video?.uploader || '?';
-        // Simple hash function to generate deterministic color
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
          hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash % 360);
-        const bgColor = `hsl(${hue}, 70%, 85%)`; // Light pastel background
-        const textColor = `hsl(${hue}, 80%, 30%)`; // Dark readable text
-
+        const bgColor = `hsl(${hue}, 70%, 85%)`;
+        const textColor = `hsl(${hue}, 80%, 30%)`;
         return (
          <div
           className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0"
@@ -157,51 +343,29 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
         );
        })()
       )}
-      <span className="text-xs text-muted-foreground font-medium truncate">
+      <span className="text-xs text-muted-foreground font-medium truncate flex-1">
        {video?.channel?.name || video?.uploader || 'Unknown Channel'}
       </span>
       {video?.channel?.verified && (
        <Icon name="CheckCircle" size={12} className="text-primary flex-shrink-0" />
       )}
      </div>
+
+     {/* Views */}
      {video?.views !== undefined && (
-      <span className="flex-shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+      <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
        {formatViews(video?.views)}
       </span>
      )}
     </div>
 
-    {/* Video Stats */}
-    {video?.uploadDate !== undefined && (
-     <div className="flex items-center justify-between text-xs text-muted-foreground">
-      <div className="flex items-center space-x-3">
-       <span>{formatUploadTime(video?.uploadDate)}</span>
-      </div>
-
-      {/* Like Ratio Indicator */}
-      {video?.likes && video?.dislikes && (
-       <div className="flex items-center space-x-1">
-        <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
-         <div
-          className="h-full bg-success rounded-full"
-          style={{
-           width: `${(video?.likes / (video?.likes + video?.dislikes)) * 100}%`
-          }}
-         />
-        </div>
-        <Icon name="ThumbsUp" size={10} className="text-success" />
-       </div>
-      )}
-     </div>
-    )}
-
     {/* Tags */}
     {video?.tags && video?.tags?.length > 0 && (
-     <div className="flex flex-wrap gap-1 mt-2">
+     <div className="flex flex-wrap gap-1 mt-3">
       {video?.tags?.slice(0, 3)?.map((tag, index) => (
        <span
         key={index}
-        className="text-xs bg-accent/50 text-accent-foreground px-2 py-0.5 rounded-full"
+        className="text-[10px] bg-accent/30 text-accent-foreground px-2 py-0.5 rounded-full border border-border/50"
        >
         #{tag}
        </span>
@@ -209,40 +373,42 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
      </div>
     )}
    </div>
+   
    {/* Quick Actions Footer */}
-   <div className="px-4 pb-4 flex items-center justify-between border-t border-border/50 pt-3">
-    <div className="flex items-center space-x-2">
-     <Button
-      variant="ghost"
-      className="h-7 text-xs px-2 rounded-md font-medium text-muted-foreground"
-      onClick={(e) => {
-       e?.stopPropagation();
-       onQuickDownload?.(video, 'jpg');
-      }}
-      title="Download Thumbnail (JPG)"
-     >
-      <Icon name="Image" size={14} className="mr-2" />
-      Download Thumbnail
-     </Button>
-    </div>
+   <div className="px-4 pb-4 flex items-center justify-between border-t border-border/20 pt-3">
+    <Button
+     variant="ghost"
+     className="h-7 text-xs px-2 rounded-md font-medium text-muted-foreground hover:text-foreground"
+     onClick={(e) => {
+      e?.stopPropagation();
+      onQuickDownload?.(video, 'jpg');
+     }}
+     title="Download Thumbnail (JPG)"
+    >
+     <Icon name="Image" size={14} className="mr-2" />
+     Download Thumbnail
+    </Button>
 
-    <div className="flex items-center space-x-1">
-     <Button
-      variant="ghost"
-      size="icon"
-      className="w-7 h-7"
-      onClick={(e) => {
-       e?.stopPropagation();
-       if (video?.url) {
-        navigator.clipboard.writeText(video.url);
-        // Optional: You could trigger a toast notification here
-        alert('URL Copied to clipboard!');
-       }
-      }}
-      title="Copy Video Link"
+    <div className="flex items-center space-x-0.5 -mr-2">
+     <button
+      onClick={handleWatchLater}
+      className={`p-1.5 rounded-full transition-all group/btn ${isSaved ? 'text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
+      title={isSaved ? 'Remove from Watch Later' : 'Save to Watch Later'}
      >
-      <Icon name="Copy" size={14} />
-     </Button>
+      <Icon 
+       name="Clock" 
+       size={15} 
+       strokeWidth={isSaved ? 2.5 : 2} 
+       className={`transition-all duration-300 ${isSaved ? 'text-primary drop-shadow-[0_0_5px_rgba(44,93,169,0.5)] scale-110' : ''}`}
+      />
+     </button>
+     <button
+      onClick={handleShare}
+      className="p-1.5 rounded-full transition-all hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+      title="Share Video"
+     >
+      <Icon name="Share2" size={15} />
+     </button>
     </div>
    </div>
   </div>

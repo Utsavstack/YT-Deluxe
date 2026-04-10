@@ -110,7 +110,7 @@ flowchart TD
    - If "Trimming" was requested, `FFmpeg` cuts the file at the specified `start` and `end` timestamps without re-encoding when possible, ensuring zero quality loss.
 5. **Environment Check (`isDesktop` Flag)**:
    - **Web Mode**: Once the file is ready in the `tempfiles/` folder, the backend returns a success status. The frontend then uses a hidden `<a>` tag to trigger a native browser download, saving the file to the user's default browser downloads folder.
-   - **Desktop Mode**: The `isDesktop` flag tells the backend to handle the file writes natively. The file is downloaded directly to the user's local `YT Deluxe Downloads/` subdirectories (Videos, Music, or Thumbnails) instead of a temporary folder. The user can then click "Open in Explorer" in the UI to trigger a background API call that natively highlights the file in Windows Explorer.
+   - **Desktop Mode**: The `isDesktop` flag (detected via `window.pywebview`) tells the backend to handle the file writes natively. The file is downloaded directly to the user's local `YT Deluxe Downloads/` subdirectories (Videos, Music, or Thumbnails) instead of a temporary folder. The user can then click "Open in Explorer" in the UI to trigger a background API call that natively highlights the file in Windows Explorer.
 6. **Auto-Cleanup**: After the user receives the file, a self-destruct timer wipes the file from the server's temporary storage to keep it lightweight.
 
 ---
@@ -121,12 +121,12 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
 
 1. **Background Tasks**: All extraction (including `<720p` progressive and `1080p+` DASH formats) occurs in a robust background worker inside the FastAPI backend.
 2. **WebSocket/Polling Progress**: Frontend seamlessly pulls download speed, ETA, and progress from the backend without heavy page reloads, showing a smooth in-app progress bar.
-3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, the UI assesses the `{Environment Check}` via the `isDesktop` flag.
+3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, the UI assesses the `{Environment Check}` via the `isDesktop` flag (detected through `window.pywebview`).
     - **Web Form**: A hidden `<a download>` tag silently triggers the browser's native file saving window.
     - **Desktop Form**: FastAPI natively saves the file directly to your Custom Download Directory. An "Open Folder" button in the UI can execute a foreground Windows Explorer window to highlight the file.
 4. **Auto-Cleanup**: A background threading daemon automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
 5. **Anti-Bot Engine (PO Tokens)**: Deeply integrates a Node.js-based HTTP server inside the container alongside FastAPI that silently negotiates Proof-of-Origin limits with YouTube via mobile web profiles, effectively avoiding `HTTP 403 Forbidden` bans.
-6. **Hybrid Architecture (`isDesktop`)**: Automatically detects if it's running in a browser or as an installed Windows app. This single flag dictates the **{Environment Check}** step in the workflow — altering features (like hiding Storage Settings on the Web) seamlessly.
+6. **Hybrid Architecture (`isDesktop`)**: Automatically detects if it's running in a browser or as an installed Windows app via `window.pywebview` presence. This detection dictates the **{Environment Check}** step in the workflow — altering features (like hiding Storage Settings on the Web) seamlessly.
 7. **Hybrid Storage & History Handling**:
    - `tempfiles/`: Used internally by the backend for processing FFmpeg merges.
    - `localStorage`: Fast, isolated history storage specifically for Web deployments.
@@ -210,7 +210,7 @@ flowchart TD
         Exe[YT-Deluxe-Setup.exe]
         Launcher[launcher.py Spawns Processes]
         WebView[PyWebView Chromium Window]
-        API[Locally Bundled Backend server]
+        API["Locally Bundled Backend server\n(also serves Frontend via HTTP)"]
         
         Disk[(YT Deluxe Downloads / \n Videos, Music, Thumbnails)]
         Hist[(~/.yt-deluxe/download_history.json)]
@@ -218,16 +218,19 @@ flowchart TD
     
     Exe --> |Installs| Launcher
     Launcher --> |Starts Background| API
-    Launcher --> |Opens Foreground| WebView
-    WebView <--> |Localhost Requests| API
+    Launcher --> |"Opens http://127.0.0.1:8000"| WebView
+    WebView <--> |"HTTP Requests (same origin)"| API
     API -- Saves Raw Files --> Disk
     API -- Read/Writes --> Hist
 ```
 
 **Desktop Integration Workflow:**
 
+- **HTTP-Based Frontend Serving**: In packaged mode, the backend serves the React build as static files at `http://127.0.0.1:8000`. The PyWebView window loads this URL instead of a `file:///` path. This provides a valid HTTP origin, which is **critical** for YouTube iframe embeds (fixes Error 153: Video player configuration error) and enables proper `BrowserRouter` navigation.
+- **SPA Fallback**: The backend includes a catch-all route that serves `index.html` for any non-API path, ensuring React Router handles client-side navigation correctly even on page refresh.
 - **Backend Engine**: The localized `main.exe` (FastAPI) runs as a background process on the user's PC, allowing for extremely low-latency communication.
 - **Frontend Container**: `pywebview` acts as a dedicated application window (powered by WebView2), providing a high-performance interface without needing a separate browser tab.
+- **Desktop Detection**: The frontend detects desktop mode via `window.pywebview` (injected by PyWebView regardless of URL protocol), not via `file:` protocol checks. This ensures reliable detection in the HTTP-served environment.
 - **Deep OS Access**:
   - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
   - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
@@ -566,4 +569,4 @@ For issues and questions:
 
 **Made With❤️UP7**
 
-_Last Updated: March 2026_
+_Last Updated: April 2026_
