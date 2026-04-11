@@ -109,7 +109,7 @@ def main():
         print("[YT Deluxe] ERROR: Backend did not respond within 30s. Exiting.")
         backend_proc.terminate()
         show_error(
-            "YT Deluxe — Error",
+            "YT Deluxe - Error",
             "YT Deluxe backend failed to start.\n\n"
             "Please try running the app again.\n"
             "If the problem persists, check if your antivirus is blocking it."
@@ -138,9 +138,10 @@ def main():
         js_api=api,
         width=1280,
         height=800,
-        min_size=(900, 600),
+        min_size=(300, 500),
         resizable=True,
         text_select=True,
+        maximized=True,
     )
 
     def on_closed():

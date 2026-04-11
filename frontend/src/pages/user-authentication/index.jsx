@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useTranslation } from "react-i18next";import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
@@ -10,125 +10,125 @@ import ForgotPasswordModal from './components/ForgotPasswordModal';
 import GuestAccessBanner from './components/GuestAccessBanner';
 import BackgroundShapes from './components/BackgroundShapes';
 
-const UserAuthentication = () => {
- const [isLogin, setIsLogin] = useState(true);
- const [isLoading, setIsLoading] = useState(false);
- const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
- const [authSuccess, setAuthSuccess] = useState(false);
- const navigate = useNavigate();
+const UserAuthentication = () => {const { t } = useTranslation();
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [authSuccess, setAuthSuccess] = useState(false);
+  const navigate = useNavigate();
 
- // Check if user is already authenticated
- useEffect(() => {
-  const authData = localStorage.getItem('ytdeluxe_auth');
-  if (authData) {
-   navigate('/home-search-dashboard');
-  }
- }, [navigate]);
+  // Check if user is already authenticated
+  useEffect(() => {
+    const authData = localStorage.getItem('ytdeluxe_auth');
+    if (authData) {
+      navigate('/home-search-dashboard');
+    }
+  }, [navigate]);
 
- const handleAuthSubmit = async (formData) => {
-  setIsLoading(true);
+  const handleAuthSubmit = async (formData) => {
+    setIsLoading(true);
 
-  // Simulate API call
-  setTimeout(() => {
-   // Mock authentication logic
-   const userData = {
-    id: Date.now(),
-    name: isLogin ? 'John Doe' : formData?.fullName,
-    email: formData?.email,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData?.email}`,
-    plan: 'free',
-    joinedAt: new Date()?.toISOString()
-   };
+    // Simulate API call
+    setTimeout(() => {
+      // Mock authentication logic
+      const userData = {
+        id: Date.now(),
+        name: isLogin ? 'John Doe' : formData?.fullName,
+        email: formData?.email,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData?.email}`,
+        plan: 'free',
+        joinedAt: new Date()?.toISOString()
+      };
 
-   // Store auth data
-   localStorage.setItem('ytdeluxe_auth', JSON.stringify({
-    user: userData,
-    token: 'mock_jwt_token_' + Date.now(),
-    expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
-   }));
+      // Store auth data
+      localStorage.setItem('ytdeluxe_auth', JSON.stringify({
+        user: userData,
+        token: 'mock_jwt_token_' + Date.now(),
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      }));
 
-   setAuthSuccess(true);
-   setIsLoading(false);
+      setAuthSuccess(true);
+      setIsLoading(false);
 
-   // Redirect after success animation
-   setTimeout(() => {
+      // Redirect after success animation
+      setTimeout(() => {
+        navigate('/home-search-dashboard');
+      }, 1500);
+    }, 2000);
+  };
+
+  const handleSocialAuth = async (provider) => {
+    setIsLoading(true);
+
+    // Simulate social auth
+    setTimeout(() => {
+      const userData = {
+        id: Date.now(),
+        name: `User via ${provider}`,
+        email: `user@${provider}.com`,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`,
+        plan: 'free',
+        joinedAt: new Date()?.toISOString(),
+        provider: provider
+      };
+
+      localStorage.setItem('ytdeluxe_auth', JSON.stringify({
+        user: userData,
+        token: 'mock_social_token_' + Date.now(),
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000
+      }));
+
+      setAuthSuccess(true);
+      setIsLoading(false);
+
+      setTimeout(() => {
+        navigate('/home-search-dashboard');
+      }, 1500);
+    }, 1500);
+  };
+
+  const handleForgotPassword = (email) => {
+    console.log('Password reset requested for:', email);
+    // In real app, this would trigger password reset email
+  };
+
+  const handleGuestAccess = () => {
+    // Set guest session
+    localStorage.setItem('ytdeluxe_guest', JSON.stringify({
+      isGuest: true,
+      downloadsRemaining: 3,
+      sessionStart: Date.now()
+    }));
+
     navigate('/home-search-dashboard');
-   }, 1500);
-  }, 2000);
- };
+  };
 
- const handleSocialAuth = async (provider) => {
-  setIsLoading(true);
-
-  // Simulate social auth
-  setTimeout(() => {
-   const userData = {
-    id: Date.now(),
-    name: `User via ${provider}`,
-    email: `user@${provider}.com`,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`,
-    plan: 'free',
-    joinedAt: new Date()?.toISOString(),
-    provider: provider
-   };
-
-   localStorage.setItem('ytdeluxe_auth', JSON.stringify({
-    user: userData,
-    token: 'mock_social_token_' + Date.now(),
-    expiresAt: Date.now() + (24 * 60 * 60 * 1000)
-   }));
-
-   setAuthSuccess(true);
-   setIsLoading(false);
-
-   setTimeout(() => {
+  const handleBackToHome = () => {
     navigate('/home-search-dashboard');
-   }, 1500);
-  }, 1500);
- };
+  };
 
- const handleForgotPassword = (email) => {
-  console.log('Password reset requested for:', email);
-  // In real app, this would trigger password reset email
- };
-
- const handleGuestAccess = () => {
-  // Set guest session
-  localStorage.setItem('ytdeluxe_guest', JSON.stringify({
-   isGuest: true,
-   downloadsRemaining: 3,
-   sessionStart: Date.now()
-  }));
-
-  navigate('/home-search-dashboard');
- };
-
- const handleBackToHome = () => {
-  navigate('/home-search-dashboard');
- };
-
- if (authSuccess) {
-  return (
-   <div className="min-h-screen bg-background flex items-center justify-center p-4">
+  if (authSuccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
     <BackgroundShapes />
     <div className="text-center space-y-4 glass-card p-8 max-w-md w-full">
      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto animate-bounce">
       <Icon name="CheckCircle" size={32} className="text-green-600" />
      </div>
-     <h2 className="text-2xl font-bold text-foreground">Welcome!</h2>
-     <p className="text-muted-foreground">
-      Authentication successful. Redirecting to dashboard...
-     </p>
+     <h2 className="text-2xl font-bold text-foreground">{t("userAuthentication.welcome")}</h2>
+     <p className="text-muted-foreground"> {t("userAuthentication.authenticationSuccessfulRedirectingTo")} 
+
+          </p>
      <div className="w-full bg-muted rounded-full h-2">
       <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '100%' }} />
      </div>
     </div>
-   </div>
-  );
- }
+   </div>);
 
- return (
-  <div className="min-h-screen bg-background">
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
    <BackgroundShapes />
    {/* Header */}
    <header className="relative z-10 p-4 lg:p-6">
@@ -138,20 +138,20 @@ const UserAuthentication = () => {
        <Icon name="Play" size={20} color="white" />
       </div>
       <div>
-       <h1 className="text-xl font-bold text-foreground">YT Deluxe</h1>
-       <p className="text-xs text-muted-foreground">Premium Downloader</p>
+       <h1 className="text-xl font-bold text-foreground">{t("userAuthentication.ytDeluxe")}</h1>
+       <p className="text-xs text-muted-foreground">{t("userAuthentication.premiumDownloader")}</p>
       </div>
      </div>
      
      <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleBackToHome}
-      iconName="ArrowLeft"
-      iconPosition="left"
-     >
-      Back to Home
-     </Button>
+            variant="ghost"
+            size="sm"
+            onClick={handleBackToHome}
+            iconName="ArrowLeft"
+            iconPosition="left"> {t("userAuthentication.backToHome")} 
+
+
+          </Button>
     </div>
    </header>
    {/* Main Content */}
@@ -168,33 +168,33 @@ const UserAuthentication = () => {
          {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
         <p className="text-muted-foreground text-sm">
-         {isLogin 
-          ? 'Sign in to access your downloads and preferences' 
-          : 'Join YT Deluxe for unlimited downloads and features'
-         }
+         {isLogin ?
+                  'Sign in to access your downloads and preferences' :
+                  'Join YT Deluxe for unlimited downloads and features'
+                  }
         </p>
        </div>
 
        <AuthToggle isLogin={isLogin} onToggle={setIsLogin} />
 
-       {isLogin ? (
-        <LoginForm
-         onSubmit={handleAuthSubmit}
-         isLoading={isLoading}
-         onForgotPassword={() => setIsForgotPasswordOpen(true)}
-        />
-       ) : (
-        <RegisterForm
-         onSubmit={handleAuthSubmit}
-         isLoading={isLoading}
-        />
-       )}
+       {isLogin ?
+              <LoginForm
+                onSubmit={handleAuthSubmit}
+                isLoading={isLoading}
+                onForgotPassword={() => setIsForgotPasswordOpen(true)} /> :
+
+
+              <RegisterForm
+                onSubmit={handleAuthSubmit}
+                isLoading={isLoading} />
+
+              }
 
        <div className="mt-6">
         <SocialAuth
-         onSocialAuth={handleSocialAuth}
-         isLoading={isLoading}
-        />
+                  onSocialAuth={handleSocialAuth}
+                  isLoading={isLoading} />
+                
        </div>
 
        <GuestAccessBanner onGuestAccess={handleGuestAccess} />
@@ -212,32 +212,32 @@ const UserAuthentication = () => {
          {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
         <p className="text-muted-foreground text-xs">
-         {isLogin 
-          ? 'Sign in to your account' :'Join YT Deluxe today'
-         }
+         {isLogin ?
+                  'Sign in to your account' : 'Join YT Deluxe today'
+                  }
         </p>
        </div>
 
        <AuthToggle isLogin={isLogin} onToggle={setIsLogin} />
 
-       {isLogin ? (
-        <LoginForm
-         onSubmit={handleAuthSubmit}
-         isLoading={isLoading}
-         onForgotPassword={() => setIsForgotPasswordOpen(true)}
-        />
-       ) : (
-        <RegisterForm
-         onSubmit={handleAuthSubmit}
-         isLoading={isLoading}
-        />
-       )}
+       {isLogin ?
+              <LoginForm
+                onSubmit={handleAuthSubmit}
+                isLoading={isLoading}
+                onForgotPassword={() => setIsForgotPasswordOpen(true)} /> :
+
+
+              <RegisterForm
+                onSubmit={handleAuthSubmit}
+                isLoading={isLoading} />
+
+              }
 
        <div className="mt-4">
         <SocialAuth
-         onSocialAuth={handleSocialAuth}
-         isLoading={isLoading}
-        />
+                  onSocialAuth={handleSocialAuth}
+                  isLoading={isLoading} />
+                
        </div>
 
        <GuestAccessBanner onGuestAccess={handleGuestAccess} />
@@ -247,40 +247,40 @@ const UserAuthentication = () => {
      {/* Features Preview */}
      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
       {[
-       { icon: 'Download', title: 'Fast Downloads', desc: 'High-speed video downloads' },
-       { icon: 'Layers', title: 'Batch Processing', desc: 'Download multiple videos' },
-       { icon: 'Shield', title: 'Secure & Safe', desc: 'Privacy-focused platform' }
-      ]?.map((feature, index) => (
-       <div key={index} className="glass-card p-4 text-center">
+            { icon: 'Download', title: 'Fast Downloads', desc: 'High-speed video downloads' },
+            { icon: 'Layers', title: 'Batch Processing', desc: 'Download multiple videos' },
+            { icon: 'Shield', title: 'Secure & Safe', desc: 'Privacy-focused platform' }]?.
+            map((feature, index) =>
+            <div key={index} className="glass-card p-4 text-center">
         <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
          <Icon name={feature?.icon} size={16} className="text-primary" />
         </div>
         <h3 className="text-sm font-semibold text-foreground mb-1">{feature?.title}</h3>
         <p className="text-xs text-muted-foreground">{feature?.desc}</p>
        </div>
-      ))}
+            )}
      </div>
     </div>
    </main>
    {/* Footer */}
    <footer className="relative z-10 text-center p-4 text-xs text-muted-foreground">
-    <p>&copy; {new Date()?.getFullYear()} YT Deluxe. All rights reserved.</p>
+    <p>&copy; {new Date()?.getFullYear()} {t("userAuthentication.ytDeluxeAllRights")}</p>
     <div className="flex items-center justify-center space-x-4 mt-2">
-     <button className="hover:text-foreground transition-colors">Terms</button>
+     <button className="hover:text-foreground transition-colors">{t("userAuthentication.terms")}</button>
      <span>•</span>
-     <button className="hover:text-foreground transition-colors">Privacy</button>
+     <button className="hover:text-foreground transition-colors">{t("userAuthentication.privacy")}</button>
      <span>•</span>
-     <button className="hover:text-foreground transition-colors">Support</button>
+     <button className="hover:text-foreground transition-colors">{t("userAuthentication.support")}</button>
     </div>
    </footer>
    {/* Forgot Password Modal */}
    <ForgotPasswordModal
-    isOpen={isForgotPasswordOpen}
-    onClose={() => setIsForgotPasswordOpen(false)}
-    onSubmit={handleForgotPassword}
-   />
-  </div>
- );
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        onSubmit={handleForgotPassword} />
+      
+  </div>);
+
 };
 
 export default UserAuthentication;

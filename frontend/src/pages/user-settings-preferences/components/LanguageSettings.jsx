@@ -1,328 +1,290 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
 import Select from '../../../components/ui/Select';
 import { Checkbox } from '../../../components/ui/Checkbox';
 
 const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSettingsChange }) => {
- const [languageSettings, setLanguageSettings] = useState(settings);
+  const { t, i18n } = useTranslation();
+  const [languageSettings, setLanguageSettings] = useState(settings);
 
- const languages = [
-  { 
-   value: 'en', 
-   label: 'English', 
-   nativeName: 'English',
-   flag: '',
-   description: 'Default language'
-  },
-  { 
-   value: 'es', 
-   label: 'Spanish', 
-   nativeName: 'Español',
-   flag: '',
-   description: 'Spanish language support'
-  },
-  { 
-   value: 'fr', 
-   label: 'French', 
-   nativeName: 'Français',
-   flag: '',
-   description: 'French language support'
-  },
-  { 
-   value: 'de', 
-   label: 'German', 
-   nativeName: 'Deutsch',
-   flag: '',
-   description: 'German language support'
-  },
-  { 
-   value: 'it', 
-   label: 'Italian', 
-   nativeName: 'Italiano',
-   flag: '',
-   description: 'Italian language support'
-  },
-  { 
-   value: 'pt', 
-   label: 'Portuguese', 
-   nativeName: 'Português',
-   flag: '',
-   description: 'Portuguese language support'
-  },
-  { 
-   value: 'ru', 
-   label: 'Russian', 
-   nativeName: 'Русский',
-   flag: '',
-   description: 'Russian language support'
-  },
-  { 
-   value: 'ja', 
-   label: 'Japanese', 
-   nativeName: '日本語',
-   flag: '',
-   description: 'Japanese language support'
-  },
-  { 
-   value: 'ko', 
-   label: 'Korean', 
-   nativeName: '한국어',
-   flag: '',
-   description: 'Korean language support'
-  },
-  { 
-   value: 'zh', 
-   label: 'Chinese', 
-   nativeName: '中文',
-   flag: '',
-   description: 'Chinese language support'
-  },
-  { 
-   value: 'ar', 
-   label: 'Arabic', 
-   nativeName: 'العربية',
-   flag: '',
-   description: 'Arabic language support'
-  },
-  { 
-   value: 'hi', 
-   label: 'Hindi', 
-   nativeName: 'हिन्दी',
-   flag: '',
-   description: 'Hindi language support'
-  }
- ];
+  const languages = [
+    { value: 'en', label: 'English', nativeName: 'English', flag: 'gb' },
+    { value: 'hi', label: 'Hindi', nativeName: 'हिन्दी', flag: 'in', hasHinglish: true },
+    { value: 'de', label: 'German', nativeName: 'Deutsch', flag: 'de' },
+  ];
 
- const dateFormatOptions = [
-  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY', description: 'US format' },
-  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY', description: 'European format' },
-  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', description: 'ISO format' },
-  { value: 'DD MMM YYYY', label: 'DD MMM YYYY', description: 'Long format' }
- ];
+  const dateFormatOptions = [
+    { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY', description: 'US format' },
+    { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY', description: 'European format' },
+    { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', description: 'ISO format' },
+    { value: 'DD MMM YYYY', label: 'DD MMM YYYY', description: 'Long format' }
+  ];
 
- const timeFormatOptions = [
-  { value: '12h', label: '12-hour (AM/PM)', description: '3:30 PM' },
-  { value: '24h', label: '24-hour', description: '15:30' }
- ];
+  const timeFormatOptions = [
+    { value: '12h', label: '12-hour (AM/PM)', description: '3:30 PM' },
+    { value: '24h', label: '24-hour', description: '15:30' }
+  ];
 
- const numberFormatOptions = [
-  { value: 'en-US', label: '1,234.56', description: 'US format' },
-  { value: 'de-DE', label: '1.234,56', description: 'German format' },
-  { value: 'fr-FR', label: '1 234,56', description: 'French format' },
-  { value: 'en-IN', label: '1,23,456.78', description: 'Indian format' }
- ];
+  const numberFormatOptions = [
+    { value: 'en-US', label: '1,234.56', description: 'US format' },
+    { value: 'de-DE', label: '1.234,56', description: 'German format' },
+    { value: 'en-IN', label: '1,23,456.78', description: 'Indian format' }
+  ];
 
- const handleLanguageChange = (languageCode) => {
-  onLanguageChange(languageCode);
-  // Save to localStorage
-  localStorage.setItem('ytdeluxe_language', languageCode);
- };
+  const handleLanguageChange = (languageCode) => {
+    onLanguageChange(languageCode);
+    i18n.changeLanguage(languageCode);
+    localStorage.setItem('ytdeluxe_language', languageCode);
+  };
 
- const handleSettingChange = (key, value) => {
-  const updated = { ...languageSettings, [key]: value };
-  setLanguageSettings(updated);
-  onSettingsChange(updated);
- };
+  const isHindiFamily = (lang) => lang === 'hi' || lang === 'hg';
 
- const getCurrentLanguage = () => {
-  return languages?.find(lang => lang?.value === currentLanguage) || languages?.[0];
- };
+  const getCurrentLanguage = () => {
+    if (currentLanguage === 'hg') {
+      const hiBase = languages.find(l => l.value === 'hi');
+      return { ...hiBase, label: 'Hinglish', nativeName: 'हिन्दी (Hinglish)', value: 'hg' };
+    }
+    return languages?.find(lang => lang?.value === currentLanguage) || languages?.[0];
+  };
 
- return (
-  <div className="space-y-6">
-   {/* Language Selection */}
-   <div className="glass-card p-6">
-    <div className="mb-4">
-     <h3 className="text-lg font-semibold text-foreground">Interface Language</h3>
-     <p className="text-sm text-muted-foreground">Choose your preferred language for the application</p>
-    </div>
+  const handleSettingChange = (key, value) => {
+    const updated = { ...languageSettings, [key]: value };
+    setLanguageSettings(updated);
+    onSettingsChange(updated);
+  };
 
-    {/* Current Language Display */}
-    <div className="mb-4 p-4 glass rounded-lg border border-border">
-     <div className="flex items-center space-x-3">
-      <span className="text-2xl">{getCurrentLanguage()?.flag}</span>
-      <div>
-       <h4 className="text-sm font-semibold text-foreground">
-        {getCurrentLanguage()?.nativeName}
-       </h4>
-       <p className="text-xs text-muted-foreground">
-        {getCurrentLanguage()?.label} - Currently selected
-       </p>
-      </div>
-     </div>
-    </div>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
 
-    {/* Language Grid */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-     {languages?.map((language) => (
-      <button
-       key={language?.value}
-       onClick={() => handleLanguageChange(language?.value)}
-       className={`flex items-center space-x-3 p-3 rounded-lg text-left transition-all spring-smooth ${
-        currentLanguage === language?.value
-         ? 'bg-primary text-primary-foreground shadow-glass-sm'
-         : 'glass hover:shadow-glass-md hover:bg-accent'
-       }`}
-      >
-       <span className="text-lg">{language?.flag}</span>
-       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium truncate">
-         {language?.nativeName}
-        </h4>
-        <p className="text-xs opacity-80 truncate">
-         {language?.label}
-        </p>
-       </div>
-       {currentLanguage === language?.value && (
-        <Icon name="Check" size={16} />
-       )}
-      </button>
-     ))}
-    </div>
-   </div>
-   {/* Regional Settings */}
-   <div className="glass-card p-6">
-    <div className="mb-4">
-     <h3 className="text-lg font-semibold text-foreground">Regional Settings</h3>
-     <p className="text-sm text-muted-foreground">Customize date, time, and number formats</p>
-    </div>
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 30 } }
+  };
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-     <Select
-      label="Date Format"
-      description="How dates are displayed"
-      options={dateFormatOptions}
-      value={languageSettings?.dateFormat}
-      onChange={(value) => handleSettingChange('dateFormat', value)}
-     />
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="space-y-6"
+    >
+      {/* Language Selection */}
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8">
+        <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <Icon name="Globe" size={18} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground tracking-tight">{t('language.interfaceLang')}</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('language.interfaceLangDesc')}</p>
+          </div>
+        </div>
 
-     <Select
-      label="Time Format"
-      description="12-hour or 24-hour time"
-      options={timeFormatOptions}
-      value={languageSettings?.timeFormat}
-      onChange={(value) => handleSettingChange('timeFormat', value)}
-     />
+        {/* Current Language Display */}
+        <motion.div
+          className="mb-8 p-5 glass rounded-2xl border border-primary/20 bg-primary/5 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
+            <Icon name="Globe" size={100} />
+          </div>
+          <div className="flex items-center space-x-4 relative z-10">
+            <div className="w-16 h-12 rounded-xl bg-primary/10 p-0.5 overflow-hidden border border-primary/20 flex items-center justify-center shadow-lg">
+              <img
+                src={`https://flagcdn.com/w80/${getCurrentLanguage()?.flag}.png`}
+                alt={getCurrentLanguage()?.label}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <h4 className="text-lg font-bold text-foreground">
+                  {getCurrentLanguage()?.nativeName}
+                </h4>
+                {/* Active Ping Badge */}
+                <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Active</span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {getCurrentLanguage()?.label}
+              </p>
+            </div>
+          </div>
+        </motion.div>
 
-     <Select
-      label="Number Format"
-      description="How numbers are formatted"
-      options={numberFormatOptions}
-      value={languageSettings?.numberFormat}
-      onChange={(value) => handleSettingChange('numberFormat', value)}
-     />
+        {/* Language Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <AnimatePresence mode="popLayout">
+            {languages?.map((language, index) => {
+              const isActive = language.value === currentLanguage || (language.hasHinglish && isHindiFamily(currentLanguage));
 
-     <div className="flex items-center space-x-4">
-      <Checkbox
-       label="Use system locale"
-       description="Automatically detect regional settings"
-       checked={languageSettings?.useSystemLocale}
-       onChange={(e) => handleSettingChange('useSystemLocale', e?.target?.checked)}
-      />
-     </div>
-    </div>
-   </div>
-   {/* Translation Settings */}
-   <div className="glass-card p-6">
-    <div className="mb-4">
-     <h3 className="text-lg font-semibold text-foreground">Translation & Content</h3>
-     <p className="text-sm text-muted-foreground">Configure content translation preferences</p>
-    </div>
+              return (
+                <motion.div
+                  key={language?.value}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`flex flex-col p-4 rounded-xl border transition-all duration-300 relative ${isActive
+                    ? 'bg-primary/5 text-foreground border-primary shadow-glass-md z-10'
+                    : 'glass border-border/50 hover:border-primary/30'
+                    }`}
+                >
+                  <div className="flex items-center space-x-4 mb-3">
+                    <div className="w-12 h-8 rounded-lg overflow-hidden border border-border/50 flex-shrink-0">
+                      <img
+                        src={`https://flagcdn.com/w80/${language.flag}.png`}
+                        alt={language.label}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0" onClick={() => handleLanguageChange(language.value)}>
+                      <h4 className="text-sm font-bold truncate">
+                        {language.nativeName}
+                      </h4>
+                      <p className={`text-[10px] truncate ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {language.label}
+                      </p>
+                    </div>
+                    {isActive && !language.hasHinglish && (
+                      <div className="bg-primary p-1 rounded-full text-primary-foreground text-xs flex items-center justify-center w-5 h-5 ml-auto">
+                        <Icon name="Check" size={14} />
+                      </div>
+                    )}
+                  </div>
 
-    <div className="space-y-4">
-     <Checkbox
-      label="Auto-translate video titles"
-      description="Automatically translate video titles to your language"
-      checked={languageSettings?.autoTranslateTitles}
-      onChange={(e) => handleSettingChange('autoTranslateTitles', e?.target?.checked)}
-     />
+                  {/* Hindi/Hinglish Toggle */}
+                  {language.hasHinglish && isActive && (
+                    <div className="mt-2 pt-3 border-t border-primary/20 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Switch Mode:</span>
+                      <div className="flex bg-muted/50 p-0.5 rounded-lg border border-border/50">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLanguageChange('hi');
+                          }}
+                          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${currentLanguage === 'hi' ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted'}`}
+                        >
+                          Pure
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLanguageChange('hg');
+                          }}
+                          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${currentLanguage === 'hg' ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted'}`}
+                        >
+                          Hinglish
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-     <Checkbox
-      label="Auto-translate descriptions"
-      description="Automatically translate video descriptions"
-      checked={languageSettings?.autoTranslateDescriptions}
-      onChange={(e) => handleSettingChange('autoTranslateDescriptions', e?.target?.checked)}
-     />
+                  {!isActive && (
+                    <button
+                      className="absolute inset-0 z-0"
+                      onClick={() => handleLanguageChange(language.value)}
+                      aria-label={`Select ${language.label}`}
+                    />
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      </motion.div>
 
-     <Checkbox
-      label="Show original text"
-      description="Display original text alongside translations"
-      checked={languageSettings?.showOriginalText}
-      onChange={(e) => handleSettingChange('showOriginalText', e?.target?.checked)}
-     />
+      {/* Regional Settings */}
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass transition-all duration-300">
+        <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <Icon name="MapPin" size={18} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground tracking-tight">{t('language.regional')}</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('language.regionalDesc')}</p>
+          </div>
+        </div>
 
-     <Checkbox
-      label="Prefer subtitles in selected language"
-      description="Prioritize subtitles in your chosen language"
-      checked={languageSettings?.preferSubtitlesInLanguage}
-      onChange={(e) => handleSettingChange('preferSubtitlesInLanguage', e?.target?.checked)}
-     />
-    </div>
-   </div>
-   {/* Keyboard & Input */}
-   <div className="glass-card p-6">
-    <div className="mb-4">
-     <h3 className="text-lg font-semibold text-foreground">Keyboard & Input</h3>
-     <p className="text-sm text-muted-foreground">Configure input method and keyboard shortcuts</p>
-    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          <Select
+            label={t('language.dateFormat')}
+            options={dateFormatOptions}
+            value={languageSettings?.dateFormat}
+            onChange={(value) => handleSettingChange('dateFormat', value)}
+          />
+          <Select
+            label={t('language.timeFormat')}
+            options={timeFormatOptions}
+            value={languageSettings?.timeFormat}
+            onChange={(value) => handleSettingChange('timeFormat', value)}
+          />
+          <Select
+            label={t('language.numberFormat')}
+            options={numberFormatOptions}
+            value={languageSettings?.numberFormat}
+            onChange={(value) => handleSettingChange('numberFormat', value)}
+          />
+          <div className="flex items-center space-x-4 pt-4">
+            <Checkbox
+              label={t('language.useSystemLocale')}
+              description={t('language.syncOS')}
+              checked={languageSettings?.useSystemLocale}
+              onChange={(e) => handleSettingChange('useSystemLocale', e?.target?.checked)}
+            />
+          </div>
+        </div>
+      </motion.div>
 
-    <div className="space-y-4">
-     <Checkbox
-      label="Enable right-to-left (RTL) layout"
-      description="Use RTL layout for Arabic, Hebrew, and other RTL languages"
-      checked={languageSettings?.rtlLayout}
-      onChange={(e) => handleSettingChange('rtlLayout', e?.target?.checked)}
-     />
+      {/* Translation Settings */}
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass transition-all duration-300">
+        <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <Icon name="Languages" size={18} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground tracking-tight">{t('language.translation')}</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('language.translationDesc')}</p>
+          </div>
+        </div>
 
-     <Checkbox
-      label="Show keyboard shortcuts in selected language"
-      description="Display keyboard shortcuts using your language's key names"
-      checked={languageSettings?.localizedShortcuts}
-      onChange={(e) => handleSettingChange('localizedShortcuts', e?.target?.checked)}
-     />
-
-     <Checkbox
-      label="Auto-detect input language"
-      description="Automatically switch input methods based on content"
-      checked={languageSettings?.autoDetectInput}
-      onChange={(e) => handleSettingChange('autoDetectInput', e?.target?.checked)}
-     />
-    </div>
-   </div>
-   {/* Language Pack Info */}
-   <div className="glass-card p-6">
-    <div className="mb-4">
-     <h3 className="text-lg font-semibold text-foreground">Language Pack Information</h3>
-     <p className="text-sm text-muted-foreground">Current language pack details and updates</p>
-    </div>
-
-    <div className="space-y-3">
-     <div className="flex items-center justify-between p-3 glass rounded-lg">
-      <div>
-       <h4 className="text-sm font-medium text-foreground">
-        {getCurrentLanguage()?.nativeName} Language Pack
-       </h4>
-       <p className="text-xs text-muted-foreground">Version 2.1.0 - Updated Jan 2025</p>
-      </div>
-      <div className="flex items-center space-x-2">
-       <Icon name="CheckCircle" size={16} className="text-success" />
-       <span className="text-xs text-success">Up to date</span>
-      </div>
-     </div>
-
-     <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground">Translation completeness</span>
-      <div className="flex items-center space-x-2">
-       <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-        <div className="h-full bg-success rounded-full w-11/12"></div>
-       </div>
-       <span className="text-xs text-muted-foreground">92%</span>
-      </div>
-     </div>
-    </div>
-   </div>
-  </div>
- );
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Checkbox
+            label={t('language.autoTranslateTitles')}
+            description={t('language.autoTranslateTitlesDesc')}
+            checked={languageSettings?.autoTranslateTitles}
+            onChange={(e) => handleSettingChange('autoTranslateTitles', e?.target?.checked)}
+          />
+          <Checkbox
+            label={t('language.autoTranslateDesc')}
+            description={t('language.autoTranslateDescDesc')}
+            checked={languageSettings?.autoTranslateDescriptions}
+            onChange={(e) => handleSettingChange('autoTranslateDescriptions', e?.target?.checked)}
+          />
+          <Checkbox
+            label={t('language.showOriginal')}
+            description={t('language.showOriginalDesc')}
+            checked={languageSettings?.showOriginalText}
+            onChange={(e) => handleSettingChange('showOriginalText', e?.target?.checked)}
+          />
+          <Checkbox
+            label={t('language.preferSubs')}
+            description={t('language.preferSubsDesc')}
+            checked={languageSettings?.preferSubtitlesInLanguage}
+            onChange={(e) => handleSettingChange('preferSubtitlesInLanguage', e?.target?.checked)}
+          />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 export default LanguageSettings;

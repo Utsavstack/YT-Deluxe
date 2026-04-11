@@ -9,7 +9,7 @@
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
 [![PO Token Provider](https://img.shields.io/github/v/release/Brainicism/bgutil-ytdlp-pot-provider?label=PO%20Token%20Provider&style=for-the-badge)](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
 
-**YT Deluxe** is a Free & OpenSource, Full-stack, Feature-rich YouTube Downloader and Media Management Web Application with a modern glassmorphism UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to search, preview, and download YouTube videos and audio with advanced options.
+**YT Deluxe** is a Free & OpenSource, Full-stack, Feature-rich YouTube Downloader and Media Management Web Application with a premium **"Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to search, preview, and download YouTube videos and audio with a streamlined, premium experience.
 
 It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Hosted **Web App** (browser-based) or as a Native **Windows App** (.exe), sharing the exact same codebase.
 
@@ -20,9 +20,11 @@ It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Ho
 ### 1.1 Frontend (Modern UI)
 
 - **React 18 & Vite**: Ultra-fast, responsive UI leveraging modern concurrent rendering and hooks.
-- **Glassmorphism Design**: High-end, transparent, and minimalist styling via TailwindCSS.
+- **Liquid Glass Design Language**: Premium, high-blur, and transparent styling via TailwindCSS with **`rounded-xl`** geometry for consistent modern aesthetics.
+- **Multilingual & Hinglish Support**: Native support for English, Hindi, German, and conversational **Hinglish** (Hindi-English) with persistent state synchronization.
 - **Dynamic Mode Detection**: React automatically switches UI features (like local paths) based on the `isDesktop` environment flag.
-- **Framer Motion**: Smooth, high-performance UI animations for transitions and state changes.
+- **Framer Motion**: Smooth, high-performance UI animations, including premium 'Sliding Pill' tab transitions and entrance effects.
+- **Integrated Legal Hub**: Dedicated informational sections for About, Privacy Policy, and Terms & Conditions directly inside the app.
 - **Lucide Icons**: Clean, light-weight, and professional-grade icon library.
 
 ### 1.2 Backend (Advanced Engine)
@@ -30,8 +32,10 @@ It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Ho
 - **FastAPI Core**: Blazing fast asynchronous processing with comprehensive endpoint management.
 - **Advanced yt-dlp Extractor**: Robust video/audio fetching with **PO Token** (Proof of Origin) support to bypass bot detection.
 - **Integrated FFmpeg Merge**: Seamlessly merges high-res (1080p+) DASH video/audio streams into a single high-quality file.
-- **Native Download Manager**: On Windows Desktop, files are natively routed to your `Downloads` folder, with an "Open Folder" feature.
-- **Precision Trimming**: Trim specific segments from your downloads with no quality re-encoding loss.
+- **Unified Download Engine**: On Windows Desktop, files are natively routed to your `Downloads` folder, with an "Open Folder" feature.
+- **Thumbnail API Proxy**: Bypasses CORS and environment restrictions in desktop mode by routing image downloads through a secure backend proxy.
+- **Precision Trimming**: Trim specific segments from your downloads with no quality re-encoding loss, featuring **MM:SS** time formatting.
+- **Streamlined Preferences**: Removed technical "Advanced" overhead to focus on a cleaner, simplified user experience.
 - **Progress Tracking**: Real-time download speed, percentage, and ETA polling.
 - **History Persistence**: User downloads are logged and persist across sessions (JSON on Desktop, LocalStorage on Web).
 - **Auto-Cleanup Daemon**: Server-side temp files are wiped after delivery to ensure data privacy and prevent bloating.
@@ -229,7 +233,6 @@ flowchart TD
 - **HTTP-Based Frontend Serving**: In packaged mode, the backend statically serves the React build at `http://127.0.0.1:8000`. The PyWebView wrapper loads this URL instead of a `file:///` path. This provides a valid HTTP origin, which is **critical** for YouTube iframe embeds (fixes Error 153: Video player configuration) and enables standard `BrowserRouter` routing.
 - **Dynamic Path Resolution (YTDELUXE_FRONTEND_DIR)**: `launcher.py` safely evaluates the bundled frontend location at runtime and proxies it to the isolated `--onefile` backend via standard environment variables (`os.environ.get('YTDELUXE_FRONTEND_DIR')`). This fundamentally replaces hardcoded or `sys._MEIPASS` dependency checking, enabling modular pyinstaller build strategies.
 - **Port Conflict Awareness**: If a developer launches the `YT-Deluxe.exe` application while their local Uvicorn dev server is active on `port 8000`, the bundled backend silently crashes (`winerror 10048 address already in use`), and the UI inadvertently communicates with the uncompiled dev server (resulting in a blank `{"detail":"Not Found"}` SPA fallback). Users must close dev shells before executing native wrapper tests.
-- **SPA Fallback Verification**: The backend initiates a catch-all route that renders `index.html` for any unmatched path request. 
 - **Desktop Detection**: The frontend detects desktop mode natively via the `window.pywebview` object (injected by the compiled GUI framework), disregarding archaic `file:` protocol checks. This ensures reliable native download triggers.
 - **Deep OS Access**:
   - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
@@ -518,10 +521,10 @@ _(Creates the massive `desktop/dist/YT-Deluxe` application folder containing the
 
 ### 9.5 Post-Build Testing (Port 8000 Conflict Awareness)
 
-Before distributing your app, you should manually run the generated wrapper at `desktop/dist/YT-Deluxe/YT-Deluxe.exe`. 
+Before distributing your app, you should manually run the generated wrapper at `desktop/dist/YT-Deluxe/YT-Deluxe.exe`.
 
-⚠️ **CRITICAL WARNING:** You **MUST CLOSE** any running local development servers (`uvicorn main:app --reload`) before double-clicking the generated `.exe`. 
-If a dev server is active, it occupies `port 8000`. The bundled `.exe` will launch, silently crash in the background due to `winerror 10048 address already in use`, and the UI window will mistakenly hit your uncompiled Dev server resulting in a blank `{"detail":"Not Found"}` SPA response. 
+⚠️ **CRITICAL WARNING:** You **MUST CLOSE** any running local development servers (`uvicorn main:app --reload`) before double-clicking the generated `.exe`.
+If a dev server is active, it occupies `port 8000`. The bundled `.exe` will launch, silently crash in the background due to `winerror 10048 address already in use`, and the UI window will mistakenly hit your uncompiled Dev server resulting in a blank `{"detail":"Not Found"}` SPA response.
 
 ### 9.6 Create the Final Setup Installer (Inno Setup)
 

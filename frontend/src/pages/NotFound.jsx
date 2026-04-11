@@ -1,17 +1,17 @@
-import React from 'react';
+import { useTranslation } from "react-i18next";import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from 'components/ui/Button';
 import Icon from 'components/AppIcon';
 
-const NotFound = () => {
- const navigate = useNavigate();
+const NotFound = () => {const { t } = useTranslation();
+  const navigate = useNavigate();
 
- const handleGoHome = () => {
-  navigate('/');
- };
+  const handleGoHome = () => {
+    navigate('/');
+  };
 
- return (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
    <div className="text-center max-w-md">
     <div className="flex justify-center mb-6">
      <div className="relative">
@@ -19,33 +19,33 @@ const NotFound = () => {
      </div>
     </div>
 
-    <h2 className="text-2xl font-medium text-onBackground mb-2">Page Not Found</h2>
-    <p className="text-onBackground/70 mb-8">
-     The page you're looking for doesn't exist. Let's get you back!
-    </p>
+    <h2 className="text-2xl font-medium text-onBackground mb-2">{t("common.pageNotFound")}</h2>
+    <p className="text-onBackground/70 mb-8"> {t("common.thePageYoureLooking")} 
+
+        </p>
 
     <div className="flex flex-col sm:flex-row gap-4 justify-center">
      <Button
-      variant="primary"
-      icon={<Icon name="ArrowLeft" />}
-      iconPosition="left"
-      onClick={() => window.history?.back()}
-     >
-      Go Back
-     </Button>
+            variant="primary"
+            icon={<Icon name="ArrowLeft" />}
+            iconPosition="left"
+            onClick={() => window.history?.back()}> {t("common.goBack")} 
+
+
+          </Button>
 
      <Button
-      variant="outline"
-      icon={<Icon name="Home" />}
-      iconPosition="left"
-      onClick={handleGoHome}
-     >
-      Back to Home
-     </Button>
+            variant="outline"
+            icon={<Icon name="Home" />}
+            iconPosition="left"
+            onClick={handleGoHome}> {t("common.backToHome")} 
+
+
+          </Button>
     </div>
    </div>
-  </div>
- );
+  </div>);
+
 };
 
 export default NotFound;

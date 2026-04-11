@@ -1,34 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../components/AppIcon';
 import Header from '../../components/ui/Header';
 import ProgressNotification from '../../components/ui/ProgressNotification';
 import ThemeCustomization from './components/ThemeCustomization';
 import DownloadPreferences from './components/DownloadPreferences';
-import NotificationSettings from './components/NotificationSettings';
 import LanguageSettings from './components/LanguageSettings';
-import AdvancedSettings from './components/AdvancedSettings';
 import AccountManagement from './components/AccountManagement';
+import AboutYTDeluxe from './components/AboutYTDeluxe';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsAndConditions from './components/TermsAndConditions';
 
 import { useTheme } from '../../utils/ThemeContext';
 
 const UserSettingsPreferences = () => {
+  const { t, i18n } = useTranslation();
   const { theme: currentTheme, setTheme: onThemeChange } = useTheme();
-  const [activeSection, setActiveSection] = useState('theme');
+  const [activeSection, setActiveSection] = useState('account');
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [currentAccentColor, setCurrentAccentColor] = useState('#2C5DA9');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Mock user data
   const [user, setUser] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-    joinDate: '2024-01-15',
-    subscription: 'free',
-    downloadCount: 1247,
-    totalSize: '15.6 GB',
-    favoriteChannels: 23
+    name: 'Cristiano',
+    avatar: '/assets/images/developer.jpg',
   });
 
   // Mock settings states
@@ -52,31 +50,6 @@ const UserSettingsPreferences = () => {
     deleteAfterConversion: false
   });
 
-  const [notificationSettings, setNotificationSettings] = useState({
-    browserNotifications: true,
-    downloadComplete: true,
-    downloadError: true,
-    batchProgress: true,
-    storageWarnings: true,
-    soundEnabled: true,
-    soundType: 'default',
-    volume: 50,
-    soundOnComplete: true,
-    soundOnError: true,
-    position: 'top-right',
-    autoDismissTime: 5,
-    showProgress: true,
-    persistentErrors: true,
-    successAnimations: true,
-    systemTray: false,
-    emailNotifications: false,
-    emailAddress: '',
-    dailySummary: false,
-    weeklyReport: false,
-    batchCompletion: true,
-    maintenanceAlerts: true
-  });
-
   const [languageSettings, setLanguageSettings] = useState({
     dateFormat: 'MM/DD/YYYY',
     timeFormat: '12h',
@@ -91,92 +64,33 @@ const UserSettingsPreferences = () => {
     autoDetectInput: false
   });
 
-  const [advancedSettings, setAdvancedSettings] = useState({
-    clipboardMonitoring: true,
-    autoPasteDetection: true,
-    clipboardNotifications: true,
-    proxyType: 'none',
-    proxyHost: '',
-    proxyPort: '',
-    proxyUsername: '',
-    proxyPassword: '',
-    userAgent: 'YT Deluxe/1.0.0',
-    enableLogging: true,
-    logLevel: 'info',
-    maxLogSize: 10,
-    enableAnalytics: true,
-    crashReporting: true,
-    betaFeatures: false,
-    developerMode: false,
-    apiTimeout: 30,
-    retryAttempts: 3,
-    cacheSize: 100,
-    hardwareAcceleration: true,
-    preloadMetadata: true,
-    anonymousReporting: true
-  });
 
   const settingSections = [
-    {
-      id: 'theme',
-      label: 'Theme',
-      icon: 'Palette',
-      description: 'Appearance and colors'
-    },
-    {
-      id: 'downloads',
-      label: 'Downloads',
-      icon: 'Download',
-      description: 'Download preferences'
-    },
-    {
-      id: 'notifications',
-      label: 'Notifications',
-      icon: 'Bell',
-      description: 'Alert settings'
-    },
-    {
-      id: 'language',
-      label: 'Language',
-      icon: 'Globe',
-      description: 'Language and region'
-    },
-    {
-      id: 'advanced',
-      label: 'Advanced',
-      icon: 'Settings',
-      description: 'Advanced options'
-    },
-    {
-      id: 'account',
-      label: 'My Profile',
-      icon: 'User',
-      description: 'Profile and privacy'
-    }
+    { id: 'account', label: t('nav.myProfile'), icon: 'User', description: t('nav.profileDesc') },
+    { id: 'theme', label: t('nav.theme'), icon: 'Palette', description: t('nav.themeDesc') },
+    { id: 'downloads', label: t('nav.downloads'), icon: 'Download', description: t('nav.downloadsDesc') },
+    { id: 'language', label: t('nav.language'), icon: 'Globe', description: t('nav.languageDesc') },
+    { id: 'about', label: t('nav.about'), icon: 'Info', description: t('nav.aboutDesc') },
+    { id: 'privacy', label: t('nav.privacy'), icon: 'Shield', description: t('nav.privacyDesc') },
+    { id: 'terms', label: t('nav.terms'), icon: 'FileText', description: t('nav.termsDesc') }
   ];
 
   useEffect(() => {
-    // Load saved language preference
     const savedLanguage = localStorage.getItem('ytdeluxe_language');
     if (savedLanguage) {
       setCurrentLanguage(savedLanguage);
+      i18n.changeLanguage(savedLanguage);
     }
 
-    // Load saved accent color
     const savedAccentColor = localStorage.getItem('ytdeluxe_accent_color');
-    if (savedAccentColor) {
-      setCurrentAccentColor(savedAccentColor);
-    }
+    if (savedAccentColor) setCurrentAccentColor(savedAccentColor);
   }, []);
 
-  const handleThemeChange = (newTheme) => {
-    onThemeChange(newTheme);
-  };
+  const handleThemeChange = (newTheme) => onThemeChange(newTheme);
 
   const handleAccentColorChange = (color) => {
     setCurrentAccentColor(color);
     localStorage.setItem('ytdeluxe_accent_color', color);
-    // Apply accent color changes
     document.documentElement?.style?.setProperty('--color-primary', color);
   };
 
@@ -188,190 +102,307 @@ const UserSettingsPreferences = () => {
   const renderActiveSection = () => {
     switch (activeSection) {
       case 'theme':
-        return (
-          <ThemeCustomization
-            currentTheme={currentTheme}
-            onThemeChange={handleThemeChange}
-            currentAccentColor={currentAccentColor}
-            onAccentColorChange={handleAccentColorChange}
-          />
-        );
+        return <ThemeCustomization currentTheme={currentTheme} onThemeChange={handleThemeChange} currentAccentColor={currentAccentColor} onAccentColorChange={handleAccentColorChange} />;
       case 'downloads':
-        return (
-          <DownloadPreferences
-            preferences={downloadPreferences}
-            onPreferencesChange={setDownloadPreferences}
-          />
-        );
-      case 'notifications':
-        return (
-          <NotificationSettings
-            settings={notificationSettings}
-            onSettingsChange={setNotificationSettings}
-          />
-        );
+        return <DownloadPreferences preferences={downloadPreferences} onPreferencesChange={setDownloadPreferences} />;
       case 'language':
-        return (
-          <LanguageSettings
-            currentLanguage={currentLanguage}
-            onLanguageChange={handleLanguageChange}
-            settings={languageSettings}
-            onSettingsChange={setLanguageSettings}
-          />
-        );
-      case 'advanced':
-        return (
-          <AdvancedSettings
-            settings={advancedSettings}
-            onSettingsChange={setAdvancedSettings}
-          />
-        );
+        return <LanguageSettings currentLanguage={currentLanguage} onLanguageChange={handleLanguageChange} settings={languageSettings} onSettingsChange={setLanguageSettings} />;
       case 'account':
-        return (
-          <AccountManagement
-            user={user}
-            onUserUpdate={setUser}
-          />
-        );
+        return <AccountManagement user={user} onUserUpdate={setUser} />;
+      case 'about':
+        return <AboutYTDeluxe />;
+      case 'privacy':
+        return <PrivacyPolicy />;
+      case 'terms':
+        return <TermsAndConditions />;
       default:
         return null;
     }
   };
 
-  const getCurrentSectionInfo = () => {
-    return settingSections?.find(section => section?.id === activeSection) || settingSections?.[0];
+  const getCurrentSectionInfo = () => settingSections?.find(section => section?.id === activeSection) || settingSections?.[0];
+
+  const sidebarVariants = {
+    hidden: { x: -20, opacity: 0 },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05,
+        type: "spring",
+        stiffness: 300,
+        damping: 30
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { x: -10, opacity: 0 },
+    visible: { x: 0, opacity: 1 }
   };
 
   return (
     <>
       <Helmet>
         <title>Settings & Preferences - YT Deluxe</title>
-        <meta name="description" content="Customize your YT Deluxe experience with theme options, download preferences, notifications, and advanced settings." />
+        <meta name="description" content="Customize your YT Deluxe experience." />
       </Helmet>
       <div className="min-h-screen bg-background">
         <Header />
         <ProgressNotification />
 
-        <div className="pt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="pt-24 pb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Page Header */}
-            <div className="mb-8">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary shadow-glass-md">
-                  <Icon name="Settings" size={20} color="white" />
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-glass-md">
+                  <Icon name="Settings2" size={20} />
                 </div>
                 <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Profile & Settings</h1>
-                  <p className="text-muted-foreground">Customize your YT Deluxe experience</p>
+                  <h1 className="text-xl lg:text-2xl font-bold text-foreground tracking-tight">{t('settings.title')}</h1>
+                  <p className="text-xs text-muted-foreground">{t('settings.subtitle')}</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               {/* Desktop Sidebar */}
-              <div className="hidden lg:block lg:col-span-1">
-                <div className="glass-card p-4 sticky top-24">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={sidebarVariants}
+                className="hidden lg:block lg:col-span-1"
+              >
+                <div className="glass-card p-3 sticky top-28 space-y-4">
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground opacity-70">
+                    {t('settings.configMap')}
+                  </div>
                   <nav className="space-y-1">
                     {settingSections?.map((section) => (
-                      <button
+                      <motion.button
                         key={section?.id}
+                        variants={itemVariants}
+                        whileHover={{ x: 5 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => setActiveSection(section?.id)}
-                        className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-all spring-smooth ${activeSection === section?.id
-                          ? 'bg-primary text-primary-foreground shadow-glass-sm'
-                          : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                        className={`w-full group flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-all duration-300 relative overflow-hidden ${activeSection === section?.id
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'glass border-transparent hover:border-primary/20 hover:bg-primary/5 text-foreground'
                           }`}
                       >
-                        <Icon name={section?.icon} size={18} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{section?.label}</p>
-                          <p className="text-xs opacity-80 truncate">{section?.description}</p>
+                        {activeSection === section?.id && (
+                          <motion.div
+                            layoutId="active-nav-bg"
+                            className="absolute inset-0 bg-primary z-0"
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                        <div className="relative z-10 flex items-center space-x-3 w-full">
+                          <Icon name={section?.icon} size={18} className={activeSection === section?.id ? 'text-white' : 'text-primary/80 group-hover:text-primary'} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium tracking-tight">{section?.label}</p>
+                            <p className={`text-xs truncate ${activeSection === section?.id ? 'text-white/80' : 'text-muted-foreground opacity-80'}`}>
+                              {section?.description}
+                            </p>
+                          </div>
                         </div>
-                      </button>
+                      </motion.button>
                     ))}
                   </nav>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Mobile Section Selector */}
               <div className="lg:hidden mb-6">
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="w-full glass-card p-4 flex items-center justify-between"
+                  className="w-full glass-card p-4 flex items-center justify-between border-primary/20 bg-primary/5"
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon name={getCurrentSectionInfo()?.icon} size={20} />
+                    <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">
+                      <Icon name={getCurrentSectionInfo()?.icon} size={20} />
+                    </div>
                     <div className="text-left">
-                      <p className="font-medium text-foreground">{getCurrentSectionInfo()?.label}</p>
-                      <p className="text-sm text-muted-foreground">{getCurrentSectionInfo()?.description}</p>
+                      <p className="text-sm font-semibold text-foreground">{getCurrentSectionInfo()?.label}</p>
+                      <p className="text-xs text-muted-foreground">{getCurrentSectionInfo()?.description}</p>
                     </div>
                   </div>
-                  <Icon name={isMobileMenuOpen ? "ChevronUp" : "ChevronDown"} size={20} />
-                </button>
+                  <Icon name={isMobileMenuOpen ? "ChevronUp" : "ChevronDown"} size={20} className="text-primary" />
+                </motion.button>
 
-                {isMobileMenuOpen && (
-                  <div className="mt-2 glass-card p-2">
-                    <nav className="space-y-1">
-                      {settingSections?.map((section) => (
-                        <button
-                          key={section?.id}
-                          onClick={() => {
-                            setActiveSection(section?.id);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all spring-smooth ${activeSection === section?.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-foreground hover:bg-accent'
-                            }`}
-                        >
-                          <Icon name={section?.icon} size={16} />
-                          <div>
-                            <p className="text-sm font-medium">{section?.label}</p>
-                            <p className="text-xs opacity-80">{section?.description}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </nav>
-                  </div>
-                )}
+                <AnimatePresence>
+                  {isMobileMenuOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="mt-2 glass-card p-2 overflow-hidden"
+                    >
+                      <nav className="space-y-1">
+                        {settingSections?.map((section) => (
+                          <button
+                            key={section?.id}
+                            onClick={() => {
+                              setActiveSection(section?.id);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-left transition-all ${activeSection === section?.id
+                              ? 'bg-primary text-primary-foreground'
+                              : 'glass hover:bg-accent text-foreground'
+                              }`}
+                          >
+                            <Icon name={section?.icon} size={18} />
+                            <div>
+                              <p className="text-sm font-medium">{section?.label}</p>
+                              <p className={`text-xs ${activeSection === section?.id ? 'text-white/80' : 'text-muted-foreground opacity-80'}`}>{section?.description}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </nav>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {/* Main Content */}
-              <div className="lg:col-span-3">
-                <div className="space-y-6">
-                  {/* Section Header */}
-                  <div className="glass-card p-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary">
-                        <Icon name={getCurrentSectionInfo()?.icon} size={24} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-foreground">{getCurrentSectionInfo()?.label}</h2>
-                        <p className="text-muted-foreground">{getCurrentSectionInfo()?.description}</p>
-                      </div>
+              {/* Main Content Area */}
+              <div className="lg:col-span-3 space-y-6">
+                {/* Active Section Info Bar */}
+                <motion.div
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  key={`header-${activeSection}`}
+                  className="glass-card p-6 border-l-4 border-primary group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
+                    <Icon name={getCurrentSectionInfo()?.icon} size={120} />
+                  </div>
+                  <div className="relative z-10 flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
+                      <Icon name={getCurrentSectionInfo()?.icon} size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground tracking-tight">{getCurrentSectionInfo()?.label}</h2>
+                      <p className="text-xs text-muted-foreground">{getCurrentSectionInfo()?.description}</p>
                     </div>
                   </div>
+                </motion.div>
 
-                  {/* Dynamic Content */}
-                  {renderActiveSection()}
-                </div>
+                {/* Content Fragment */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeSection}
+                    initial={{ y: 30, opacity: 0, scale: 0.98 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    exit={{ y: -30, opacity: 0, scale: 0.98 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30
+                    }}
+                  >
+                    {renderActiveSection()}
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="bg-card border-t border-border mt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="text-center">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary">
-                  <Icon name="Play" size={16} color="white" />
+        <footer className="bg-card/30 backdrop-blur-xl border-t border-border mt-16 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
+              {/* Brand Signal */}
+              <div className="space-y-6 max-w-sm">
+                <div
+                  className="flex items-center space-x-3 group cursor-pointer"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  <motion.div
+                    whileHover={{ rotate: 10, scale: 1.05 }}
+                    transition={{ duration: 0.5 }}
+                    className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-white/60 to-white/20 dark:from-white/25 dark:to-white/5 border border-white/60 dark:border-white/30 backdrop-blur-xl shadow-glass-sm relative z-10 p-2 overflow-hidden"
+                  >
+                    <img src="/assets/images/logo-light.png" alt="YT-Deluxe" className="w-full h-full object-contain" />
+                  </motion.div>
+                  <div className="text-left">
+                    <h3 className="text-xl allan-bold text-foreground leading-none tracking-tight">YT-Deluxe</h3>
+                    <p className="text-xs text-muted-foreground font-medium mt-1">{t('footer.premiumMedia')}</p>
+                  </div>
                 </div>
-                <span className="text-lg font-semibold text-foreground">YT Deluxe</span>
+
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t('footer.footerDesc')}
+                </p>
+
+                <div className="flex items-center space-x-3">
+                  {[
+                    { icon: 'Github', url: 'https://github.com/Utsavstack' },
+                    { icon: 'Linkedin', url: 'https://www.linkedin.com/in/utsavparmar-full-stack-dev' },
+                    { icon: 'Globe', url: '#' }
+                  ].map((social, idx) => (
+                    <motion.a
+                      key={idx}
+                      whileHover={{ y: -3, backgroundColor: 'rgba(var(--primary-rgb), 0.1)' }}
+                      whileTap={{ scale: 0.95 }}
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-10 h-10 rounded-xl bg-accent/30 flex items-center justify-center text-muted-foreground hover:text-primary transition-all duration-300 border border-transparent hover:border-primary/20"
+                    >
+                      <Icon name={social.icon} size={18} />
+                    </motion.a>
+                  ))}
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {new Date()?.getFullYear()} YT Deluxe. All rights reserved.
-              </p>
+
+              {/* Navigation Map */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-left w-full lg:w-auto flex-1 lg:ml-12">
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">{t('footer.system')}</h4>
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    <li><button onClick={() => setActiveSection('account')} className="hover:text-primary transition-colors flex items-center group">{t('footer.profile')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('theme')} className="hover:text-primary transition-colors flex items-center group">{t('footer.appearance')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('downloads')} className="hover:text-primary transition-colors flex items-center group">{t('footer.engine')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                  </ul>
+                </div>
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">{t('footer.security')}</h4>
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    <li><button onClick={() => setActiveSection('privacy')} className="hover:text-primary transition-colors flex items-center group">{t('footer.privacyHub')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('terms')} className="hover:text-primary transition-colors flex items-center group">{t('footer.eula')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                  </ul>
+                </div>
+                <div className="space-y-4">
+                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">{t('footer.aboutSection')}</h4>
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    <li><button onClick={() => setActiveSection('about')} className="hover:text-primary transition-colors flex items-center group">{t('footer.history')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe" className="hover:text-primary transition-colors flex items-center group">{t('footer.repository')} <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-16 pt-8 border-t border-border/40 flex flex-col gap-6">
+
+              <div className="flex flex-col lg:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center font-medium">
+                  <span>&copy; 2026 YT Deluxe &bull; Utsav Parmar</span>
+                </div>
+                <div className="flex items-center space-x-6 font-semibold">
+                  <button onClick={() => setActiveSection('privacy')} className="flex items-center hover:text-primary transition-colors">
+                    {t('nav.privacy')}
+                  </button>
+                  <button onClick={() => setActiveSection('terms')} className="flex items-center hover:text-primary transition-colors">
+                    {t('nav.terms')}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </footer>
