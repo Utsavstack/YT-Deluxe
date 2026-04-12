@@ -9,6 +9,7 @@ import QuickPreviewModal from './components/QuickPreviewModal';
 import FloatingActionButton from './components/FloatingActionButton';
 import BackgroundShapes from './components/BackgroundShapes';
 import YTDeluxeAPI from '../../utils/api';
+import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
 
 const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -503,7 +504,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-            <BackgroundShapes />
+            <TheInfiniteGrid />
             <Header />
             {downloads.length > 0 && <ProgressNotification downloads={downloads} />}
 
