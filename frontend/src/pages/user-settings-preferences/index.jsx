@@ -343,8 +343,7 @@ const UserSettingsPreferences = () => {
                 <div className="flex items-center space-x-3">
                   {[
                     { icon: 'Github', url: 'https://github.com/Utsavstack' },
-                    { icon: 'Linkedin', url: 'https://www.linkedin.com/in/utsavparmar-full-stack-dev' },
-                    { icon: 'Globe', url: '#' }
+                    { icon: 'Linkedin', url: 'https://www.linkedin.com/in/utsavparmar-full-stack-dev' }
                   ].map((social, idx) => (
                     <motion.a
                       key={idx}

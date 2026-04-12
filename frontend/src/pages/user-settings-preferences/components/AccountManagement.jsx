@@ -5,6 +5,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import YTDeluxeAPI from '../../../utils/api';
+import { formatDate } from '../../../utils/dateFormat';
 
 const AccountManagement = ({ user, onUserUpdate }) => {
   const { t } = useTranslation();
@@ -48,7 +49,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
         const transformed = response.history.map((item, idx) => ({
           id: item.id || idx,
           title: item.title,
-          channel: item.channel || 'Unknown Channel',
+          channel: item.channel || '',
           thumbnail: item.thumbnail || '',
           format: item.format || 'mp4',
           quality: item.quality || '720p',
@@ -373,10 +374,9 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                 {/* Thumbnail */}
                 <div className="w-14 h-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-border/30">
                   {item.thumbnail ? (
-                    <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center"><Icon name="Film" size={16} className="text-muted-foreground/40" /></div>
-                  )}
+                    <img src={item.thumbnail} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                  ) : null}
+                  <div className={`w-full h-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 ${item.thumbnail ? 'hidden' : 'flex'}`}><Icon name="Play" size={14} className="text-primary/60" /></div>
                 </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
@@ -392,7 +392,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                 {/* Size & Date */}
                 <div className="text-right flex-shrink-0 hidden sm:block">
                   <p className="text-xs font-bold text-foreground">{formatBytes(item.fileSize || 0)}</p>
-                  <p className="text-[10px] text-muted-foreground">{new Date(item.downloadDate).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatDate(item.downloadDate)}</p>
                 </div>
               </motion.div>
             ))}

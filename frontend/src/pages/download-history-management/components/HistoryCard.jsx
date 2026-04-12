@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";import React, { useState } from '
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
+import { formatDate, formatDateTime } from '../../../utils/dateFormat';
 
 const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, isSelected, onSelect }) => {const { t } = useTranslation();
   const [showActions, setShowActions] = useState(false);
@@ -147,7 +148,7 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
         {item?.quality}
        </div>
        <div>{formatFileSize(item?.fileSize)}</div>
-       <div>{new Date(item.downloadDate)?.toLocaleDateString()}</div>
+       <div>{formatDate(item.downloadDate)}</div>
       </div>
 
       {/* Tags */}
@@ -188,7 +189,7 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
      
      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
       <Icon name="Calendar" size={12} />
-      <span>{new Date(item.downloadDate)?.toLocaleString()}</span>
+      <span>{formatDateTime(item.downloadDate)}</span>
      </div>
     </div>
    </div>

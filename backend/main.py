@@ -325,7 +325,8 @@ def get_video_details(url: str):
       'title': info.get('title'),
       'thumbnail': info.get('thumbnail'),
       'duration': info.get('duration'),
-      'uploader': info.get('uploader'),
+      'uploader': info.get('uploader') or info.get('channel'),
+      'channel': info.get('channel') or info.get('uploader'),
       'description': info.get('description'),
       'view_count': info.get('view_count'),
       'upload_date': info.get('upload_date'),
@@ -567,6 +568,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
           "file_size": os.path.getsize(filepath),
           "format": "jpg",
           "quality": "Thumbnail",
+          "thumbnail": info.get('thumbnail', ''),
+          "channel": info.get('uploader') or info.get('channel', ''),
+          "duration": info.get('duration', 0),
           "batch_id": download_tasks[task_id].get("batch_id")
         }
         download_history.append(history_entry)
@@ -763,6 +767,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
         "file_size": os.path.getsize(filepath) if os.path.exists(filepath) else 0,
         "format": format or ('mp3' if quality == 'audio' else 'mp4'),
         "quality": quality or '1080p',
+        "thumbnail": info.get('thumbnail', ''),
+        "channel": info.get('uploader') or info.get('channel', ''),
+        "duration": info.get('duration', 0),
         "batch_id": batch_id
       }
       download_history.append(history_entry)

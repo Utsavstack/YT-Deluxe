@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";import React, { useState, useEffe
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
+import { formatDate } from '../../../utils/dateFormat';
 
 const QuickPreviewModal = ({ video, isOpen, onClose, onDownload }) => {const { t } = useTranslation();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -281,7 +282,7 @@ const QuickPreviewModal = ({ video, isOpen, onClose, onDownload }) => {const { t
       <div className="flex items-center space-x-4">
        <span>{video?.views?.toLocaleString()} {t("homeSearchDashboard.views")}</span>
        <span>•</span>
-       <span>{new Date(video.uploadDate)?.toLocaleDateString()}</span>
+       <span>{formatDate(video.uploadDate)}</span>
       </div>
       
       <div className="flex items-center space-x-2">

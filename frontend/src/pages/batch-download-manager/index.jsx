@@ -78,7 +78,7 @@ const BatchDownloadManager = () => {const { t } = useTranslation();
               id: Date.now() + Math.random(),
               url,
               title: response.video.title,
-              channel: response.video.uploader || 'Unknown Channel',
+              channel: response.video.uploader || response.video.channel || '',
               thumbnail: response.video.thumbnail,
               duration: response.video.duration,
               views: `${Math.floor(Math.random() * 999) + 1}K`,

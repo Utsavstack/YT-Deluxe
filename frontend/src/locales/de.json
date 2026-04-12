@@ -167,7 +167,7 @@
     "architecture": "Die Architektur von YT Deluxe",
     "architectureDesc": "Entwickelt für diejenigen, die mehr als nur einen Download-Button verlangen.",
     "vision": "Die Vision",
-    "visionText1": "YT Deluxe entstand aus einer einfachen Notwendigkeit: Das moderne Web erfordert ein belastbares, kompromissloses Tool zur Medienkonservierung. In einer Ära kurzlebiger Inhalte ist ein lokales, hochauflösendes Archiv kein Luxus – es ist wesentlich.",
+    "visionText1": "YT Deluxe entstand aus einer einfachen Notwendigkeit: Das moderne Web erfordert ein belastbares, kompromissloses Tool zur Medienkonservierung. In einer Ära kurzlebiger Inhalte ist ein lokales, hochauflösendes Archiv kein Luxus es ist wesentlich.",
     "visionText2": "Dieses System ist nicht nur ein Wrapper; es ist eine dedizierte Engine. Jede Komponente, von der glassmorphen Oberfläche bis zum gleichzeitigen Download-Daemon, ist so konzipiert, dass ästhetische Schönheit mit reiner technischer Fähigkeit in Einklang gebracht wird.",
     "architect": "Architekt & Entwickler",
     "leadEngineer": "Leitender Ingenieur",
@@ -188,10 +188,10 @@
   },
   "aboutUs": {
     "heroSubtitle": "\"Der Premium Medien-Downloader\"",
-    "prodReady": "Produktionsbereit",
+    "prodReady": "Beta",
     "vision": "Die Vision",
-    "visionText1": "YT Deluxe entstand aus einem einfachen Bedürfnis: eine schöne, private und leistungsstarke Möglichkeit, digitale Inhalte zu verwalten.",
-    "visionText2": "Aufgebaut auf dem erstklassigen yt-dlp-Kern haben wir die leistungsstärksten Extraktionstools der Branche in eine hochmoderne \"Liquid Glass\"-Oberfläche gepackt.",
+    "visionText1": "YT Deluxe entstand aus einer einfachen Notwendigkeit: Das moderne Web erfordert ein belastbares, werbefreies und kompromissloses Tool zur Medienkonservierung. In einer Ära kurzlebiger Inhalte und komplexer Downloader ist ein sauberes, hochauflösendes Archiv kein Luxus es ist wesentlich.",
+    "visionText2": "Als Full-Stack-Lösung mit React und FastAPI entwickelt, integriert diese Plattform nahtlos den erstklassigen yt-dlp-Kern mit einer professionellen \"Liquid Glass\"-Oberfläche. Unsere Mission ist es, Lernenden und Erstellern gleichermaßen ein werbefreies, sicheres und funktionsreiches Erlebnis zu bieten.",
     "premiumEdge": "Premium-Rand",
     "feat1Title": "Hochwertige Downloads",
     "feat1Desc": "Unterstützt Auflösungen von 144p bis 8K, mit automatischem FFmpeg-Zusammenführen für überlegene Qualität.",
@@ -203,7 +203,7 @@
     "feat4Desc": "Läuft reibungslos als Web-App oder als native Windows-Desktop-Anwendung.",
     "devBadge": "Mit Leidenschaft Entworfen",
     "devRole": "Full Stack Artisan & Systemingenieur",
-    "devDesc": "Spezialisiert auf den Bau leistungsstarker, ästhetisch ansprechender Anwendungen. YT Deluxe repräsentiert eine Verschmelzung von technischer Robustheit und erstklassiger Designphilosophie.",
+    "devDesc": "Leidenschaft für die Architektur leistungsstarker, ästhetisch ansprechender Systeme. YT Deluxe repräsentiert eine Verschmelzung von technischer Robustheit und erstklassigem \"Liquid Glass\"-Design, wobei der Fokus auf Benutzererfahrung, Skalierbarkeit und Sicherheit liegt.",
     "sourceCode": "Quellcode",
     "professional": "Fachmann",
     "footerBanner": "Nichtkommerziell • Nur für Bildungszwecke • Open Source",
@@ -231,7 +231,7 @@
     "disclaimerText1": "\"Dieses kostenlose Open-Source-Tool ist ausschließlich für nichtkommerzielle, pädagogische Zwecke bestimmt. Wir respektieren die YouTube-Community-Richtlinien und das geistige Eigentum der Urheber. Bitte verantwortungsvoll verwenden.\"",
     "disclaimerText2": "Die Software wird \"wie besehen\" ohne jegliche weder ausdrückliche noch stillschweigende Gewährleistung zur Verfügung gestellt. In keinem Fall haften die Architekten oder Mitwirkenden für Ansprüche, Schäden oder sonstige Haftungen, die sich aus technischen Interaktionen mit Drittanbietern ergeben.",
     "auditEngine": "Prüfungsmaschine:",
-    "protocol": "Protokolldokument v2.0 • Verifiziert 2026"
+    "protocol": "Protokolldokument v1.2.0 • Verifiziert 2026"
   },
   "batchDownloadManager": {
     "addVideosToQueue": "Videos zur Warteschlange hinzufügen",

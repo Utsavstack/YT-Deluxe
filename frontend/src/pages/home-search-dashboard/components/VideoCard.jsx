@@ -29,7 +29,7 @@ const toggleWatchLater = (video) => {
       id: video?.originalId || video?.id,
       title: video?.title,
       thumbnail: video?.thumbnail,
-      channel: video?.channel?.name || video?.uploader || 'Unknown Channel',
+      channel: video?.channel?.name || video?.uploader || '',
       duration: video?.duration,
       views: video?.views,
       uploadDate: video?.uploadDate,
@@ -441,7 +441,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {const { t } = useT
             })()
             }
             <span className="text-xs text-muted-foreground font-medium truncate flex-1">
-              {video?.channel?.name || video?.uploader || 'Unknown Channel'}
+              {video?.channel?.name || video?.uploader || ''}
             </span>
             {video?.channel?.verified &&
             <Icon name="CheckCircle" size={12} className="text-primary flex-shrink-0" />

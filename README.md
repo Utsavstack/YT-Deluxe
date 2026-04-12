@@ -11,13 +11,23 @@
 
 **YT Deluxe** is a Free & OpenSource, Full-stack, Feature-rich YouTube Downloader and Media Management Web Application with a premium **"Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to search, preview, and download YouTube videos and audio with a streamlined, premium experience.
 
-It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Hosted **Web App** (browser-based) or as a Native **Windows App** (.exe), sharing the exact same codebase.
+---
+
+## 1. Why YT Deluxe?
+
+### 1.1 The Problem
+
+In today’s digital-first world, YouTube is one of the largest sources of video and audio content. However, YouTube itself does not allow direct downloading for offline use, creating significant inconvenience for learners, creators, and researchers. Most existing third-party downloaders are plagued with intrusive ads, malware risks, confusing interfaces, and limited format options.
+
+### 1.2 The Solution
+
+**YT-Deluxe** is envisioned as a clean, ad-free, free and and open source feature-rich media management system. It provides a secure environment for users to preserve digital content in multiple qualities and formats. By leveraging a state-of-the-art **"Liquid Glass"** interface and a robust backend architecture, it bridges the gap between raw technical power and premium user experience.
 
 ---
 
-## 1. Features Overview
+## 2. Features Overview
 
-### 1.1 Frontend (Modern UI)
+### 2.1 Frontend (Modern UI)
 
 - **React 18 & Vite**: Ultra-fast, responsive UI leveraging modern concurrent rendering and hooks.
 - **Liquid Glass Design Language**: Premium, high-blur, and transparent styling via TailwindCSS with **`rounded-xl`** geometry for consistent modern aesthetics.
@@ -27,7 +37,7 @@ It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Ho
 - **Integrated Legal Hub**: Dedicated informational sections for About, Privacy Policy, and Terms & Conditions directly inside the app.
 - **Lucide Icons**: Clean, light-weight, and professional-grade icon library.
 
-### 1.2 Backend (Advanced Engine)
+### 2.2 Backend (Advanced Engine)
 
 - **FastAPI Core**: Blazing fast asynchronous processing with comprehensive endpoint management.
 - **Advanced yt-dlp Extractor**: Robust video/audio fetching with **PO Token** (Proof of Origin) support to bypass bot detection.
@@ -43,13 +53,13 @@ It is designed with a **Hybrid Architecture** meaning it runs seamlessly as a Ho
 
 ---
 
-## 2. Demo
+## 3. Demo
 
 > _Add screenshots or a GIF here to showcase the UI and features!_
 
 ---
 
-## 3. Project Structure
+## 4. Project Structure
 
 ```text
 yt-deluxe/
@@ -79,9 +89,9 @@ yt-deluxe/
 
 ---
 
-## 4. Architecture & Workflows
+## 5. Architecture & Workflows
 
-### 4.1 Unified Download Flow (yt-dlp to User Output)
+### 5.1 Unified Download Flow (yt-dlp to User Output)
 
 _How a video converts from a YouTube URL into a file on your device._
 
@@ -119,7 +129,7 @@ flowchart TD
 
 ---
 
-### 4.2 Download Architecture Details
+### 5.2 Download Architecture Details
 
 The application uses a sophisticated **Server-Merged Tempfile Architecture** to ensure the smoothest user experience:
 
@@ -136,7 +146,7 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
    - `localStorage`: Fast, isolated history storage specifically for Web deployments.
    - `~/.yt-deluxe/`: Persistent local JSON for Desktop installations.
 
-### 4.3 End-to-End System Structure
+### 5.3 End-to-End System Structure
 
 _How the entire platform communicates during a download lifecycle._
 
@@ -171,7 +181,7 @@ sequenceDiagram
 
 ---
 
-### 4.4 Hosted Web Application Architecture
+### 5.4 Hosted Web Application Architecture
 
 _How the platform operates when hosted on cloud servers._
 
@@ -204,7 +214,7 @@ flowchart LR
 
 ---
 
-### 4.5 Native Windows Desktop Architecture
+### 5.5 Native Windows Desktop Architecture
 
 _How the platform operates when installed locally as an .exe via the Launcher._
 
@@ -241,11 +251,11 @@ flowchart TD
 
 ---
 
-## 5. Installation and Setup (Local Development)
+## 6. Installation and Setup (Local Development)
 
 Follow this setup to run both servers (React + FastAPI) locally on any development machine.
 
-### 5.1 Frontend Dependencies
+### 6.1 Frontend Dependencies
 
 | Package | Version | Purpose |
 |---|---|---|
@@ -256,7 +266,7 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 | framer-motion | `^10.16.4` | UI animations |
 | axios | `^1.8.4` | Backend API communication |
 
-### 5.2 Backend Dependencies
+### 6.2 Backend Dependencies
 
 | Package | Version | Purpose |
 |---|---|---|
@@ -269,14 +279,14 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 | python-multipart | `0.0.22` | Form-data parsing for FastAPI |
 | aiofiles | `25.1.0` | Async file operations |
 
-### 5.3 Desktop Dependencies
+### 6.3 Desktop Dependencies
 
 | Package | Version | Purpose |
 |---|---|---|
 | pywebview | `>=4.4.1` | Native OS window encapsulation (Chromium Edge) |
 | pyinstaller | `>=6.4.0` | Bundling Python application to `.exe` |
 
-### 5.4 Prerequisites
+### 6.4 Prerequisites
 
 - **Node.js**: `v18 or LTS`
 - **Python**: `3.10+ (Tested on 3.13)`
@@ -284,7 +294,7 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 
 - **FFmpeg**: `>=2025-09-25 (keep as soon as possible updated)` _for Merging Videos_
 
-### 5.5 Frontend Setup (Local)
+### 6.5 Frontend Setup (Local)
 
 Open your first terminal window:
 
@@ -306,7 +316,7 @@ npm run dev     # Starts Vite Server on http://localhost:5848
 │    └── utils/api.js    # Backend communication client
 ```
 
-### 5.6 Backend Setup (Local)
+### 6.6 Backend Setup (Local)
 
 Open a second terminal window:
 
@@ -352,7 +362,7 @@ _By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API
 
 ---
 
-## 6. API Reference
+## 7. API Reference
 
 | Endpoint                           | Method | Description                                      |
 |------------------------------------|--------|--------------------------------------------------|
@@ -372,52 +382,52 @@ _By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API
 
 ---
 
-## 7. Usage Guide
+## 8. Usage Guide
 
-### 7.1 Search and Discovery
+### 8.1 Search and Discovery
 
 - Enter keywords in the search bar to fetch top YouTube results including thumbnails, durations, and channel metadata.
 - **REST API**: `GET /api/search?q=search_term`
 
-### 7.2 Format Selection, Metadata & Streaming
+### 8.2 Format Selection, Metadata & Streaming
 
 - Click any search result to extract all available DASH (High-Def) and Progressive (Standard-Def) formats directly from YouTube. You can also stream content directly without downloading.
 - **REST API**: `GET /api/video?url=youtube_url` | `GET /api/stream?url=youtube_url&quality=1080p`
 
-### 7.3 Download Management
+### 8.3 Download Management
 
 - Configure your download with quality options (144p to 8K), format selection (MP4, MP3), and precision trimming.
 - Integrated automatic PO Token negotiation ensures your IP remains safe from 403 blocks.
 - **REST API**: `POST /api/download`
 
-### 7.4 Batch Processing
+### 8.4 Batch Processing
 
 - Paste multiple YouTube URLs into the Batch Manager to download entire playlists or series simultaneously.
 - **REST API**: `POST /api/batch-download`
 
-### 7.5 Real-time Performance Tracking
+### 8.5 Real-time Performance Tracking
 
 - Monitor download speed (MB/s), percentage completed, and estimated time remaining (ETA) via a circular or linear visual progress bar.
 - **REST API**: `GET /api/progress/{task_id}`
 
-### 7.6 History and Storage Management
+### 8.6 History and Storage Management
 
 - Access your download history to re-download files, delete single entries, or clear multiple items at once. You can also monitor your local disk usage statistics.
 - **REST API**: `GET /api/history` (List all), `DELETE /api/history/{id}` (Remove single entry), `POST /api/history/delete` (Batch remove), and `POST /api/system/storage` (Check disk availability).
 
-### 7.7 Native Desktop Integrations
+### 8.7 Native Desktop Integrations
 
 - For users on the Windows Desktop App, file exploration is deeply integrated. You can click to open specific files or their parent folders seamlessly inside Windows Explorer.
 - **REST API**: `POST /api/desktop/open-file` and `POST /api/desktop/open-folder`
 
-### 7.8 User Feedback
+### 8.8 User Feedback
 
 - Submit bug reports or suggestions directly from the application UI.
 - **REST API**: `POST /api/feedback`
 
 ---
 
-### 7.9 API Usage Examples (CLI/cURL)
+### 8.9 API Usage Examples (CLI/cURL)
 
 #### Search for Videos
 
@@ -442,11 +452,11 @@ curl "http://localhost:8000/api/progress/{task_id}"
 
 ---
 
-## 8. Building & Deploying the Web App
+## 9. Building & Deploying the Web App
 
 To host YT Deluxe publicly on the internet (Vercel, Render, Heroku):
 
-### 8.1 Backend (Cloud Web Service)
+### 9.1 Backend (Cloud Web Service)
 
 - Deploy the `backend/` directory as a standard Python Web Service.
 - **Critical Build Logic**: The server _must_ install FFmpeg alongside Python.
@@ -457,13 +467,13 @@ To host YT Deluxe publicly on the internet (Vercel, Render, Heroku):
 - **Use `Dockerfile` in backend folder to build and deploy.**
 `yt-deluxe\backend\Dockerfile`
 
-### 8.2 Frontend (Static Hosted App)
+### 9.2 Frontend (Static Hosted App)
 
 - Deploy the `frontend/` directory to any static hosting provider.
 - **Build Command**: `npm run build`
 - **Environment Variable**: Ensure you add `VITE_API_BASE_URL` pointing to your automatically deployed Backend URL (e.g., `https://my-backend-domain.com`).
 
-### 8.3 Connecting Frontend & Backend
+### 9.3 Connecting Frontend & Backend
 
 - By default, the frontend expects the backend API at `http://localhost:8000`.
 - CORS is enabled for local development.
@@ -471,11 +481,11 @@ To host YT Deluxe publicly on the internet (Vercel, Render, Heroku):
 
 ---
 
-## 9. Building for Desktop (Windows .exe)
+## 10. Building for Desktop (Windows .exe)
 
 To bundle the entire project into a completely standalone Windows application, follow this exact sequential pipeline. Each step fundamentally depends on the compiled output of the previous step.
 
-### 9.1 Environment Preparation (Crucial)
+### 10.1 Environment Preparation (Crucial)
 
 Before building, **both** backend and desktop dependencies must be installed into the **backend's isolated `.venv`**. This ensures PyInstaller bundles everything cohesively without `ModuleNotFoundError` crashes.
 
@@ -491,7 +501,7 @@ cd ..\desktop
 ..\backend\.venv\Scripts\pip.exe install -r requirements.txt
 ```
 
-### 9.2 Build Static Frontend
+### 10.2 Build Static Frontend
 
 ```powershell
 cd frontend
@@ -500,7 +510,7 @@ npm run build
 
 _(Packages React into optimized HTML/JS inside `frontend/build`. The desktop `build.spec` copies this folder into the final bundle)._
 
-### 9.3 Bundle Backend via PyInstaller
+### 10.3 Bundle Backend via PyInstaller
 
 ```powershell
 cd backend
@@ -509,7 +519,7 @@ cd backend
 
 _(Packages Python, FastAPI, and `ffmpeg.exe` into a headless `backend/dist/main.exe`)._ **Note:** You must re-run this step anytime `main.py` is edited so changes are included in the bundle.
 
-### 9.4 Build UI Launcher via PyInstaller
+### 10.4 Build UI Launcher via PyInstaller
 
 ```powershell
 cd desktop
@@ -519,14 +529,14 @@ cd desktop
 
 _(Creates the massive `desktop/dist/YT-Deluxe` application folder containing the PyWebView edge browser, the copied backend server, and the static frontend assets)._
 
-### 9.5 Post-Build Testing (Port 8000 Conflict Awareness)
+### 10.5 Post-Build Testing (Port 8000 Conflict Awareness)
 
 Before distributing your app, you should manually run the generated wrapper at `desktop/dist/YT-Deluxe/YT-Deluxe.exe`.
 
 ⚠️ **CRITICAL WARNING:** You **MUST CLOSE** any running local development servers (`uvicorn main:app --reload`) before double-clicking the generated `.exe`.
 If a dev server is active, it occupies `port 8000`. The bundled `.exe` will launch, silently crash in the background due to `winerror 10048 address already in use`, and the UI window will mistakenly hit your uncompiled Dev server resulting in a blank `{"detail":"Not Found"}` SPA response.
 
-### 9.6 Create the Final Setup Installer (Inno Setup)
+### 10.6 Create the Final Setup Installer (Inno Setup)
 
 To generate the distribution `.exe` that users can install on any Windows machine:
 
@@ -559,7 +569,7 @@ To generate the distribution `.exe` that users can install on any Windows machin
 
 ---
 
-## 10. Contributing
+## 11. Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -569,19 +579,19 @@ To generate the distribution `.exe` that users can install on any Windows machin
 
 ---
 
-## 11. Legal Notice
+## 12. Legal Notice
 
 This tool is for personal use only. Downloading copyrighted content may violate YouTube’s terms of service. Use responsibly and respect copyright laws.
 
 ---
 
-## 12. License
+## 13. License
 
 This project is for educational purposes. Please respect YouTube’s terms of service and copyright laws.
 
 ---
 
-## 13. Support & Maintenance
+## 14. Support & Maintenance
 
 For issues and questions:
 

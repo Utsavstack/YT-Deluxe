@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import { formatDate } from '../../../utils/dateFormat';
 
 const VideoMetadata = ({ videoData }) => {const { t } = useTranslation();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -131,7 +132,7 @@ const VideoMetadata = ({ videoData }) => {const { t } = useTranslation();
                         <div className="flex items-center space-x-2">
                             <Icon name="Calendar" size={16} className="text-primary" />
                             <span className="text-muted-foreground">{t("videoDetailsDownload.uploaded")}</span>
-                            <span className="text-foreground font-semibold">{new Date(videoData?.uploadDate)?.toLocaleDateString()}</span>
+                            <span className="text-foreground font-semibold">{formatDate(videoData?.uploadDate)}</span>
                         </div>
 
                         <div className="flex items-center space-x-2">

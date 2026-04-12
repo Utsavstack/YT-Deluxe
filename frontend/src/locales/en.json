@@ -167,7 +167,7 @@
     "architecture": "The Architecture of YT Deluxe",
     "architectureDesc": "Built for those who demand more than just a download button.",
     "vision": "The Vision",
-    "visionText1": "YT Deluxe was born from a simple necessity: the modern web requires a resilient, uncompromising tool for media preservation. In an era of ephemeral content, having a local, high-fidelity archive isn't a luxury—it's essential.",
+    "visionText1": "YT Deluxe was born from a simple necessity: the modern web requires a resilient, uncompromising tool for media preservation. In an era of ephemeral content, having a local, high-fidelity archive isn't a luxury it's essential.",
     "visionText2": "This system isn't just a wrapper; it's a dedicated engine. Every component, from the glassmorphic interface to the concurrent download daemon, is engineered to balance aesthetic beauty with raw technical capability.",
     "architect": "Architect & Developer",
     "leadEngineer": "Lead Engineer",
@@ -188,10 +188,10 @@
   },
   "aboutUs": {
     "heroSubtitle": "\"The Premium Media Downloader\"",
-    "prodReady": "Production Ready",
+    "prodReady": "Beta",
     "vision": "The Vision",
-    "visionText1": "YT Deluxe was born from a simple need: a beautiful, private, and powerful way to manage digital content.",
-    "visionText2": "Built on top of the world-class yt-dlp core, we've wrapped the industry's most powerful extraction tools inside a state-of-the-art \"Liquid Glass\" interface.",
+    "visionText1": "YT Deluxe was born from a simple necessity: the modern web requires a resilient, ad-free, and uncompromising tool for media preservation. In an era of ephemeral content and complex downloaders, having a clean, high-fidelity archive isn't a luxury it's essential.",
+    "visionText2": "Engineered as a full-stack solution using React and FastAPI, this platform seamlessly integrates the world-class yt-dlp core with a professional \"Liquid Glass\" interface. Our mission is to provide an ad-free, secure, and feature-rich experience for learners and creators alike.",
     "premiumEdge": "Premium Edge",
     "feat1Title": "High Quality Downloads",
     "feat1Desc": "Supports resolutions from 144p up to 8K, with automatic FFmpeg merging for superior quality.",
@@ -203,7 +203,7 @@
     "feat4Desc": "Runs seamlessly as a web app or as a native Windows desktop application.",
     "devBadge": "Architected with Passion",
     "devRole": "Full Stack Artisan & Systems Engineer",
-    "devDesc": "Specializing in building high-performance, aesthetically stunning applications. YT Deluxe represents a fusion of technical robustness and premium design philosophy.",
+    "devDesc": "Passionate about architecting high-performance, aesthetically stunning systems. YT Deluxe represents a fusion of technical robustness and premium \"Liquid Glass\" design, focusing on user experience, scalability, and security.",
     "sourceCode": "Source Code",
     "professional": "Professional",
     "footerBanner": "Non-Commercial • Educational Purpose Only • Open Source",
@@ -231,7 +231,7 @@
     "disclaimerText1": "\"This free, open-source tool is strictly for non-commercial, educational purposes. We respect YouTube Community Guidelines and creator intellectual property. Please use responsibly.\"",
     "disclaimerText2": "The software is provided \"as is\", without warranty of any kind, express or implied. In no event shall the architects or contributors be held liable for any claim, damages or other liability arising from technical interactions with third-party service providers.",
     "auditEngine": "Audit Engine:",
-    "protocol": "Protocol Document v2.0 • Verified 2026"
+    "protocol": "Protocol Document v1.2.0 • Verified 2026"
   },
   "batchDownloadManager": {
     "addVideosToQueue": "Add Videos to Queue",

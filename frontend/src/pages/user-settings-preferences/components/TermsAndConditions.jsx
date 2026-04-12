@@ -54,7 +54,7 @@ const TermsAndConditions = () => {
       variants={containerVariants}
       className="space-y-8"
     >
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-10 group hover:shadow-glass transition-all duration-500">
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-10 hover:shadow-glass transition-all duration-500">
         <div className="flex items-center space-x-4 mb-10">
           <motion.div
             whileHover={{ scale: 1.05, rotate: -10 }}
@@ -74,10 +74,10 @@ const TermsAndConditions = () => {
               <motion.div
                 key={index}
                 whileHover={{ y: -5, scale: 1.01 }}
-                className="flex flex-col items-center text-center p-6 rounded-2xl bg-primary/5 border border-primary/10 group-layer hover:bg-primary/10 hover:border-primary/30 transition-all duration-500 relative overflow-hidden"
+                className="flex flex-col items-center text-center p-6 rounded-2xl bg-primary/5 border border-primary/10 group hover:bg-primary/10 hover:border-primary/30 transition-all duration-500 relative overflow-hidden"
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-primary/20 group-layer-hover:bg-primary transition-colors" />
-                <div className="mb-4 text-primary group-layer-hover:scale-110 transition-transform duration-500">
+                <div className="absolute top-0 left-0 w-full h-1 bg-primary/20 group-hover:bg-primary transition-colors" />
+                <div className="mb-4 text-primary group-hover:scale-110 transition-transform duration-500">
                   <Icon name={item.icon} size={28} />
                 </div>
                 <h3 className="text-sm font-black text-foreground m-0 mb-2 tracking-tight">{item.title}</h3>

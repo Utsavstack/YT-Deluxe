@@ -88,8 +88,8 @@ const AboutYTDeluxe = () => {
               {t('aboutUs.heroSubtitle')}
             </p>
             <div className="flex items-center justify-center space-x-2 pt-2">
-              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">v1.2.0-Alpha</span>
-              <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold uppercase tracking-widest border border-green-500/20">{t('aboutUs.prodReady')}</span>
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">v1.2.0</span>
+              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">{t('aboutUs.prodReady')}</span>
             </div>
           </div>
         </div>
@@ -101,7 +101,7 @@ const AboutYTDeluxe = () => {
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-colors duration-500" />
           <div className="flex items-center space-x-3 relative z-10">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
-              <Icon name="Activity" size={20} />
+              <Icon name="Rocket" size={20} />
             </div>
             <h2 className="text-xl font-bold text-foreground">{t('aboutUs.vision')}</h2>
           </div>

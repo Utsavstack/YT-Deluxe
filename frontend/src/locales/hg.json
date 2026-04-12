@@ -188,10 +188,10 @@
   },
   "aboutUs": {
     "heroSubtitle": "★ Hinglish Mode Active ★ - Sabse Premium Media Downloader",
-    "prodReady": "Banke Taiyyar Hai",
+    "prodReady": "Beta",
     "vision": "Asli Maqsad",
-    "visionText1": "YT Deluxe ki shuruaat ek simple zarurat se hui thi.",
-    "visionText2": "Duniya ke best yt-dlp core par bana ye app ek Liquid Glass interface deta hai.",
+    "visionText1": "YT Deluxe ek simple zarurat se paida hua tha: aaj ke digital world ko ek pakka, ad-free aur uncompromising tool manage karne ki zarurat hai. Jab content itna temporary ho gaya hai, toh ek saaf aur high-quality archive rakhna koi luxury nahi, balki ek necessity hai.",
+    "visionText2": "React aur FastAPI ke full-stack combo par bana ye platform, world-class yt-dlp core ko ek smooth 'Liquid Glass' interface ke sath jodta hai. Hamara mission hai learners aur creators ko ek ad-free, secure aur features se bharpoor experience dena.",
     "premiumEdge": "Premium Faayde",
     "feat1Title": "High Quality Downloads",
     "feat1Desc": "144p se lekar 8K tak, sab bdiya quality milegi.",
@@ -203,7 +203,7 @@
     "feat4Desc": "Web app ya Windows dono par mast chalega.",
     "devBadge": "Dil Se Banaya Gaya",
     "devRole": "Full Stack Artisan aur System Engineer",
-    "devDesc": "High performance aur dikhne mein lajawab apps banane mein expert.",
+    "devDesc": "High-performance aur dikhne mein lajawab systems banane ka junoon. YT Deluxe technical robustness aur premium 'Liquid Glass' design ka ek perfect fusion hai, jiska focus user experience, scalability aur security par hai.",
     "sourceCode": "Code Dekhein",
     "professional": "Professional Profile",
     "footerBanner": "Sirf Seekhne Ke Liye • Open Source",
@@ -231,7 +231,7 @@
     "disclaimerText1": "\"Ye free tool hai, please ise zimmedari se use karein.\"",
     "disclaimerText2": "Software jaise hai waise milega, koi warranty nahi hai.",
     "auditEngine": "Audit Engine:",
-    "protocol": "Protocol Document v2.0 • Verified 2026"
+    "protocol": "Protocol Document v1.2.0 • Verified 2026"
   },
   "batchDownloadManager": {
     "addVideosToQueue": "Queue mein Video Dalein",

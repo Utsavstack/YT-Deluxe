@@ -62,7 +62,7 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
             `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z` :
             new Date().toISOString(),
             channel: {
-              name: response.video.uploader || 'Unknown Channel',
+              name: response.video.uploader || response.video.channel || initialVideo?.uploader || initialVideo?.channel?.name || '',
               subscribers: '1M+',
               avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
             },
@@ -128,6 +128,9 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
     const newDownload = {
       id: Date.now() + Math.random(),
       filename: `${downloadConfig?.filename || 'video'}.${downloadConfig?.format || 'mp4'}`,
+      title: downloadConfig?.filename || videoData?.title || '',
+      channel: videoData?.channel?.name || '',
+      thumbnail: videoData?.thumbnail || '',
       type: downloadConfig?.type,
       quality: downloadConfig?.quality,
       format: downloadConfig?.format,
@@ -137,7 +140,8 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
       speed: 0,
       timeRemaining: 0,
       startedAt: new Date(),
-      trimSettings: trimSettings
+      trimSettings: trimSettings,
+      duration: videoData?.duration || 0
     };
 
     setDownloads((prev) => [...prev, newDownload]);
@@ -293,12 +297,12 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
                 if (completedDownload) {
                   const historyItem = {
                     id: completedDownload.id,
-                    title: completedDownload.title || 'Downloaded Media',
+                    title: completedDownload.title || videoData?.title || 'Downloaded Media',
                     filename: progress.filename || completedDownload.filename,
                     filepath: progress.filepath,
-                    channel: completedDownload.channel || 'Unknown Channel',
-                    thumbnail: completedDownload.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=225&fit=crop',
-                    duration: completedDownload.duration || 0,
+                    channel: completedDownload.channel || videoData?.channel?.name || '',
+                    thumbnail: completedDownload.thumbnail || videoData?.thumbnail || '',
+                    duration: completedDownload.duration || videoData?.duration || 0,
                     format: completedDownload.format || 'mp4',
                     quality: completedDownload.quality || 'Auto',
                     fileSize: progress.total_bytes || 0,
