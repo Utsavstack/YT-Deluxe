@@ -155,7 +155,7 @@ const AboutYTDeluxe = () => {
                 className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/20 shadow-glass flex items-center justify-center bg-primary/5"
               >
                 <img
-                  src="/assets/images/CR7-DP.jpg"
+                  src="/assets/images/utsav.jpeg"
                   alt="Utsav Parmar"
                   className="w-full h-full object-cover"
                   onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Utsav+Parmar&background=0D8ABC&color=fff&size=128' }}

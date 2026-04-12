@@ -156,7 +156,9 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
         rename: downloadConfig.filename,
         trim_start: trimSettings?.startTime,
         trim_end: trimSettings?.endTime,
-        type: downloadConfig.type
+        type: downloadConfig.type,
+        channel: videoData?.channel?.name || '',
+        thumbnail: videoData?.thumbnail || ''
       };
 
       // Start download via API
@@ -298,6 +300,7 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
                   const historyItem = {
                     id: completedDownload.id,
                     title: completedDownload.title || videoData?.title || 'Downloaded Media',
+                    url: videoData?.url || '',
                     filename: progress.filename || completedDownload.filename,
                     filepath: progress.filepath,
                     channel: completedDownload.channel || videoData?.channel?.name || '',

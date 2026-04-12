@@ -1,12 +1,14 @@
 import { useTranslation } from "react-i18next";import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import ShareModal from '../../../components/ui/ShareModal';
 import { formatDate } from '../../../utils/dateFormat';
 
 const VideoMetadata = ({ videoData }) => {const { t } = useTranslation();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const formatViews = (views) => {
     // Clean string format if it has commas like "1,746,153,552"
@@ -117,9 +119,8 @@ const VideoMetadata = ({ videoData }) => {const { t } = useTranslation();
             size="sm"
             iconName="Share"
             iconPosition="left"
+            onClick={() => setIsShareModalOpen(true)}
             className="rounded-xl"> {t("videoDetailsDownload.share")} 
-
-
           </Button>
                 </div>
             </div>
@@ -188,6 +189,16 @@ const VideoMetadata = ({ videoData }) => {const { t } = useTranslation();
           }
                 </div>
             </div>
+            {isShareModalOpen && (
+                <div onClick={(e) => e.stopPropagation()} className="relative z-[260]">
+                    <ShareModal 
+                      isOpen={isShareModalOpen} 
+                      onClose={() => setIsShareModalOpen(false)} 
+                      url={videoData?.url || `https://www.youtube.com/watch?v=${videoData?.originalId || videoData?.id?.split('_')?.[0]}`} 
+                      title={videoData?.title} 
+                    />
+                </div>
+            )}
         </div>);
 
 };

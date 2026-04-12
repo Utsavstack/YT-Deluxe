@@ -87,8 +87,6 @@ def wait_for_backend(timeout=30):
 class AppApi:
     def read_clipboard(self):
         try:
-            # Using PowerShell instead of ctypes to avoid GUI thread deadlocks 
-            # and hard crashes with pywebview on Edge Chromium.
             import subprocess
             out = subprocess.check_output(
                 ["powershell", "-command", "Get-Clipboard"],
@@ -97,6 +95,28 @@ class AppApi:
             return out.decode("utf-8", errors="ignore").strip()
         except Exception:
             return ""
+
+    def write_clipboard(self, text):
+        try:
+            # Native clipboard write via PowerShell to avoid UI freezes
+            import subprocess
+            cmd = f'[link.text.copy]::Clear(); [System.Windows.Forms.Clipboard]::SetText("{text}")'
+            # Actually simpler to use Set-Clipboard in modern PS
+            subprocess.run(
+                ["powershell", "-command", f"Set-Clipboard -Value '{text}'"],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            return True
+        except Exception:
+            return False
+
+    def open_url(self, url):
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            return True
+        except Exception:
+            return False
 
 
 def main():

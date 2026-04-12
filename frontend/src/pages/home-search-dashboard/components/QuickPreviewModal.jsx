@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";import React, { useState, useEffe
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
+import ShareModal from '../../../components/ui/ShareModal';
 import { formatDate } from '../../../utils/dateFormat';
 
 const QuickPreviewModal = ({ video, isOpen, onClose, onDownload }) => {const { t } = useTranslation();
@@ -12,6 +13,7 @@ const QuickPreviewModal = ({ video, isOpen, onClose, onDownload }) => {const { t
   const [isMuted, setIsMuted] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showControls, setShowControls] = useState(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const videoRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
 
@@ -289,7 +291,7 @@ const QuickPreviewModal = ({ video, isOpen, onClose, onDownload }) => {const { t
        <Button variant="ghost" size="sm" iconName="ThumbsUp" iconPosition="left">
         {video?.likes?.toLocaleString()}
        </Button>
-       <Button variant="ghost" size="sm" iconName="Share2" iconPosition="left"> {t("homeSearchDashboard.share")} 
+       <Button variant="ghost" size="sm" iconName="Share2" iconPosition="left" onClick={() => setIsShareModalOpen(true)}> {t("homeSearchDashboard.share")} 
 
               </Button>
       </div>
@@ -302,6 +304,16 @@ const QuickPreviewModal = ({ video, isOpen, onClose, onDownload }) => {const { t
           }
     </div>
    </div>
+   {isShareModalOpen && (
+     <div onClick={(e) => e.stopPropagation()} className="relative z-[260]">
+       <ShareModal 
+         isOpen={isShareModalOpen} 
+         onClose={() => setIsShareModalOpen(false)} 
+         url={video?.url || `https://www.youtube.com/watch?v=${video?.originalId || video?.id?.split('_')?.[0]}`} 
+         title={video?.title} 
+       />
+     </div>
+   )}
   </div>);
 
 };

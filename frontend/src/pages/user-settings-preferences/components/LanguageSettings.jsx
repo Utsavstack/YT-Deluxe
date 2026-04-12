@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
 import Select from '../../../components/ui/Select';
 import { Checkbox } from '../../../components/ui/Checkbox';
+import { YTDeluxeStorage, STORAGE_KEYS } from '../../../utils/storage';
 
 const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSettingsChange }) => {
   const { t, i18n } = useTranslation();
@@ -33,10 +34,11 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
     { value: 'en-IN', label: '1,23,456.78', description: 'Indian format' }
   ];
 
-  const handleLanguageChange = (languageCode) => {
+  const handleLanguageChange = async (languageCode) => {
     onLanguageChange(languageCode);
     i18n.changeLanguage(languageCode);
-    localStorage.setItem('ytdeluxe_language', languageCode);
+    // Platform-aware sync
+    await YTDeluxeStorage.setItem(STORAGE_KEYS.LANGUAGE, languageCode);
   };
 
   const isHindiFamily = (lang) => lang === 'hi' || lang === 'hg';
@@ -49,10 +51,12 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
     return languages?.find(lang => lang?.value === currentLanguage) || languages?.[0];
   };
 
-  const handleSettingChange = (key, value) => {
+  const handleSettingChange = async (key, value) => {
     const updated = { ...languageSettings, [key]: value };
     setLanguageSettings(updated);
     onSettingsChange(updated);
+    // Platform-aware sync
+    await YTDeluxeStorage.setItem(STORAGE_KEYS.LANGUAGE_SETTINGS, updated);
   };
 
   const containerVariants = {
@@ -75,7 +79,7 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
       {/* Language Selection */}
       <motion.div variants={itemVariants} className="glass-card p-6 md:p-8">
         <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shadow-inner">
             <Icon name="Globe" size={18} />
           </div>
           <div>
@@ -86,35 +90,34 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
 
         {/* Current Language Display */}
         <motion.div
-          className="mb-8 p-5 glass rounded-2xl border border-primary/20 bg-primary/5 relative overflow-hidden group"
+          className="mb-8 p-6 glass rounded-2xl border border-primary/20 bg-primary/5 relative overflow-hidden group shadow-inner"
         >
-          <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
-            <Icon name="Globe" size={100} />
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-500 text-primary">
+            <Icon name="Globe" size={120} />
           </div>
-          <div className="flex items-center space-x-4 relative z-10">
-            <div className="w-16 h-12 rounded-xl bg-primary/10 p-0.5 overflow-hidden border border-primary/20 flex items-center justify-center shadow-lg">
+          <div className="flex items-center space-x-5 relative z-10">
+            <div className="w-20 h-14 rounded-2xl bg-primary/10 p-0.5 overflow-hidden border border-primary/20 flex items-center justify-center shadow-glass-sm">
               <img
-                src={`https://flagcdn.com/w80/${getCurrentLanguage()?.flag}.png`}
+                src={`https://flagcdn.com/w160/${getCurrentLanguage()?.flag}.png`}
                 alt={getCurrentLanguage()?.label}
-                className="w-full h-full object-cover rounded-lg"
+                className="w-full h-full object-cover rounded-xl"
               />
             </div>
             <div className="flex-1">
               <div className="flex items-center space-x-2">
-                <h4 className="text-lg font-bold text-foreground">
+                <h4 className="text-xl font-black text-foreground tracking-tight">
                   {getCurrentLanguage()?.nativeName}
                 </h4>
-                {/* Active Ping Badge */}
-                <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Active</span>
+                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.1em]">Active</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {getCurrentLanguage()?.label}
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+                {getCurrentLanguage()?.label} Edition
               </p>
             </div>
           </div>
@@ -133,29 +136,30 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`flex flex-col p-4 rounded-xl border transition-all duration-300 relative ${isActive
-                    ? 'bg-primary/5 text-foreground border-primary shadow-glass-md z-10'
-                    : 'glass border-border/50 hover:border-primary/30'
+                  onClick={() => !isActive && handleLanguageChange(language.value)}
+                  className={`flex flex-col p-5 rounded-2xl border transition-all duration-300 relative cursor-pointer ${isActive
+                    ? 'bg-primary/10 text-foreground border-primary shadow-glass-md z-10'
+                    : 'glass border-border/50 hover:border-primary/30 hover:bg-primary/5'
                     }`}
                 >
-                  <div className="flex items-center space-x-4 mb-3">
-                    <div className="w-12 h-8 rounded-lg overflow-hidden border border-border/50 flex-shrink-0">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="w-14 h-9 rounded-xl overflow-hidden border border-border/30 flex-shrink-0 shadow-sm">
                       <img
                         src={`https://flagcdn.com/w80/${language.flag}.png`}
                         alt={language.label}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="flex-1 min-w-0" onClick={() => handleLanguageChange(language.value)}>
-                      <h4 className="text-sm font-bold truncate">
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`text-sm font-black tracking-tight ${isActive ? 'text-primary' : 'text-foreground'}`}>
                         {language.nativeName}
                       </h4>
-                      <p className={`text-[10px] truncate ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-primary/70' : 'text-muted-foreground'}`}>
                         {language.label}
                       </p>
                     </div>
                     {isActive && !language.hasHinglish && (
-                      <div className="bg-primary p-1 rounded-full text-primary-foreground text-xs flex items-center justify-center w-5 h-5 ml-auto">
+                      <div className="bg-primary p-1 rounded-full text-primary-foreground flex items-center justify-center w-6 h-6 ml-auto shadow-lg">
                         <Icon name="Check" size={14} />
                       </div>
                     )}
@@ -163,15 +167,15 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
 
                   {/* Hindi/Hinglish Toggle */}
                   {language.hasHinglish && isActive && (
-                    <div className="mt-2 pt-3 border-t border-primary/20 flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-70">Switch Mode:</span>
-                      <div className="flex bg-muted/50 p-0.5 rounded-lg border border-border/50">
+                    <div className="mt-2 pt-4 border-t border-primary/20 flex items-center justify-between">
+                      <span className="text-[9px] font-black text-muted-foreground uppercase opacity-70 tracking-tighter">Variant:</span>
+                      <div className="flex bg-muted/40 p-1 rounded-xl border border-border/30 shadow-inner">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleLanguageChange('hi');
                           }}
-                          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${currentLanguage === 'hi' ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted'}`}
+                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${currentLanguage === 'hi' ? 'bg-primary text-primary-foreground shadow-lg' : 'hover:bg-muted text-muted-foreground'}`}
                         >
                           Pure
                         </button>
@@ -180,20 +184,12 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
                             e.stopPropagation();
                             handleLanguageChange('hg');
                           }}
-                          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${currentLanguage === 'hg' ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted'}`}
+                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${currentLanguage === 'hg' ? 'bg-primary text-primary-foreground shadow-lg' : 'hover:bg-muted text-muted-foreground'}`}
                         >
                           Hinglish
                         </button>
                       </div>
                     </div>
-                  )}
-
-                  {!isActive && (
-                    <button
-                      className="absolute inset-0 z-0"
-                      onClick={() => handleLanguageChange(language.value)}
-                      aria-label={`Select ${language.label}`}
-                    />
                   )}
                 </motion.div>
               );
@@ -203,9 +199,9 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
       </motion.div>
 
       {/* Regional Settings */}
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass transition-all duration-300">
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass-sm transition-all duration-500 border-primary/5">
         <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shadow-inner">
             <Icon name="MapPin" size={18} />
           </div>
           <div>
@@ -214,7 +210,7 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           <Select
             label={t('language.dateFormat')}
             options={dateFormatOptions}
@@ -245,9 +241,9 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
       </motion.div>
 
       {/* Translation Settings */}
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass transition-all duration-300">
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass-sm transition-all duration-500 border-primary/5">
         <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shadow-inner">
             <Icon name="Languages" size={18} />
           </div>
           <div>
@@ -256,7 +252,7 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
           <Checkbox
             label={t('language.autoTranslateTitles')}
             description={t('language.autoTranslateTitlesDesc')}

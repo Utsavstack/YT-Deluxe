@@ -453,6 +453,8 @@ def download_video(
   is_desktop: bool = Form(False),
   download_path: Optional[str] = Form(None),
   type: Optional[str] = Form(None),
+  channel: Optional[str] = Form(None),
+  thumbnail: Optional[str] = Form(None),
   background_tasks: BackgroundTasks = None
 ):
   try:
@@ -463,6 +465,8 @@ def download_video(
       "url": url,
       "filename": None,
       "error": None,
+      "channel": channel,
+      "thumbnail": thumbnail,
       "started_at": datetime.now().isoformat()
     }
 
@@ -568,8 +572,8 @@ def download_worker(task_id: str, url: str, quality: str = None,
           "file_size": os.path.getsize(filepath),
           "format": "jpg",
           "quality": "Thumbnail",
-          "thumbnail": info.get('thumbnail', ''),
-          "channel": info.get('uploader') or info.get('channel', ''),
+          "thumbnail": download_tasks[task_id].get("thumbnail") or info.get('thumbnail', ''),
+          "channel": download_tasks[task_id].get("channel") or info.get('uploader') or info.get('channel', ''),
           "duration": info.get('duration', 0),
           "batch_id": download_tasks[task_id].get("batch_id")
         }
@@ -767,8 +771,8 @@ def download_worker(task_id: str, url: str, quality: str = None,
         "file_size": os.path.getsize(filepath) if os.path.exists(filepath) else 0,
         "format": format or ('mp3' if quality == 'audio' else 'mp4'),
         "quality": quality or '1080p',
-        "thumbnail": info.get('thumbnail', ''),
-        "channel": info.get('uploader') or info.get('channel', ''),
+        "thumbnail": download_tasks[task_id].get("thumbnail") or info.get('thumbnail', ''),
+        "channel": download_tasks[task_id].get("channel") or info.get('uploader') or info.get('channel', ''),
         "duration": info.get('duration', 0),
         "batch_id": batch_id
       }
@@ -847,13 +851,20 @@ def get_progress(task_id: str):
     "speed": task.get("speed", 0),
     "eta": task.get("eta", 0),
     "downloaded_bytes": task.get("downloaded_bytes", 0),
-    "total_bytes": task.get("total_bytes", 0)
+    "total_bytes": task.get("total_bytes", 0),
+    "channel": task.get("channel"),
+    "thumbnail": task.get("thumbnail")
   }
 
 def get_history_file_path():
   history_dir = os.path.join(os.path.expanduser("~"), ".yt-deluxe")
   os.makedirs(history_dir, exist_ok=True)
   return os.path.join(history_dir, "download_history.json")
+
+def get_settings_file_path():
+  history_dir = os.path.join(os.path.expanduser("~"), ".yt-deluxe")
+  os.makedirs(history_dir, exist_ok=True)
+  return os.path.join(history_dir, "settings.json")
 
 # Save history to file
 def save_history():
@@ -880,20 +891,106 @@ def get_history():
   return {"history": download_history}
 
 @app.delete("/api/history/{task_id}")
-def delete_history_item(task_id: str):
+def delete_history_item(task_id: str, delete_file: bool = False):
   global download_history
-  download_history = [item for item in download_history if item.get("id") != task_id]
+  
+  if delete_file:
+    for item in download_history:
+      if str(item.get("id")) == str(task_id):
+        filepath = item.get("filepath")
+        if filepath and os.path.exists(filepath):
+          try:
+            os.remove(filepath)
+          except Exception as e:
+            print(f"Error deleting file {filepath}: {e}")
+        break
+
+  download_history = [item for item in download_history if str(item.get("id")) != str(task_id)]
   save_history()
   return {"status": "success"}
 
 @app.post("/api/history/delete")
-async def batch_delete_history(request: Request):
+async def batch_delete_history(request: Request, delete_file: bool = False):
   global download_history
   data = await request.json()
   ids = data.get("ids", [])
+  
+  if delete_file:
+    for item in download_history:
+      if str(item.get("id")) in [str(i) for i in ids]:
+        filepath = item.get("filepath")
+        if filepath and os.path.exists(filepath):
+          try:
+            os.remove(filepath)
+          except Exception as e:
+            print(f"Error deleting file {filepath}: {e}")
+            
   download_history = [item for item in download_history if str(item.get("id")) not in [str(i) for i in ids]]
   save_history()
   return {"status": "success"}
+
+@app.delete("/api/history/all")
+def clear_all_history(delete_file: bool = False):
+  global download_history
+  
+  if delete_file:
+    for item in download_history:
+      filepath = item.get("filepath")
+      if filepath and os.path.exists(filepath):
+        try:
+          os.remove(filepath)
+        except Exception as e:
+          print(f"Error deleting file {filepath}: {e}")
+            
+  download_history = []
+  save_history()
+  return {"status": "success"}
+
+# Settings Persistence Endpoints
+@app.get("/api/settings/{key}")
+def get_setting(key: str):
+  try:
+    path = get_settings_file_path()
+    if os.path.exists(path):
+      with open(path, "r") as f:
+        settings = json.load(f)
+        return {"value": settings.get(key)}
+  except Exception:
+    pass
+  return {"value": None}
+
+@app.post("/api/settings/{key}")
+async def save_setting(key: str, request: Request):
+  try:
+    data = await request.json()
+    value = data.get("value")
+    path = get_settings_file_path()
+    settings = {}
+    if os.path.exists(path):
+      with open(path, "r") as f:
+        settings = json.load(f)
+    
+    settings[key] = value
+    with open(path, "w") as f:
+      json.dump(settings, f, indent=2)
+    return {"status": "success"}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.delete("/api/settings/{key}")
+def delete_setting(key: str):
+  try:
+    path = get_settings_file_path()
+    if os.path.exists(path):
+      with open(path, "r") as f:
+        settings = json.load(f)
+      if key in settings:
+        del settings[key]
+        with open(path, "w") as f:
+          json.dump(settings, f, indent=2)
+    return {"status": "success"}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
 # Initialize history on startup
 download_history = load_history()

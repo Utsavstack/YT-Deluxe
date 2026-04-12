@@ -35,12 +35,17 @@ const FilterBar = ({
 
   const qualityOptions = [
   { value: '', label: 'All Qualities' },
+  { value: '4320p', label: '8K (4320p)' },
+  { value: '2160p', label: '4K (2160p)' },
+  { value: '1440p', label: '2K (1440p)' },
   { value: '1080p', label: '1080p HD' },
   { value: '720p', label: '720p HD' },
   { value: '480p', label: '480p SD' },
   { value: '360p', label: '360p' },
   { value: '240p', label: '240p' },
-  { value: '144p', label: '144p' }];
+  { value: '144p', label: '144p' },
+  { value: 'Max Resolution', label: 'Max Resolution' },
+  { value: 'Audio Only', label: 'Audio Only' }];
 
 
   const dateRangeOptions = [

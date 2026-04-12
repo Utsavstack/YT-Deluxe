@@ -63,6 +63,12 @@ class YTDeluxeAPI {
    if (downloadConfig.type) {
     formData.append('type', downloadConfig.type);
    }
+   if (downloadConfig.channel) {
+    formData.append('channel', downloadConfig.channel);
+   }
+   if (downloadConfig.thumbnail) {
+    formData.append('thumbnail', downloadConfig.thumbnail);
+   }
    const downloadPath = localStorage.getItem('ytdeluxe_download_path');
    if (downloadPath) {
     formData.append('download_path', downloadPath);
@@ -134,6 +140,47 @@ class YTDeluxeAPI {
    return await handleResponse(response);
   } catch (error) {
    console.error('History API error:', error);
+   throw error;
+  }
+ }
+
+ // Delete a single history item
+ static async deleteHistoryItem(taskId, deleteFile = false) {
+  try {
+   const response = await fetch(`${API_BASE_URL}/api/history/${taskId}?delete_file=${deleteFile}`, {
+    method: 'DELETE'
+   });
+   return await handleResponse(response);
+  } catch (error) {
+   console.error('Delete history API error:', error);
+   throw error;
+  }
+ }
+
+ // Batch delete history items
+ static async batchDeleteHistory(ids, deleteFile = false) {
+  try {
+   const response = await fetch(`${API_BASE_URL}/api/history/delete?delete_file=${deleteFile}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+   });
+   return await handleResponse(response);
+  } catch (error) {
+   console.error('Batch delete history API error:', error);
+   throw error;
+  }
+ }
+
+ // Clear all history
+ static async clearAllHistory(deleteFile = false) {
+  try {
+   const response = await fetch(`${API_BASE_URL}/api/history/all?delete_file=${deleteFile}`, {
+    method: 'DELETE'
+   });
+   return await handleResponse(response);
+  } catch (error) {
+   console.error('Clear all history API error:', error);
    throw error;
   }
  }

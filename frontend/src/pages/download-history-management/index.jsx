@@ -1,4 +1,5 @@
-import { useTranslation } from "react-i18next";import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from "react-i18next";
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
 import ProgressNotification from '../../components/ui/ProgressNotification';
@@ -10,8 +11,11 @@ import TabNavigation from './components/TabNavigation';
 import EmptyState from './components/EmptyState';
 import ConfirmationModal from './components/ConfirmationModal';
 import YTDeluxeAPI from '../../utils/api';
+import ShareModal from '../../components/ui/ShareModal';
+import UndoToast from '../../components/ui/UndoToast';
 
-const DownloadHistoryManagement = () => {const { t } = useTranslation();
+const DownloadHistoryManagement = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('downloadDate');
@@ -23,14 +27,28 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
     channel: ''
   });
   const [selectedItems, setSelectedItems] = useState([]);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', data: null });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', data: null, title: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [downloadHistory, setDownloadHistory] = useState([]);
   const [error, setError] = useState(null);
   const [storageStats, setStorageStats] = useState({ totalSize: 0, availableSpace: 0, itemCount: 0 });
+  
+  // Share & Undo State
+  const [shareData, setShareData] = useState({ isOpen: false, url: '', title: '' });
+  const [undoState, setUndoState] = useState({ isOpen: false, items: [], message: '', timerId: null });
+  const undoRef = useRef(null);
+
+  // Re-download progress tracking
+  const [activeDownloads, setActiveDownloads] = useState([]);
+
+  const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
 
   useEffect(() => {
     loadDownloadHistory();
+    return () => {
+      // Clear any pending undo deletions on unmount
+      if (undoRef.current) clearTimeout(undoRef.current);
+    };
   }, []);
 
   const loadDownloadHistory = async () => {
@@ -39,15 +57,14 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
     try {
       const response = await YTDeluxeAPI.getDownloadHistory();
 
-      const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
-
       if (isDesktop && response.history) {
         // Transform backend data to match UI expectations
         const transformed = response.history.map((item, idx) => ({
-          id: item.id || idx,
+          id: item.id || `hist_${idx}`,
           title: item.title,
           filename: item.filename,
           filepath: item.filepath,
+          url: item.url || '',
           channel: item.channel || '',
           thumbnail: item.thumbnail || '',
           duration: item.duration || 0,
@@ -62,39 +79,38 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
 
         // Fetch Storage Space
         const dlPath = localStorage.getItem('ytdeluxe_download_path');
-        const storageData = await YTDeluxeAPI.getStorageInfo(dlPath);
-        if (storageData) {
-          const totalSize = transformed.reduce((sum, item) => sum + item.fileSize, 0);
-          setStorageStats({
-            totalSize: totalSize,
-            availableSpace: storageData.free,
-            itemCount: transformed.length
-          });
-        }
-      } else if (!isDesktop) {
-        // Web Mode: Use local storage to prevent all web users from sharing the server's history database
+        try {
+          const storageData = await YTDeluxeAPI.getStorageInfo(dlPath);
+          if (storageData) {
+            const totalSize = transformed.reduce((sum, item) => sum + item.fileSize, 0);
+            setStorageStats({
+              totalSize: totalSize,
+              availableSpace: storageData.free,
+              itemCount: transformed.length
+            });
+          }
+        } catch {}
+      } else {
+        // Web Mode: Use local storage
         const localHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
-        setDownloadHistory(localHistory.map((item) => ({
+        const transformed = localHistory.map((item) => ({
           ...item,
           downloadDate: new Date(item.downloadDate || Date.now())
-        })));
+        }));
+        setDownloadHistory(transformed);
 
-        // Mock Web Storage space since browser cannot read system storage
-        const totalSize = localHistory.reduce((sum, item) => sum + (item.fileSize || 0), 0);
-        setStorageStats({ totalSize: totalSize, availableSpace: 10737418240, itemCount: localHistory.length });
+        const totalSize = transformed.reduce((sum, item) => sum + (item.fileSize || 0), 0);
+        setStorageStats({ totalSize: totalSize, availableSpace: 10 * 1024 * 1024 * 1024, itemCount: transformed.length });
       }
     } catch (error) {
+      console.error(error);
       setError('Failed to load download history.');
-      setDownloadHistory([]);
-      setStorageStats({ totalSize: 0, availableSpace: 0, itemCount: 0 });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
-    // When watchLater tab is active, show watch later items instead of download history
     if (activeTab === 'watchLater') {
       let watchLaterItems = [];
       try {
@@ -116,130 +132,166 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
         }));
       } catch {}
 
-      // Apply search filter on watch later
       if (searchQuery) {
-        const query = searchQuery?.toLowerCase();
+        const query = searchQuery.toLowerCase();
         watchLaterItems = watchLaterItems.filter((item) =>
-        item?.title?.toLowerCase()?.includes(query) ||
-        item?.channel?.toLowerCase()?.includes(query)
+          item.title?.toLowerCase().includes(query) ||
+          item.channel?.toLowerCase().includes(query)
         );
       }
       return watchLaterItems;
     }
 
-    let filtered = downloadHistory;
+    let filtered = [...downloadHistory];
 
-    // Filter by tab
     if (activeTab !== 'all') {
-      filtered = filtered?.filter((item) => item?.type === activeTab);
+      filtered = filtered.filter((item) => item.type === activeTab);
     }
 
-    // Filter by search query
     if (searchQuery) {
-      const query = searchQuery?.toLowerCase();
-      filtered = filtered?.filter((item) =>
-      item?.title?.toLowerCase()?.includes(query) ||
-      item?.channel?.toLowerCase()?.includes(query) ||
-      item?.tags?.some((tag) => tag?.toLowerCase()?.includes(query))
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((item) =>
+        item.title?.toLowerCase().includes(query) ||
+        item.channel?.toLowerCase().includes(query) ||
+        item.tags?.some((tag) => tag.toLowerCase().includes(query))
       );
     }
 
-    // Apply filters
-    if (filters?.format) {
-      filtered = filtered?.filter((item) => item?.format === filters?.format);
+    if (filters.format) {
+      filtered = filtered.filter((item) => item.format === filters.format);
     }
-    if (filters?.quality) {
-      filtered = filtered?.filter((item) => item?.quality === filters?.quality);
+    if (filters.quality) {
+      filtered = filtered.filter((item) => item.quality === filters.quality);
     }
-    if (filters?.channel) {
-      filtered = filtered?.filter((item) =>
-      item?.channel?.toLowerCase()?.includes(filters?.channel?.toLowerCase())
+    if (filters.channel) {
+      filtered = filtered.filter((item) =>
+        item.channel?.toLowerCase().includes(filters.channel.toLowerCase())
       );
     }
-    if (filters?.dateRange) {
-      const now = new Date();
+    if (filters.dateRange) {
       const filterDate = new Date();
-
-      switch (filters?.dateRange) {
-        case 'today':
-          filterDate?.setHours(0, 0, 0, 0);
-          break;
-        case 'week':
-          filterDate?.setDate(now?.getDate() - 7);
-          break;
-        case 'month':
-          filterDate?.setMonth(now?.getMonth() - 1);
-          break;
-        case 'year':
-          filterDate?.setFullYear(now?.getFullYear() - 1);
-          break;
-        default:
-          filterDate?.setTime(0);
+      switch (filters.dateRange) {
+        case 'today': filterDate.setHours(0, 0, 0, 0); break;
+        case 'week': filterDate.setDate(filterDate.getDate() - 7); break;
+        case 'month': filterDate.setMonth(filterDate.getMonth() - 1); break;
+        case 'year': filterDate.setFullYear(filterDate.getFullYear() - 1); break;
+        default: filterDate.setTime(0);
       }
-
-      filtered = filtered?.filter((item) => item?.downloadDate >= filterDate);
+      filtered = filtered.filter((item) => item.downloadDate >= filterDate);
     }
 
-    // Sort data
-    filtered?.sort((a, b) => {
-      let aValue = a?.[sortBy];
-      let bValue = b?.[sortBy];
-
+    filtered.sort((a, b) => {
+      let aValue = a[sortBy];
+      let bValue = b[sortBy];
       if (sortBy === 'downloadDate') {
-        aValue = new Date(aValue);
-        bValue = new Date(bValue);
+        aValue = new Date(aValue); bValue = new Date(bValue);
       } else if (typeof aValue === 'string') {
-        aValue = aValue?.toLowerCase();
-        bValue = bValue?.toLowerCase();
+        aValue = aValue.toLowerCase(); bValue = bValue.toLowerCase();
       }
-
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
+      return sortOrder === 'asc' ? (aValue > bValue ? 1 : -1) : (aValue < bValue ? 1 : -1);
     });
 
     return filtered;
   }, [downloadHistory, activeTab, searchQuery, filters, sortBy, sortOrder]);
 
-  // Calculate counts for tabs
   const tabCounts = useMemo(() => {
     let watchLaterCount = 0;
     try {
       watchLaterCount = JSON.parse(localStorage.getItem('ytdeluxe_watch_later') || '[]').length;
     } catch {}
     return {
-      all: downloadHistory?.length,
+      all: downloadHistory.length,
       watchLater: watchLaterCount,
       bookmarks: 0
     };
   }, [downloadHistory]);
 
-  // Storage logic moved to API directly
   const handleItemSelect = (itemId) => {
     setSelectedItems((prev) => {
-      const isSelected = prev?.some((item) => item?.id === itemId);
+      const isSelected = prev.some((item) => item.id === itemId);
       if (isSelected) {
-        return prev?.filter((item) => item?.id !== itemId);
+        return prev.filter((item) => item.id !== itemId);
       } else {
-        const item = downloadHistory?.find((item) => item?.id === itemId);
+        const item = downloadHistory.find((item) => item.id === itemId);
         return item ? [...prev, item] : prev;
       }
     });
   };
 
-  const handleSelectAll = () => {
-    setSelectedItems(filteredAndSortedData);
-  };
+  const handleSelectAll = () => setSelectedItems(filteredAndSortedData);
+  const handleDeselectAll = () => setSelectedItems([]);
 
-  const handleDeselectAll = () => {
-    setSelectedItems([]);
-  };
+  const handleRedownload = async (item) => {
+    // Try multiple sources for the video URL
+    let videoUrl = item.url;
+    
+    // Fallback: reconstruct from video ID if available
+    if (!videoUrl && item.id) {
+      const isYoutubeId = item.id.length === 11 && !item.id.includes('-');
+      if (isYoutubeId) {
+        videoUrl = `https://www.youtube.com/watch?v=${item.id}`;
+      }
+    }
+    
+    if (!videoUrl) {
+      alert("Cannot re-download: Video URL not found in history.");
+      return;
+    }
 
-  const handleRedownload = (item) => {
-    console.log('Re-downloading:', item?.title);
-    // Implement re-download logic
+    try {
+      const isDesktopEnv = typeof window !== 'undefined' && window.pywebview !== undefined;
+      const response = await YTDeluxeAPI.downloadVideo({
+        url: videoUrl,
+        quality: item.quality,
+        format: item.format,
+        is_desktop: isDesktopEnv
+      });
+
+      if (response.task_id) {
+        // Create a local download entry for progress tracking
+        const dlEntry = {
+          id: response.task_id,
+          filename: item.title || 'Re-downloading...',
+          title: item.title,
+          type: item.format === 'mp3' ? 'audio' : item.format === 'jpg' ? 'thumbnail' : 'video',
+          quality: item.quality,
+          format: item.format,
+          progress: 0,
+          status: 'downloading',
+          startedAt: new Date(),
+        };
+        setActiveDownloads(prev => [...prev, dlEntry]);
+
+        // Poll progress
+        const pollInterval = setInterval(async () => {
+          try {
+            const prog = await YTDeluxeAPI.getDownloadProgress(response.task_id);
+            setActiveDownloads(prev => prev.map(d =>
+              d.id === response.task_id
+                ? { ...d, progress: prog.progress || 0, status: prog.status || 'downloading', filename: prog.filename || d.filename, filepath: prog.filepath }
+                : d
+            ));
+
+            if (prog.status === 'completed' || prog.status === 'error') {
+              clearInterval(pollInterval);
+              // Reload history after successful re-download
+              if (prog.status === 'completed') {
+                setTimeout(() => loadDownloadHistory(), 1500);
+              }
+              // Auto-dismiss after 8 seconds
+              setTimeout(() => {
+                setActiveDownloads(prev => prev.filter(d => d.id !== response.task_id));
+              }, 8000);
+            }
+          } catch (e) {
+            clearInterval(pollInterval);
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      console.error("Re-download failed:", err);
+      alert("Re-download failed. Please try again.");
+    }
   };
 
   const handleDelete = (item) => {
@@ -248,7 +300,7 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
       type: 'danger',
       data: [item],
       title: 'Delete Download',
-      message: `Are you sure you want to delete "${item?.title}"? This action cannot be undone.`
+      message: `Are you sure you want to delete "${item.title}"? Records will be removed from your download history profile.`
     });
   };
 
@@ -258,18 +310,15 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
       type: 'danger',
       data: selectedItems,
       title: 'Delete Selected Downloads',
-      message: `Are you sure you want to delete ${selectedItems?.length} selected download${selectedItems?.length !== 1 ? 's' : ''}? This action cannot be undone.`
+      message: `Are you sure you want to delete ${selectedItems.length} selected download${selectedItems.length !== 1 ? 's' : ''}?`
     });
   };
 
   const handleOpenLocation = async (item) => {
-    const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
     if (!isDesktop) {
-      alert("History downloaded to your browser's default download folder.");
+      alert("Browser based downloads are stored in your default downloads folder.");
       return;
     }
-
-    console.log('Opening file location for:', item?.title);
     try {
       await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/desktop/open-file`, {
         method: 'POST',
@@ -282,186 +331,209 @@ const DownloadHistoryManagement = () => {const { t } = useTranslation();
   };
 
   const handleShare = (item) => {
-    console.log('Sharing:', item?.title);
-    // Implement sharing logic
+    setShareData({
+      isOpen: true,
+      url: item.url || `https://youtube.com/watch?v=${item.id}`,
+      title: item.title
+    });
   };
 
-  const handleBulkExport = async () => {
-    setIsLoading(true);
+  const executeActualDeletion = async (itemsToDelete, deleteFile = false) => {
     try {
-      console.log('Exporting selected items:', selectedItems);
-      // Implement export logic
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate export
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateZip = async () => {
-    setIsLoading(true);
-    try {
-      console.log('Creating ZIP for selected items:', selectedItems);
-      // Implement ZIP creation logic
-      await new Promise((resolve) => setTimeout(resolve, 3000)); // Simulate ZIP creation
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleConfirmAction = async () => {
-    setIsLoading(true);
-    try {
-      const idsToDelete = confirmModal.data.map((item) => item.id);
-      const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
-
+      const ids = itemsToDelete.map(i => i.id);
       if (isDesktop) {
-        if (idsToDelete.length === 1) {
-          await YTDeluxeAPI.deleteHistoryItem(idsToDelete[0]);
-        } else if (idsToDelete.length > 1) {
-          await YTDeluxeAPI.batchDeleteHistory(idsToDelete);
+        if (ids.length === 1) {
+          await YTDeluxeAPI.deleteHistoryItem(ids[0], deleteFile);
+        } else {
+          await YTDeluxeAPI.batchDeleteHistory(ids, deleteFile);
         }
       } else {
-        // Web Mode: Delete from local storage
-        const currentHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
-        const remaining = currentHistory.filter((h) => !idsToDelete.includes(h.id));
-        localStorage.setItem('ytdeluxe_web_history', JSON.stringify(remaining));
+        const current = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
+        const updated = current.filter(h => !ids.includes(h.id));
+        localStorage.setItem('ytdeluxe_web_history', JSON.stringify(updated));
       }
-
+      // Reload stats after deletion
       await loadDownloadHistory();
-
-      setSelectedItems([]);
-      setConfirmModal({ isOpen: false, type: '', data: null });
-    } catch (error) {
-      setError('Failed to delete items.');
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      console.error("Deletion failed:", err);
+      setError("Failed to delete records from permanent storage.");
     }
+  };
+
+  const handleConfirmAction = (deleteFile = false) => {
+    const itemsToDelete = confirmModal.data;
+    
+    // Immediate UI feedback
+    const remainingHistory = downloadHistory.filter(h => !itemsToDelete.some(it => it.id === h.id));
+    setDownloadHistory(remainingHistory);
+    setSelectedItems([]);
+    setConfirmModal({ isOpen: false, type: '', data: null, title: '', message: '' });
+
+    // Show Undo Toast
+    if (undoRef.current) clearTimeout(undoRef.current);
+    
+    setUndoState({
+      isOpen: true,
+      items: itemsToDelete,
+      message: `${itemsToDelete.length} item${itemsToDelete.length > 1 ? 's' : ''} deleted`
+    });
+
+    // Schedule actual deletion
+    undoRef.current = setTimeout(() => {
+      executeActualDeletion(itemsToDelete, deleteFile);
+      setUndoState(prev => ({ ...prev, isOpen: false }));
+    }, 5000);
+  };
+
+  const handleUndoDelete = () => {
+    if (undoRef.current) clearTimeout(undoRef.current);
+    
+    // Restore UI
+    setDownloadHistory(prev => [...undoState.items, ...prev].sort((a,b) => {
+       // Restore sorting
+       if (sortBy === 'downloadDate') return new Date(b.downloadDate) - new Date(a.downloadDate);
+       return 0;
+    }));
+    
+    setUndoState({ isOpen: false, items: [], message: '' });
   };
 
   const handleClearFilters = () => {
     setSearchQuery('');
-    setFilters({
-      format: '',
-      quality: '',
-      dateRange: '',
-      channel: ''
-    });
+    setFilters({ format: '', quality: '', dateRange: '', channel: '' });
   };
 
   const hasActiveFilters = () => {
-    return searchQuery || Object.values(filters)?.some((value) => value && value !== '');
+    return searchQuery || Object.values(filters).some(value => value && value !== '');
   };
 
   return (
     <>
-   <Helmet>
-    <title>{t("downloadHistoryManagement.downloadHistoryManagementYt")}</title>
-    <meta name="description" content="Manage and organize your YouTube download history with advanced filtering, sorting, and bulk operations." />
-   </Helmet>
-   <div className="min-h-screen bg-background">
-    <Header />
-    <ProgressNotification />
-    
-    <main className="pt-20 pb-8">
-     <div className="container mx-auto px-4 lg:px-6">
-      {/* Page Header */}
-      <div className="mb-8">
-       <h1 className="text-3xl font-bold text-foreground mb-2"> {t("downloadHistoryManagement.downloadHistoryManagement")} 
-
-              </h1>
-       <p className="text-muted-foreground"> {t("downloadHistoryManagement.trackOrganizeAndManage")} 
-
-              </p>
-      </div>
-
-      {/* Storage Usage */}
-      <StorageUsage
-              totalSize={storageStats?.totalSize}
-              availableSpace={storageStats?.availableSpace}
-              itemCount={storageStats?.itemCount} />
-            
-
-      {/* Tab Navigation */}
-      <TabNavigation
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              counts={tabCounts} />
-            
-
-      {/* Filter Bar */}
-      <FilterBar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              sortOrder={sortOrder}
-              onSortOrderChange={setSortOrder}
-              filters={filters}
-              onFiltersChange={setFilters}
-              onClearFilters={handleClearFilters} />
-            
-
-      {/* Bulk Actions */}
-      <BulkActions
-              selectedItems={selectedItems}
-              onSelectAll={handleSelectAll}
-              onDeselectAll={handleDeselectAll}
-              onBulkDelete={handleBulkDelete}
-              onBulkExport={handleBulkExport}
-              onCreateZip={handleCreateZip}
-              totalItems={filteredAndSortedData?.length} />
-            
-
-      {/* Error Display */}
-      {error &&
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-red-800">{error}</p>
-       </div>
-            }
-
-      {/* Content */}
-      {isLoading ?
-            <div className="text-center py-12 text-muted-foreground">{t("downloadHistoryManagement.loading")}</div> :
-            filteredAndSortedData?.length === 0 ?
-            <EmptyState
-              type={activeTab}
-              searchQuery={searchQuery}
-              hasFilters={hasActiveFilters()}
-              onClearFilters={handleClearFilters} /> :
-
-
-            <div className="space-y-4">
-        {filteredAndSortedData?.map((item) =>
-              <HistoryCard
-                key={item?.id}
-                item={item}
-                onRedownload={handleRedownload}
-                onDelete={handleDelete}
-                onOpenLocation={handleOpenLocation}
-                onShare={handleShare}
-                isSelected={selectedItems?.some((selected) => selected?.id === item?.id)}
-                onSelect={handleItemSelect} />
-
-              )}
-       </div>
-            }
-     </div>
-    </main>
-
-    {/* Confirmation Modal */}
-    <ConfirmationModal
-          isOpen={confirmModal?.isOpen}
-          onClose={() => setConfirmModal({ isOpen: false, type: '', data: null })}
-          onConfirm={handleConfirmAction}
-          title={confirmModal?.title}
-          message={confirmModal?.message}
-          type={confirmModal?.type}
-          confirmText="Delete"
-          isLoading={isLoading} />
+      <Helmet>
+        <title>{t("downloadHistoryManagement.downloadHistoryManagementYt")}</title>
+      </Helmet>
+      
+      <div className="min-h-screen bg-background text-foreground">
+        <Header />
+        <ProgressNotification downloads={activeDownloads} />
         
-   </div>
-  </>);
+        <main className="pt-24 pb-12">
+          <div className="container mx-auto px-4 max-w-7xl">
+            {/* Page Header */}
+            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <h1 className="text-4xl font-black text-foreground mb-2 tracking-tight">
+                  {t("downloadHistoryManagement.downloadHistoryManagement")}
+                </h1>
+                <p className="text-muted-foreground font-medium">
+                  {t("downloadHistoryManagement.trackOrganizeAndManage")}
+                </p>
+              </div>
+              <StorageUsage
+                totalSize={storageStats.totalSize}
+                availableSpace={storageStats.availableSpace}
+                itemCount={storageStats.itemCount}
+              />
+            </div>
 
+            {/* Main Interface */}
+            <div className="grid grid-cols-1 gap-8">
+              <div className="space-y-6">
+                <TabNavigation
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  counts={tabCounts}
+                />
+
+                <FilterBar
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  sortOrder={sortOrder}
+                  onSortOrderChange={setSortOrder}
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  onClearFilters={handleClearFilters}
+                />
+
+                <BulkActions
+                  selectedItems={selectedItems}
+                  onSelectAll={handleSelectAll}
+                  onDeselectAll={handleDeselectAll}
+                  onBulkDelete={handleBulkDelete}
+                  totalItems={filteredAndSortedData.length}
+                />
+
+                {error && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-sm font-bold flex items-center gap-3">
+                    <Icon name="AlertTriangle" size={18} />
+                    {error}
+                  </div>
+                )}
+
+                {isLoading && downloadHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+                    <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+                    <p className="text-muted-foreground font-bold tracking-widest uppercase text-xs">{t("downloadHistoryManagement.loading")}</p>
+                  </div>
+                ) : filteredAndSortedData.length === 0 ? (
+                  <EmptyState
+                    type={activeTab}
+                    searchQuery={searchQuery}
+                    hasFilters={hasActiveFilters()}
+                    onClearFilters={handleClearFilters}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
+                    {filteredAndSortedData.map((item) => (
+                      <HistoryCard
+                        key={item.id}
+                        item={item}
+                        onRedownload={handleRedownload}
+                        onDelete={handleDelete}
+                        onOpenLocation={handleOpenLocation}
+                        onShare={handleShare}
+                        isSelected={selectedItems.some((selected) => selected.id === item.id)}
+                        onSelect={handleItemSelect}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Global UI Components */}
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          onConfirm={handleConfirmAction}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          type={confirmModal.type}
+          items={confirmModal.data || []}
+          confirmText="Confirm Delete"
+          isLoading={isLoading}
+        />
+
+        <ShareModal
+          isOpen={shareData.isOpen}
+          onClose={() => setShareData({ ...shareData, isOpen: false })}
+          url={shareData.url}
+          title={shareData.title}
+        />
+
+        <UndoToast
+          isOpen={undoState.isOpen}
+          message={undoState.message}
+          onUndo={handleUndoDelete}
+          onExpire={() => {}} // Clean deletion already scheduled by timeout
+        />
+      </div>
+    </>
+  );
 };
 
 export default DownloadHistoryManagement;
