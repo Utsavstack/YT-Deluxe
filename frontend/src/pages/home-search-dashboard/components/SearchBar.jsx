@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../../../components/AppIcon';
-import Button from '../../../components/ui/Button';
 import './SearchBar.css';
 
 const isYouTubeUrl = (url) => {
@@ -9,7 +8,7 @@ const isYouTubeUrl = (url) => {
   return url.includes('youtube.com') || url.includes('youtu.be');
 };
 
-const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearch }) => {
+const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearch, isSticky = false }) => {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -63,23 +62,14 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
       }
     };
 
-    // Initial check
     checkClipboard();
-    
-    const handleFocus = () => {
-      checkClipboard();
-    };
 
-    // Check when user explicitly copies something inside the app
-    const handleCopy = () => {
-      setTimeout(checkClipboard, 100);
-    };
+    const handleFocus = () => { checkClipboard(); };
+    const handleCopy = () => { setTimeout(checkClipboard, 100); };
 
     window.addEventListener('focus', handleFocus);
     document.addEventListener('copy', handleCopy);
-    
-    // Poll continuously every 1 second to detect clipboard changes
-    // even if the user hasn't explicitly clicked back into the window context yet
+
     const intervalId = setInterval(checkClipboard, 1000);
 
     return () => {
@@ -94,7 +84,6 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
     setSearchQuery(value);
 
     if (value?.trim()) {
-      // Filter suggestions based on input
       const filtered = mockSuggestions?.filter((suggestion) =>
         suggestion?.toLowerCase()?.includes(value?.toLowerCase())
       );
@@ -111,7 +100,6 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
       onSearch(query?.trim());
       setShowSuggestions(false);
 
-      // Add to recent searches
       const recent = JSON.parse(localStorage.getItem('ytdeluxe_recent_searches') || '[]');
       const updatedRecent = [query?.trim(), ...recent?.filter((item) => item !== query?.trim())]?.slice(0, 10);
       localStorage.setItem('ytdeluxe_recent_searches', JSON.stringify(updatedRecent));
@@ -133,10 +121,10 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
       if (i >= text.length) {
         clearInterval(interval);
         if (autoSearch) {
-          setTimeout(() => handleSearch(text), 300); // slight delay after typing
+          setTimeout(() => handleSearch(text), 300);
         }
       }
-    }, 20); // Fast typing micro animation
+    }, 20);
   };
 
   const handleVoiceSearch = () => {
@@ -155,9 +143,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
       recognition.interimResults = false;
       recognition.lang = 'en-US';
 
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
+      recognition.onstart = () => { setIsListening(true); };
 
       recognition.onresult = (event) => {
         const transcript = event.results?.[0]?.[0]?.transcript;
@@ -166,13 +152,8 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
         }
       };
 
-      recognition.onerror = () => {
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
+      recognition.onerror = () => { setIsListening(false); };
+      recognition.onend = () => { setIsListening(false); };
 
       recognition?.start();
     } else {
@@ -181,7 +162,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
   };
 
   return (
-    <div className="search-bar-wrapper">
+    <div className={`search-bar-wrapper ${isSticky ? 'is-sticky' : ''}`}>
       {/* Main Search Bar */}
       <div ref={searchRef} className="relative z-10 w-full max-w-2xl mx-auto">
         <div className="search-theme-container">
@@ -210,14 +191,14 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
                 </button>
               )}
 
-              {/* Paste from Clipboard icon */}
+              {/* Paste from Clipboard */}
               {!searchQuery && clipboardLink && (
                 <button
                   className="search-action-btn animate-pop-in text-primary"
                   title="Paste copied link"
                   onClick={() => {
                     typeTextAndSearch(clipboardLink, false);
-                    setClipboardLink(''); // Hide after click
+                    setClipboardLink('');
                   }}>
                   <Icon name="ClipboardPaste" size={18} />
                 </button>
@@ -232,7 +213,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
                 <Icon name={isListening ? "Square" : "Mic"} size={18} />
               </button>
 
-              {/* Search Icon based on user snippet Design */}
+              {/* Search Submit Icon */}
               <div
                 className="search__icon-custom"
                 onClick={() => handleSearch()}
@@ -240,7 +221,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
               >
                 <svg viewBox="0 0 24 24">
                   <g>
-                    <path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z"></path>
+                    <path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z" />
                   </g>
                 </svg>
               </div>
@@ -248,8 +229,8 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
           </div>
         </div>
 
-        {/* Auto-suggestions Dropdown */}
-        {showSuggestions && suggestions?.length > 0 && (
+        {/* Auto-suggestions Dropdown — hidden for now, will implement later */}
+        {false && showSuggestions && suggestions?.length > 0 && (
           <div ref={suggestionsRef} className="search-suggestions-container animate-slide-down">
             <div className="text-xs text-muted-foreground px-3 py-2 font-medium uppercase tracking-wider">
               {t("homeSearchDashboard.suggestions")}
@@ -267,8 +248,17 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
         )}
       </div>
 
-      {/* Recent Searches outside of relative bounds slightly */}
-      <div className="relative z-0">
+      {/* Recent Searches — hidden when sticky */}
+      <div
+        className="recent-searches-section"
+        style={{
+          maxHeight: isSticky ? '0px' : '200px',
+          opacity: isSticky ? 0 : 1,
+          pointerEvents: isSticky ? 'none' : 'auto',
+          overflow: 'hidden',
+          transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
+        }}
+      >
         {recentSearches?.length > 0 && !showSuggestions && !searchQuery && (
           <div className="mt-8 flex flex-col items-center">
             <div className="text-sm text-foreground/70 mb-3 font-medium bg-card/40 backdrop-blur-md px-4 py-1 rounded-full border border-border/50 animate-stagger-item">
@@ -299,20 +289,22 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
           </div>
         )}
 
-        {/* Voice Search Indicator UI fallback if not using popup */}
+        {/* Voice Search Indicator */}
         {isListening && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-12 glass-card shadow-glass-xl p-4 rounded-xl text-center animate-slide-down flex flex-col items-center min-w-[250px] border border-primary/20">
             <div className="flex items-center space-x-2 text-error mb-2">
-              <div className="w-3 h-3 bg-error rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.7)]"></div>
+              <div className="w-3 h-3 bg-error rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.7)]" />
               <span className="font-semibold">{t("homeSearchDashboard.listening")}</span>
             </div>
             <p className="text-sm text-muted-foreground">{t("homeSearchDashboard.speakNowToSearch")}</p>
             <div className="flex gap-1 mt-3">
-              <div className="w-1 h-3 bg-error/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-1 h-4 bg-error/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-1 h-5 bg-error rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              <div className="w-1 h-4 bg-error/60 rounded-full animate-bounce" style={{ animationDelay: '450ms' }}></div>
-              <div className="w-1 h-3 bg-error/40 rounded-full animate-bounce" style={{ animationDelay: '600ms' }}></div>
+              {[0, 150, 300, 450, 600].map((delay, i) => (
+                <div
+                  key={i}
+                  className={`w-1 rounded-full bg-error animate-bounce ${['h-3', 'h-4', 'h-5', 'h-4', 'h-3'][i]} ${['opacity-40', 'opacity-60', 'opacity-100', 'opacity-60', 'opacity-40'][i]}`}
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
             </div>
           </div>
         )}

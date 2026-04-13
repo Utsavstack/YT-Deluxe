@@ -247,3 +247,41 @@
 .search-suggestion-item:hover .suggestion-icon {
   color: var(--color-primary);
 }
+
+/* ===================================
+   STICKY MODE OVERRIDES
+   =================================== */
+
+/* Wrapper shrinks when sticky */
+.search-bar-wrapper.is-sticky {
+  max-width: 520px;
+  transition: max-width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Inner container gets more compact */
+.search-bar-wrapper.is-sticky .search-inner-container {
+  padding: 5px 12px;
+}
+
+/* Input font slightly smaller */
+.search-bar-wrapper.is-sticky .search-input-field {
+  font-size: 0.95rem;
+  padding: 5px 8px;
+}
+
+/* Tighter glow shadow in sticky */
+.search-bar-wrapper.is-sticky .search-theme-container {
+  box-shadow: 0 6px 25px -8px var(--color-primary), 0 0 15px -8px var(--color-accent);
+  padding: 2.5px;
+}
+
+/* Action buttons a touch smaller */
+.search-bar-wrapper.is-sticky .search-action-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.search-bar-wrapper.is-sticky .search__icon-custom {
+  width: 34px;
+  height: 34px;
+}

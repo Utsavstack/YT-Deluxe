@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
 import Header from '../../components/ui/Header';
@@ -14,23 +14,39 @@ const SearchResultsPage = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const query = searchParams.get('q') || '';
-  
+
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState(null);
-  
+
   const [previewVideo, setPreviewVideo] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [downloads, setDownloads] = useState([]);
   const [recentSearches, setRecentSearches] = useState([]);
 
+  // Sticky search bar state
+  const [isSearchSticky, setIsSearchSticky] = useState(false);
+  const searchBarRef = useRef(null);
+
+  // IntersectionObserver sentinel ref
+  const sentinelRef = useRef(null);
+
   useEffect(() => {
     const savedSearches = JSON.parse(localStorage.getItem('ytdeluxe_recent_searches') || '[]');
     setRecentSearches(savedSearches);
+  }, []);
+
+  // Scroll listener for sticky behavior
+  useEffect(() => {
+    const onScroll = () => {
+      setIsSearchSticky(window.scrollY > 84);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
@@ -77,7 +93,6 @@ const SearchResultsPage = () => {
         setTotalResults(0);
         setHasMoreResults(false);
       }
-
     } catch (err) {
       console.error('Search failed:', err);
       setError('Search failed. Please try again.');
@@ -89,7 +104,7 @@ const SearchResultsPage = () => {
     }
   };
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = useCallback(async () => {
     if (isSearching || !hasMoreResults) return;
     setIsSearching(true);
 
@@ -105,11 +120,7 @@ const SearchResultsPage = () => {
         }));
 
         setSearchResults((prev) => [...prev, ...moreResults]);
-        if (offset > 50) {
-          setHasMoreResults(false);
-        } else {
-          setHasMoreResults(true);
-        }
+        setHasMoreResults(offset <= 50);
       } else {
         setHasMoreResults(false);
       }
@@ -119,27 +130,45 @@ const SearchResultsPage = () => {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [isSearching, hasMoreResults, query, searchResults.length]);
+
+  // IntersectionObserver — auto-load when sentinel enters viewport
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreResults && !isSearching) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    const currentSentinel = sentinelRef.current;
+    if (currentSentinel) observer.observe(currentSentinel);
+
+    return () => {
+      if (currentSentinel) observer.unobserve(currentSentinel);
+    };
+  }, [hasMoreResults, isSearching, handleLoadMore]);
 
   const handlePreview = (video) => {
     setPreviewVideo(video);
     setIsPreviewOpen(true);
   };
 
-  // Keep download functionality intact
   const trackDownloadProgress = async (taskId, downloadId) => {
     const progressInterval = setInterval(async () => {
       try {
         const progress = await YTDeluxeAPI.getDownloadProgress(taskId);
         setDownloads((prev) => prev.map((dl) =>
-          dl.id === downloadId ? { 
-            ...dl, 
+          dl.id === downloadId ? {
+            ...dl,
             progress: progress.progress || 0,
             status: progress.status || 'downloading',
             filename: progress.filename || dl.filename
           } : dl
         ));
-        
+
         if (progress.status === 'completed' || progress.status === 'error') {
           clearInterval(progressInterval);
         }
@@ -188,7 +217,7 @@ const SearchResultsPage = () => {
 
   const handleSearch = (newQuery) => {
     if (!newQuery) return;
-    
+
     const updatedSearches = [newQuery, ...recentSearches.filter((s) => s !== newQuery)].slice(0, 10);
     setRecentSearches(updatedSearches);
     localStorage.setItem('ytdeluxe_recent_searches', JSON.stringify(updatedSearches));
@@ -205,37 +234,55 @@ const SearchResultsPage = () => {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <TheInfiniteGrid />
-      <Header />
+      <Header isScrolled={isSearchSticky} />
       {downloads.length > 0 && <ProgressNotification downloads={downloads} />}
 
-      <main className="pt-20 pb-32 lg:pb-8 px-4 lg:px-6">
-        <div className="max-w-7xl mx-auto">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800">{error}</p>
-            </div>
-          )}
+      {/* Search Bar Container */}
+      <div className="relative z-[90] w-full pt-[110px] pb-4 px-4 lg:px-6 max-w-7xl mx-auto">
+        {/* Placeholder to prevent layout shift when SearchBar becomes fixed */}
+        {isSearchSticky && <div className="h-[60px] w-full" />}
 
-          <div className="mb-8">
+        <div
+          ref={searchBarRef}
+          className={`
+            transition-all duration-500 ease-in-out pointer-events-none flex justify-center
+            ${isSearchSticky
+              ? 'fixed top-[26px] left-0 right-0 z-[105]'
+              : 'relative w-full'
+            }
+          `}
+        >
+          <div className={`transition-all duration-500 w-full pointer-events-auto ${isSearchSticky ? 'max-w-[480px]' : 'max-w-3xl'}`}>
             <SearchBar
               onSearch={handleSearch}
               recentSearches={recentSearches}
-              onClearRecentSearch={handleClearRecentSearch} 
+              onClearRecentSearch={handleClearRecentSearch}
+              isSticky={isSearchSticky}
             />
           </div>
+        </div>
+      </div>
 
-          <div className="space-y-12">
-            <SearchResultsComponent
-              results={searchResults}
-              searchQuery={query}
-              onQuickDownload={handleQuickDownload}
-              onPreview={handlePreview}
-              isLoading={isSearching}
-              onLoadMore={handleLoadMore}
-              hasMore={hasMoreResults}
-              totalResults={totalResults} 
-            />
-          </div>
+      {/* Main Content */}
+      <main className="pb-32 lg:pb-8 px-4 lg:px-6 pt-4">
+        <div className="max-w-7xl mx-auto">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl">
+              <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>
+            </div>
+          )}
+
+          <SearchResultsComponent
+            results={searchResults}
+            searchQuery={query}
+            onQuickDownload={handleQuickDownload}
+            onPreview={handlePreview}
+            isLoading={isSearching}
+            onLoadMore={handleLoadMore}
+            hasMore={hasMoreResults}
+            totalResults={totalResults}
+            sentinelRef={sentinelRef}
+          />
         </div>
       </main>
 
@@ -246,9 +293,9 @@ const SearchResultsPage = () => {
           setIsPreviewOpen(false);
           setPreviewVideo(null);
         }}
-        onDownload={handleQuickDownload} 
+        onDownload={handleQuickDownload}
       />
-      
+
       <FloatingActionButton />
     </div>
   );

@@ -30,7 +30,17 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState(null);
   const [downloads, setDownloads] = useState([]);
+  const [isSearchSticky, setIsSearchSticky] = useState(false);
   const navigate = useNavigate();
+
+  // Scroll listener for sticky search bar
+  useEffect(() => {
+    const onScroll = () => {
+      setIsSearchSticky(window.scrollY > 84);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Mock trending videos data (fallback when API is not available)
   const mockTrendingVideos = [
@@ -447,7 +457,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
             <TheInfiniteGrid />
-            <Header />
+            <Header isScrolled={isSearchSticky} />
             {downloads.length > 0 && <ProgressNotification downloads={downloads} />}
 
             <main className="pt-20 pb-32 lg:pb-8 px-4 lg:px-6">
@@ -459,6 +469,13 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                           initial={{ opacity: 0, y: 30 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.8, ease: "easeOut" }}
+                          style={{
+                            maxHeight: isSearchSticky ? '0px' : '200px',
+                            opacity: isSearchSticky ? 0 : 1,
+                            overflow: 'hidden',
+                            marginBottom: isSearchSticky ? 0 : undefined,
+                            transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, margin-bottom 0.3s ease',
+                          }}
                         >
                             <h1 className="text-4xl lg:text-5xl allan-bold text-foreground mb-4"> {t("homeSearchDashboard.ytDeluxe")} 
 
@@ -468,16 +485,29 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
 
               </p>
                         </motion.div>
+
+                        {/* Sticky SearchBar */}
+                        {isSearchSticky && <div className="h-[60px] w-full" />}
                         <motion.div
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                          className={`
+                            transition-all duration-500 ease-in-out
+                            ${isSearchSticky
+                              ? 'fixed top-[26px] left-0 right-0 z-[105] pointer-events-none flex justify-center'
+                              : 'relative'
+                            }
+                          `}
                         >
+                        <div className={`transition-all duration-500 w-full ${isSearchSticky ? 'max-w-[480px] pointer-events-auto' : 'max-w-3xl mx-auto'}`}>
                         <SearchBar
               onSearch={handleSearch}
               onVoiceSearch={handleVoiceSearch}
               recentSearches={recentSearches}
-              onClearRecentSearch={handleClearRecentSearch} />
+              onClearRecentSearch={handleClearRecentSearch}
+              isSticky={isSearchSticky} />
+                        </div>
                         </motion.div>
             
                     </div>
