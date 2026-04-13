@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/ui/Header';
 import ProgressNotification from '../../components/ui/ProgressNotification';
@@ -293,74 +294,15 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   };
 
   const handleSearch = async (query) => {
-    setSearchQuery(query);
-    setIsSearching(true);
-    setSearchResults([]);
-    setError(null);
+    if (!query) return;
+    
+    // Save search to recent searches
+    const updatedSearches = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 10);
+    setRecentSearches(updatedSearches);
+    localStorage.setItem('ytdeluxe_recent_searches', JSON.stringify(updatedSearches));
 
-    try {
-      // Save search to recent searches
-      const updatedSearches = [query, ...recentSearches.filter((s) => s !== query)].slice(0, 10);
-      setRecentSearches(updatedSearches);
-      localStorage.setItem('ytdeluxe_recent_searches', JSON.stringify(updatedSearches));
-
-      // Use smart search (keyword or URL)
-      const response = await YTDeluxeAPI.smartSearchOrVideo(query);
-
-      if (response.video) {
-        // If a single video is returned (from URL), show as single result
-        const video = response.video;
-        const transformedResult = {
-          ...video,
-          id: `${video.id}_url_0`,
-          originalId: video.id,
-          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
-          url: `https://www.youtube.com/watch?v=${video.id}`
-        };
-        setSearchResults([transformedResult]);
-        setTotalResults(1);
-        setHasMoreResults(false);
-      } else if (response.results && response.results.length > 0) {
-        // Transform API results to preserve backend data properly like Trending
-        const transformedResults = response.results.map((video, j) => ({
-          ...video,
-          originalId: video.id,
-          id: `${video.id}_search_0_${j}`,
-          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png')
-        }));
-
-        setSearchResults(transformedResults);
-        setTotalResults(transformedResults.length > 0 ? Math.floor(Math.random() * 50000) + 1000 : 0);
-        setHasMoreResults(transformedResults.length >= 10);
-      } else {
-        // Fallback to mock search results
-        const mockResults = mockTrendingVideos.
-        filter((video) =>
-        video.title.toLowerCase().includes(query.toLowerCase()) ||
-        video.channel.name.toLowerCase().includes(query.toLowerCase()) ||
-        video.tags.some((tag) => tag.toLowerCase().includes(query.toLowerCase()))
-        ).
-        map((video) => ({
-          ...video,
-          id: `search_${video.id}_${Date.now()}`,
-          views: video.views + Math.floor(Math.random() * 100000),
-          uploadDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-        }));
-
-        setSearchResults(mockResults);
-        setTotalResults(mockResults.length);
-        setHasMoreResults(mockResults.length > 9);
-      }
-
-    } catch (error) {
-      console.error('Search failed:', error);
-      setError('Search failed. Please try again.');
-      setSearchResults([]);
-      setTotalResults(0);
-      setHasMoreResults(false);
-    } finally {
-      setIsSearching(false);
-    }
+    // Navigate to the new isolated Search Results page
+    navigate(`/search-results?q=${encodeURIComponent(query)}`);
   };
 
   const handleVoiceSearch = () => {
@@ -512,7 +454,12 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                 <div className="max-w-7xl mx-auto">
                     {/* Search Section */}
                     <div className="mb-12">
-                        <div className="text-center mb-8 mt-[85px]">
+                        <motion.div 
+                          className="text-center mb-8 mt-[85px]"
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                        >
                             <h1 className="text-4xl lg:text-5xl allan-bold text-foreground mb-4"> {t("homeSearchDashboard.ytDeluxe")} 
 
               </h1>
@@ -520,38 +467,31 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
 
 
               </p>
-                        </div>
-
+                        </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                        >
                         <SearchBar
               onSearch={handleSearch}
               onVoiceSearch={handleVoiceSearch}
               recentSearches={recentSearches}
               onClearRecentSearch={handleClearRecentSearch} />
+                        </motion.div>
             
                     </div>
 
                     {/* Error Display */}
-                    {error &&
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-800">{error}</p>
-                        </div>
-          }
+                    {error && (
+                      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-red-800">{error}</p>
+                      </div>
+                    )}
 
                     {/* Content Section */}
                     <div className="space-y-12">
-                        {searchQuery && searchResults.length >= 0 ?
-            <SearchResults
-              results={searchResults}
-              searchQuery={searchQuery}
-              onQuickDownload={handleQuickDownload}
-              onPreview={handlePreview}
-              isLoading={isSearching}
-              onLoadMore={handleLoadMore}
-              hasMore={hasMoreResults}
-              totalResults={totalResults} /> :
-
-
-            <TrendingSection
+                        <TrendingSection
               videos={trendingVideos}
               onQuickDownload={handleQuickDownload}
               onPreview={handlePreview}
@@ -565,7 +505,6 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
               activeCategory={activeCategory}
               onCategorySelect={handleCategorySelect} />
 
-            }
                     </div>
                 </div>
             </main>

@@ -1,0 +1,249 @@
+.search-bar-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+@keyframes border-glow-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.search-theme-container {
+  position: relative;
+  background: linear-gradient(
+    135deg, 
+    var(--color-primary) 0%, 
+    #a855f7 25%, 
+    var(--color-accent) 50%, 
+    #3b82f6 75%, 
+    var(--color-primary) 100%
+  );
+  background-size: 300% 300%;
+  animation: border-glow-flow 8s ease infinite;
+  border-radius: 1000px;
+  padding: 3px; /* Refined thin premium border */
+  display: flex;
+  place-content: center;
+  z-index: 0;
+  width: 100%;
+  box-shadow: 0 10px 40px -10px var(--color-primary);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.search-inner-container {
+  position: relative;
+  width: 100%;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  /* Premium inner shadows for depth */
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.6), inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dark .search-inner-container {
+  background: rgba(20, 20, 20, 0.65);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.1), inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Remove old pseudo elements for a cleaner look */
+
+.search-input-field {
+  padding: 8px 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--color-foreground);
+  font-size: 1.1rem;
+  z-index: 2; /* keep above pseudos */
+}
+
+.search-input-field:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 transparent !important;
+}
+
+.search-input-field::placeholder {
+  color: var(--color-muted-foreground);
+  opacity: 0.8;
+}
+
+/* Premium Focus Effect on the Entire Search Bar */
+.search-theme-container:has(.search-input-field:focus) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 15px 50px -5px var(--color-primary), 0 0 30px -5px var(--color-accent);
+}
+
+.search-theme-container:has(.search-input-field:focus) .search-inner-container {
+  background: var(--color-popover);
+}
+
+/* The icons/buttons inside the search bar */
+.search-action-btn {
+  position: relative;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+  margin-left: 6px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.search-action-btn:hover {
+  background: var(--color-accent);
+  transform: scale(1.05);
+}
+
+.search-action-btn:active {
+  transform: scale(0.95);
+}
+
+.search-action-btn.primary-btn {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.search-action-btn.primary-btn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 10px var(--color-primary);
+}
+
+.search__icon-custom {
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 2;
+  /* User's specific search icon border effect */
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.search__icon-custom:hover {
+  border-left: 3px solid white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px var(--color-primary);
+}
+
+.search__icon-custom svg {
+  fill: var(--color-primary-foreground);
+  width: 20px;
+  height: 20px;
+}
+
+/* Animations */
+@keyframes pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-stagger-item {
+  opacity: 0;
+  animation: slide-up-fade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.recent-search-hover {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.recent-search-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.1), 0 0 15px -5px var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+@keyframes pulse-mic {
+  0% { box-shadow: 0 0 0 0 var(--color-error); }
+  70% { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.mic-listening {
+  color: var(--color-error);
+  animation: pulse-mic 1.5s infinite;
+}
+
+/* Suggestion Box Styles matching the new theme */
+.search-suggestions-container {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  margin-top: 12px;
+  padding: 8px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+.dark .search-suggestions-container {
+  background: rgba(30, 30, 30, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.search-suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--color-foreground);
+}
+
+.search-suggestion-item:hover {
+  background: var(--color-accent);
+  color: var(--color-primary);
+}
+
+.search-suggestion-item .suggestion-icon {
+  margin-right: 12px;
+  color: var(--color-muted-foreground);
+  transition: color 0.2s ease;
+}
+
+.search-suggestion-item:hover .suggestion-icon {
+  color: var(--color-primary);
+}

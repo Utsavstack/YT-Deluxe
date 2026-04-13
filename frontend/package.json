@@ -40,7 +40,7 @@
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.0.1",
-    "framer-motion": "^10.16.4",
+    "framer-motion": "^10.18.0",
     "i18next": "^26.0.4",
     "is-number": "^7.0.0",
     "lucide-react": "^0.484.0",
