@@ -7,7 +7,7 @@ import TrendingSection from './components/TrendingSection';
 import SearchResults from './components/SearchResults';
 import QuickPreviewModal from './components/QuickPreviewModal';
 import FloatingActionButton from './components/FloatingActionButton';
-import BackgroundShapes from './components/BackgroundShapes';
+
 import YTDeluxeAPI from '../../utils/api';
 import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
 

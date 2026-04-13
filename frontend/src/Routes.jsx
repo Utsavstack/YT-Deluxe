@@ -9,7 +9,7 @@ const BatchDownloadManager = lazy(() => import('./pages/batch-download-manager')
 const HomeSearchDashboard = lazy(() => import('./pages/home-search-dashboard'));
 const DownloadHistoryManagement = lazy(() => import('./pages/download-history-management'));
 const UserSettingsPreferences = lazy(() => import('./pages/user-settings-preferences'));
-const UserAuthentication = lazy(() => import('./pages/user-authentication'));
+
 const VideoDetailsDownload = lazy(() => import('./pages/video-details-download'));
 
 // Use HashRouter for desktop (file://) to prevent pushState origin errors that crash the app
@@ -28,7 +28,7 @@ const Routes = () => {
       <Route path="/home-search-dashboard" element={<HomeSearchDashboard />} />
       <Route path="/download-history-management" element={<DownloadHistoryManagement />} />
       <Route path="/user-settings-preferences" element={<UserSettingsPreferences />} />
-      <Route path="/user-authentication" element={<UserAuthentication />} />
+
       <Route path="/video-details-download" element={<VideoDetailsDownload />} />
       <Route path="*" element={<NotFound />} />
      </RouterRoutes>
