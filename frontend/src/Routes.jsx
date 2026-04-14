@@ -4,6 +4,7 @@ import ScrollToTop from "components/ScrollToTop";
 import ErrorBoundary from "components/ErrorBoundary";
 import NotFound from "pages/NotFound";
 import PageSkeleton from "components/PageSkeleton";
+import GlobalPIPPlayer from "components/ui/GlobalPIPPlayer";
 
 const BatchDownloadManager = lazy(() => import('./pages/batch-download-manager'));
 const HomeSearchDashboard = lazy(() => import('./pages/home-search-dashboard'));
@@ -35,6 +36,7 @@ const Routes = () => {
       <Route path="*" element={<NotFound />} />
      </RouterRoutes>
     </Suspense>
+    <GlobalPIPPlayer />
     </ErrorBoundary>
    </AppRouter>
   );

@@ -6,6 +6,7 @@ import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
 import ShareModal from '../../../components/ui/ShareModal';
 import { YTDeluxeStorage, STORAGE_KEYS } from '../../../utils/storage';
+import { usePIP } from '../../../context/PIPContext';
 
 const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   const { t } = useTranslation();
@@ -23,6 +24,8 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  const { openPip } = usePIP();
 
   const navigate = useNavigate();
   const iframeRef = React.useRef(null);
@@ -293,6 +296,20 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
           </div>
         )}
 
+        {/* PIP Trigger Button */}
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            setPlayVideo(false);
+            openPip(video);
+          }}
+          // z-40 so it stays above the inline iframe player which uses z-10/z-20
+          className={`absolute top-2 right-2 p-2 rounded-xl z-40 transition-all duration-300 shadow-lg active:scale-95 group/pip cursor-pointer flex items-center justify-center bg-black/70 hover:bg-primary text-white border border-white/20 hover:border-transparent backdrop-blur-md tooltip-trigger`}
+          title="Play in Picture-in-Picture"
+        >
+          <Icon name="PictureInPicture2" size={18} className="opacity-100 group-hover/pip:scale-110 transition-transform" />
+        </button>
+
         {isHovered && !videoReady && !embedError && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex space-x-1.5 bg-black/50 px-3 py-2 rounded-full backdrop-blur-sm pointer-events-none animate-fade-in shadow-lg border border-white/10">
             <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style={{ animationDelay: '-0.3s' }} />
@@ -303,15 +320,21 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
       </div>
 
       {/* Content Section */}
-      <div className="px-2 pt-2.5 pb-1.5 flex flex-col gap-3.5">
-        <h3 className="text-[16px] font-bold text-[#065fd4] dark:text-[#3ea6ff] line-clamp-2 transition-colors leading-[1.3] group-hover:text-primary decoration-primary/40 group-hover:underline underline-offset-2">
+      <div className="px-2 pt-3 pb-1 flex flex-col gap-3">
+        <h3 className="text-[15px] font-bold text-foreground/90 line-clamp-2 transition-all duration-300 leading-snug group-hover:text-primary group-hover:drop-shadow-sm">
           {video?.title}
         </h3>
         
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center border border-border/40 hover:border-border/80 bg-background/30 hover:bg-accent/20 transition-all rounded-lg pl-1.5 pr-3 h-[34px] shadow-sm cursor-pointer group/channel gap-2 overflow-hidden flex-shrink min-w-0 max-w-[65%]">
+        <div className="flex items-center justify-between gap-3 mt-0.5">
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/search-results?q=${encodeURIComponent(video?.channel?.name || video?.uploader || '')}`);
+            }}
+            className="flex items-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/5 dark:border-white/5 transition-all rounded-full pl-1 pr-3 py-1 shadow-sm cursor-pointer group/channel gap-2 overflow-hidden flex-shrink min-w-0 max-w-[60%]"
+          >
             {video?.channel?.avatar ? (
-              <Image src={video?.channel?.avatar} alt={video?.channel?.name || video?.uploader || 'Avatar'} className="w-6 h-6 rounded-full flex-shrink-0 shadow-sm" />
+              <Image src={video?.channel?.avatar} alt={video?.channel?.name || video?.uploader || 'Avatar'} className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm object-cover" />
             ) : (
               (() => {
                 const name = video?.channel?.name || video?.uploader || '?';
@@ -319,21 +342,21 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
                 for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
                 const hue = Math.abs(hash % 360);
                 return (
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold uppercase flex-shrink-0 shadow-sm" style={{ backgroundColor: `hsl(${hue}, 70%, 85%)`, color: `hsl(${hue}, 80%, 30%)` }}>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold uppercase flex-shrink-0 shadow-sm" style={{ backgroundColor: `hsl(${hue}, 70%, 85%)`, color: `hsl(${hue}, 80%, 30%)` }}>
                     {name[0]}
                   </div>
                 );
               })()
             )}
             <div className="flex items-center gap-1 min-w-0">
-               <span className="text-[12px] text-foreground font-semibold truncate group-hover/channel:text-primary transition-colors">{video?.channel?.name || video?.uploader || ''}</span>
-               {video?.channel?.verified && <Icon name="CheckCircle" size={12} className="text-primary flex-shrink-0" />}
+               <span className="text-[11px] font-bold text-foreground/80 truncate group-hover/channel:text-primary transition-colors tracking-wide">{video?.channel?.name || video?.uploader || ''}</span>
+               {video?.channel?.verified && <Icon name="CheckCircle" size={10} className="text-primary flex-shrink-0" />}
             </div>
           </div>
           
           {video?.views !== undefined && (
-            <div className="border border-border/60 dark:border-border/40 bg-background hover:bg-accent/30 transition-all duration-300 px-3 h-[34px] rounded-[10px] shadow-sm shrink-0 flex items-center justify-center cursor-default">
-              <span className="text-[12px] font-bold text-foreground/90 whitespace-nowrap tracking-wide" style={{ fontFamily: '"Roboto Mono", ui-monospace, monospace' }}>
+            <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all px-2.5 py-1 rounded-full shadow-sm shrink-0 cursor-default">
+              <span className="text-[10.5px] font-bold text-foreground/85 whitespace-nowrap tracking-wider font-mono">
                 {formatViews(video?.views)}
               </span>
             </div>
@@ -341,39 +364,39 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
         </div>
         
         {video?.tags && video?.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-0.5">
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
             {video?.tags?.slice(0, 3)?.map((tag, index) => (
-              <span key={index} className="text-[10px] bg-accent/30 text-accent-foreground px-2.5 py-0.5 rounded-full border border-border/50 shadow-sm transition-colors hover:bg-accent/50 cursor-pointer">#{tag}</span>
+              <span key={index} className="text-[9px] font-bold tracking-wider uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-md border border-primary/20 shadow-sm transition-colors hover:bg-primary/20 cursor-pointer">#{tag}</span>
             ))}
           </div>
         )}
       </div>
 
       {/* Quick Actions Footer */}
-      <div className="px-2 pb-2.5 pt-3 mt-1.5 flex items-center justify-between border-t border-border/20">
+      <div className="px-2 pb-2.5 pt-3 mt-2 flex items-center justify-between border-t border-border/10">
         <button
-          className="h-[34px] px-3.5 bg-background/30 hover:bg-accent/30 transition-all duration-300 rounded-lg flex items-center gap-2 text-xs font-semibold text-foreground border border-border/40 hover:border-border/80 shadow-sm hover:shadow active:scale-[0.98] group/btn"
+          className="h-[32px] px-3.5 bg-primary/10 hover:bg-primary/20 transition-all duration-300 rounded-full flex items-center gap-1.5 text-[10px] font-bold text-primary border border-primary/20 hover:border-primary/40 shadow-sm hover:shadow active:scale-[0.96] group/btn uppercase tracking-wide"
           onClick={(e) => { e?.stopPropagation(); onQuickDownload?.(video, 'jpg'); }}
         >
-          <Icon name="Image" size={14} className="text-muted-foreground group-hover/btn:text-primary transition-colors duration-300" />
-          <span>{t("homeSearchDashboard.downloadThumbnail", "Download Thumbnail")}</span>
+          <Icon name="Download" size={13} strokeWidth={2.5} className="text-primary group-hover/btn:-translate-y-0.5 transition-transform duration-300" />
+          <span>{t("homeSearchDashboard.downloadThumbnail", "Thumbnail")}</span>
         </button>
         
-        <div className="flex items-center h-[34px] rounded-lg border border-border/40 hover:border-border/80 bg-background/30 hover:bg-accent/20 transition-all shadow-sm overflow-hidden">
+        <div className="flex items-center gap-1.5">
           <button 
             onClick={handleWatchLater} 
-            className="h-full px-3 flex items-center justify-center transition-colors border-r border-border/30 hover:bg-accent/40 active:bg-accent active:scale-95 group/save"
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border shadow-sm active:scale-95 group/save ${isSaved ? 'bg-primary border-primary text-primary-foreground drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground/70 hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'}`}
             title={isSaved ? "Remove from History" : "Save to History"}
           >
-            <Icon name={isSaved ? "BookmarkCheck" : "Bookmark"} size={14} strokeWidth={isSaved ? 2.5 : 2} className={`transition-all duration-300 ${isSaved ? 'text-primary scale-110 drop-shadow-[0_0_5px_rgba(44,93,169,0.5)]' : 'text-muted-foreground group-hover/save:text-primary group-hover/save:scale-110'}`} />
+            <Icon name={isSaved ? "BookmarkCheck" : "Bookmark"} size={13} strokeWidth={isSaved ? 2.5 : 2} className={`${isSaved ? 'scale-110' : 'group-hover/save:scale-110'} transition-transform`} />
           </button>
 
           <button 
             onClick={handleShare} 
-            className="h-full px-3 flex items-center justify-center transition-colors hover:bg-accent/40 active:bg-accent active:scale-95 group/share"
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 shadow-sm active:scale-95 group/share text-foreground/70 hover:text-primary"
             title={t("homeSearchDashboard.share", "Share")}
           >
-            <Icon name="Share2" size={14} className="text-muted-foreground group-hover/share:text-primary group-hover/share:-rotate-12 transition-transform duration-300" />
+            <Icon name="Share2" size={13} className="group-hover/share:-rotate-12 transition-transform duration-300" />
           </button>
         </div>
       </div>
