@@ -1,9 +1,11 @@
 import { useTranslation } from "react-i18next";import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import Icon from '../../components/AppIcon';
 import Header from '../../components/ui/Header';
 import ProgressNotification from '../../components/ui/ProgressNotification';
 import SearchBar from './components/SearchBar';
+import TrendingHeader from './components/TrendingHeader';
 import TrendingSection from './components/TrendingSection';
 import SearchResults from './components/SearchResults';
 import QuickPreviewModal from './components/QuickPreviewModal';
@@ -31,16 +33,24 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [error, setError] = useState(null);
   const [downloads, setDownloads] = useState([]);
   const [isSearchSticky, setIsSearchSticky] = useState(false);
+  const [isTrendingSticky, setIsTrendingSticky] = useState(false);
+  const [isTrendingCollapsed, setIsTrendingCollapsed] = useState(false);
   const navigate = useNavigate();
 
-  // Scroll listener for sticky search bar
+  // Scroll listener for sticky search bar & trending header
   useEffect(() => {
     const onScroll = () => {
       setIsSearchSticky(window.scrollY > 84);
+      setIsTrendingSticky(window.scrollY > 164);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Auto-collapse category bar when it becomes sticky to save screen space, auto-expand when returning to top
+  useEffect(() => {
+    setIsTrendingCollapsed(isTrendingSticky);
+  }, [isTrendingSticky]);
 
   // Mock trending videos data (fallback when API is not available)
   const mockTrendingVideos = [
@@ -463,7 +473,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
             <main className="pt-20 pb-32 lg:pb-8 px-4 lg:px-6">
                 <div className="max-w-7xl mx-auto">
                     {/* Search Section */}
-                    <div className="mb-12">
+                    <div className="mb-8">
                         <motion.div 
                           className="text-center mb-8 mt-[85px]"
                           initial={{ opacity: 0, y: 30 }}
@@ -489,25 +499,29 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                         {/* Sticky SearchBar */}
                         {isSearchSticky && <div className="h-[60px] w-full" />}
                         <motion.div
+                          layout
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                          transition={{ 
+                            layout: { type: "spring", stiffness: 250, damping: 30 },
+                            opacity: { duration: 0.6, delay: 0.2, ease: "easeOut" },
+                            scale: { duration: 0.6, delay: 0.2, ease: "easeOut" }
+                          }}
                           className={`
-                            transition-all duration-500 ease-in-out
                             ${isSearchSticky
                               ? 'fixed top-[26px] left-0 right-0 z-[105] pointer-events-none flex justify-center'
                               : 'relative'
                             }
                           `}
                         >
-                        <div className={`transition-all duration-500 w-full ${isSearchSticky ? 'max-w-[480px] pointer-events-auto' : 'max-w-3xl mx-auto'}`}>
+                        <motion.div layout transition={{ layout: { type: "spring", stiffness: 250, damping: 30 } }} className={`w-full ${isSearchSticky ? 'max-w-[480px] pointer-events-auto' : 'max-w-3xl mx-auto'}`}>
                         <SearchBar
               onSearch={handleSearch}
               onVoiceSearch={handleVoiceSearch}
               recentSearches={recentSearches}
               onClearRecentSearch={handleClearRecentSearch}
               isSticky={isSearchSticky} />
-                        </div>
+                        </motion.div>
                         </motion.div>
             
                     </div>
@@ -519,21 +533,96 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                       </div>
                     )}
 
-                    {/* Content Section */}
+                    {/* Floating Category Toggle (Placed below Theme/Hamburger / right side) */}
+                    <AnimatePresence>
+                      <motion.div
+                        className="fixed top-[92px] z-[115] pointer-events-none flex justify-center w-full px-6 left-0 right-0"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                      >
+                        <div className="flex items-center justify-end max-w-7xl w-full relative">
+                          <motion.button
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setIsTrendingCollapsed(!isTrendingCollapsed)}
+                            className={`pointer-events-auto flex items-center justify-center p-2.5 rounded-full backdrop-blur-xl border shadow-glass-sm transition-all duration-300 group
+                              ${isTrendingCollapsed 
+                                ? 'bg-primary/20 hover:bg-primary/30 border-primary/40 text-primary shadow-primary/20' 
+                                : 'bg-card/80 hover:bg-muted/90 border-border/60 text-foreground/80 hover:text-foreground'
+                              }`}
+                            title={isTrendingCollapsed ? t("homeSearchDashboard.showCategories", "Show Categories") : t("homeSearchDashboard.hideCategories", "Hide Categories")}
+                          >
+                            <Icon name={isTrendingCollapsed ? "Filter" : "FilterX"} size={18} className="group-hover:scale-110 transition-transform" />
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {/* Smooth Placeholder for Sticky State */}
+                    <AnimatePresence mode="popLayout">
+                      {isTrendingSticky && !isTrendingCollapsed && (
+                        <motion.div
+                          initial={{ height: 0 }}
+                          animate={{ height: 90 }}
+                          exit={{ height: 0 }}
+                          transition={{ duration: 0.4, ease: "easeInOut" }}
+                          className="w-full"
+                        />
+                      )}
+                    </AnimatePresence>
+                    
+                    <AnimatePresence>
+                    {!isTrendingCollapsed && (
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.95, x: 50 }}
+                        animate={{ opacity: 1, height: 'auto', marginBottom: 24, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.95, x: 50, filter: 'blur(8px)' }}
+                        transition={{ 
+                          height: { duration: 0.4, ease: "easeInOut" },
+                          opacity: { duration: 0.3 },
+                          marginBottom: { duration: 0.4, ease: "easeInOut" },
+                          x: { type: "spring", stiffness: 300, damping: 30 },
+                          scale: { duration: 0.4 }
+                        }}
+                        className={`
+                          origin-right
+                          ${isTrendingSticky
+                            ? 'fixed top-[94px] left-0 right-0 z-[104] flex justify-center px-4 lg:px-6 pointer-events-none mb-6'
+                            : 'relative overflow-hidden'
+                          }
+                        `}
+                      >
+                        {/* Added pr-[52px] when sticky to avoid overlapping the fixed toggle on the right */}
+                        <motion.div layout transition={{ layout: { type: "spring", stiffness: 250, damping: 30 } }} className={`w-full pointer-events-auto ${isTrendingSticky ? 'max-w-7xl flex justify-center pr-[52px]' : ''}`}>
+                          <TrendingHeader
+
+                            onRefresh={() => loadTrendingVideos(activeCategory)}
+                            lastUpdated={lastUpdated}
+                            isLoading={isTrendingLoading}
+                            categories={categoryChips}
+                            activeCategory={activeCategory}
+                            onCategorySelect={handleCategorySelect}
+                            isSticky={isTrendingSticky}
+                          />
+                        </motion.div>
+                      </motion.div>
+                    )}
+                    </AnimatePresence>
+
+                    {/* Video Cards Grid — this is the only scrolling content */}
                     <div className="space-y-12">
                         <TrendingSection
               videos={trendingVideos}
               onQuickDownload={handleQuickDownload}
               onPreview={handlePreview}
               isLoading={isTrendingLoading}
-              onRefresh={() => loadTrendingVideos(activeCategory)}
-              lastUpdated={lastUpdated}
               onLoadMore={handleLoadMoreTrending}
               isLoadingMore={isTrendingLoadingMore}
-              hasMore={hasMoreTrending}
-              categories={categoryChips}
-              activeCategory={activeCategory}
-              onCategorySelect={handleCategorySelect} />
+              hasMore={hasMoreTrending} />
 
                     </div>
                 </div>

@@ -1,0 +1,132 @@
+/* ===================================
+   TRENDING HEADER — STICKY MODE
+   =================================== */
+
+.trending-header-wrapper {
+  position: relative;
+  width: 100%;
+  z-index: 10; /* Ensure it stays above content */
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trending-header-sticky {
+  /* Compact styling when pinned */
+}
+
+/* When sticky, slightly reduce spacing for compactness */
+.trending-header-sticky .space-y-3 > * + * {
+  margin-top: 0.5rem;
+}
+
+/* Liquid Glass Pill Effect when sticky */
+.trending-header-sticky {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  
+  /* Pill Shape */
+  border-radius: 1000px;
+  
+  /* Premium Border - utilizing a semi-transparent white border for glass effect */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  /* Liquid Glue/Glass Glow */
+  box-shadow: 
+    0 8px 32px 0 rgba(31, 38, 135, 0.07),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 4px 15px -5px var(--color-primary);
+    
+  padding: 6px 16px; /* Restored comfortable vertical padding */
+  margin-top: 4px;
+}
+
+.dark .trending-header-sticky {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 20, 20, 0.4) 0%,
+    rgba(10, 10, 10, 0.2) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 4px 20px -5px rgba(var(--color-primary-rgb, 59, 130, 246), 0.3);
+}
+
+/* Internal spacing adjustments for pill layout */
+.trending-header-sticky .space-y-3 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Reduced gap further */
+  space-y: 0;
+  width: 100%;
+}
+
+.trending-header-sticky .space-y-3 > * + * {
+  margin-top: 0 !important;
+}
+
+.trending-header-sticky .flex-col.title-row {
+  flex-direction: row !important;
+  align-items: center;
+  margin-right: auto;
+}
+
+/* Shrink category chips slightly when sticky */
+.trending-header-sticky button:not(.refresh-btn):not(.toggle-collapse-btn) {
+  font-size: 0.75rem; 
+  padding: 4px 12px;  /* Restored inner chip padding */
+}
+
+/* Shrink the title badge when sticky */
+.trending-header-sticky .group.flex.w-max {
+  padding: 4px 12px;
+  background: rgba(var(--color-primary-rgb, 59, 130, 246), 0.08);
+  flex-shrink: 0;
+}
+
+.trending-header-sticky .group.flex.w-max h2 {
+  font-size: 0.75rem;
+}
+
+/* Fixed Refresh & Toggle Button logic for sticky mode */
+.trending-header-sticky .refresh-btn,
+.trending-header-sticky .toggle-collapse-btn {
+  padding: 4px;
+  min-width: 28px;
+  height: 28px;
+  justify-content: center;
+}
+
+.trending-header-sticky .refresh-btn span {
+  display: none !important; /* Hide text, keep icon */
+}
+
+/* Custom Scrollbar Styling for category chips */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 3px; /* Very thin scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  margin: 0 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, var(--color-primary), var(--color-accent));
+  border-radius: 10px;
+  opacity: 0.5;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}

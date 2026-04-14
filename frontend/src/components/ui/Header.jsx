@@ -61,7 +61,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
   return (
     <>
       {/* Floating Rounded Menus Container */}
-      <div className="fixed top-6 left-0 right-0 z-[100] pointer-events-none flex justify-center w-full px-6">
+      <div className="fixed top-6 left-0 right-0 z-[110] pointer-events-none flex justify-center w-full px-6">
         <div className="flex items-center justify-between max-w-7xl w-full relative">
 
           {/* Left: Logo */}
@@ -139,14 +139,14 @@ const Header = ({ isScrolled: isScrolledProp }) => {
             layout={false}
           >
             {/* Stable flex row — items here never re-animate */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
               <ThemeToggle />
 
               {/* Hamburger — appears when scrolled (desktop). 
                    This wrapper has fixed dimensions so toggling menu 
                    doesn't shift ThemeToggle or Logo positions.
                    Button is in normal flow; dropdown is a separate absolute sibling. */}
-              <div id="header-hamburger-menu" className="relative hidden md:block" style={{ width: isScrolled ? 44 : 0, height: 44, overflow: 'visible', transition: 'width 0.3s ease' }}>
+              <div id="header-hamburger-menu" className="relative hidden md:block" style={{ width: isScrolled ? 44 : 0, marginLeft: isScrolled ? 12 : 0, height: 44, overflow: 'visible', transition: 'all 0.3s ease' }}>
                 {/* Button — normal flow, no absolute positioning */}
                 <AnimatePresence>
                   {isScrolled && (

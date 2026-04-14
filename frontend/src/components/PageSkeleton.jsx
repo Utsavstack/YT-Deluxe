@@ -46,22 +46,6 @@ const PageSkeleton = () => {
 
           {/* Home Content Section */}
           <div className="space-y-6">
-            {/* Trending Header */}
-            <div className="flex items-center justify-between mb-4 mt-8">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-gray-200 rounded animate-pulse"></div>
-                <div className="w-32 h-6 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-              <div className="w-32 h-8 bg-gray-200 rounded border border-gray-100 animate-pulse"></div>
-            </div>
-
-            {/* Categories */}
-            <div className="flex gap-2 overflow-hidden pb-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                <div key={i} className={`h-9 rounded-full bg-gray-200 animate-pulse flex-shrink-0 ${i === 1 ? 'w-12 bg-gray-300' : 'w-20'}`}></div>
-              ))}
-            </div>
-
             {/* Video Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-10">
               {[1, 2, 3, 4, 5, 6].map((i) => (
