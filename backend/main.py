@@ -25,6 +25,13 @@ def get_ffmpeg_path():
         return os.path.join(sys._MEIPASS, 'ffmpeg.exe')
     return 'ffmpeg'
 
+def format_time_hhmmss(seconds: float) -> str:
+    """Format seconds as HH:MM:SS.mmm for yt-dlp --download-sections and ffmpeg"""
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = seconds % 60
+    return f"{h:02d}:{m:02d}:{s:06.3f}"
+
 def get_downloads_folder():
     if os.name == 'nt':
         import winreg
@@ -440,6 +447,132 @@ def stream_video(request: Request, url: str, quality: Optional[str] = None, down
   except Exception as e:
     return JSONResponse({"error": str(e)}, status_code=500)
 
+# Endpoint: Preview clip (ffmpeg pipe — DASH + combined streams)
+@app.get("/api/preview-clip")
+def get_preview_clip(
+  request: Request,
+  url: str,
+  start: float = 0,
+  clip_duration: float = 15
+):
+  """
+  Pipe a short preview clip via ffmpeg.
+  - Combined formats (360p/480p): stream copy — very fast
+  - DASH-only formats: re-encode with ultrafast preset
+  Output: fragmented MP4 for browser streaming.
+  """
+  try:
+    ydl_opts = {
+      **get_yt_opts(),
+      'skip_download': True,
+      'format': 'best[height<=480][ext=mp4]/best[height<=480]/bestvideo[height<=480]+bestaudio/best',
+      **get_cookie_opts()
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+      info = ydl.extract_info(url, download=False)
+
+    if not info:
+      return JSONResponse({'error': 'Could not extract video info'}, status_code=400)
+
+    all_formats = info.get('formats', [])
+
+    # Prefer combined (video+audio in one stream) ≤ 480p for fast stream copy
+    combined = [
+      f for f in all_formats
+      if f.get('vcodec', 'none') != 'none'
+      and f.get('acodec', 'none') != 'none'
+      and (f.get('height') or 0) <= 480
+    ]
+
+    # Shared headers helper
+    def build_headers_str(fmt):
+      h = fmt.get('http_headers', {})
+      if not h:
+        h = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://www.youtube.com/'
+        }
+      return ''.join(f'{k}: {v}\r\n' for k, v in h.items())
+
+    if combined:
+      # --- FAST PATH: stream copy ---
+      best = max(combined, key=lambda f: f.get('height') or 0)
+      stream_url = best['url']
+      headers_str = build_headers_str(best)
+
+      cmd = [
+        get_ffmpeg_path(), '-loglevel', 'error',
+        '-headers', headers_str,
+        '-ss', str(start),
+        '-i', stream_url,
+        '-t', str(clip_duration),
+        '-c', 'copy',
+        '-f', 'mp4',
+        '-movflags', 'frag_keyframe+empty_moov+faststart',
+        'pipe:1'
+      ]
+    else:
+      # --- DASH PATH: separate video + audio, re-encode ---
+      video_fmts = sorted(
+        [f for f in all_formats if f.get('vcodec', 'none') != 'none' and f.get('acodec', 'none') == 'none' and (f.get('height') or 0) <= 480],
+        key=lambda f: f.get('height') or 0, reverse=True
+      )
+      audio_fmts = sorted(
+        [f for f in all_formats if f.get('acodec', 'none') != 'none' and f.get('vcodec', 'none') == 'none'],
+        key=lambda f: f.get('abr') or 0, reverse=True
+      )
+
+      if not video_fmts or not audio_fmts:
+        return JSONResponse({'error': 'No suitable DASH streams found'}, status_code=404)
+
+      bv = video_fmts[0]
+      ba = audio_fmts[0]
+      shared_headers = build_headers_str(bv)
+
+      cmd = [
+        get_ffmpeg_path(), '-loglevel', 'error',
+        '-headers', shared_headers,
+        '-ss', str(start), '-i', bv['url'],
+        '-ss', str(start), '-i', ba['url'],
+        '-t', str(clip_duration),
+        '-map', '0:v:0', '-map', '1:a:0',
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28',
+        '-c:a', 'aac', '-b:a', '128k',
+        '-f', 'mp4',
+        '-movflags', 'frag_keyframe+empty_moov+faststart',
+        'pipe:1'
+      ]
+
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def stream_clip():
+      try:
+        while True:
+          chunk = process.stdout.read(65536)
+          if not chunk:
+            break
+          yield chunk
+      finally:
+        process.stdout.close()
+        try:
+          process.wait(timeout=10)
+        except Exception:
+          process.kill()
+
+    return StreamingResponse(
+      stream_clip(),
+      media_type='video/mp4',
+      headers={
+        'Cache-Control': 'no-cache',
+        'Content-Disposition': 'inline; filename="preview.mp4"',
+        'Access-Control-Expose-Headers': 'Content-Disposition',
+        'Access-Control-Allow-Origin': '*',
+      }
+    )
+
+  except Exception as e:
+    return JSONResponse({'error': str(e)}, status_code=500)
+
 # Endpoint: Download video/audio (with options)
 @app.post("/api/download")
 def download_video(
@@ -622,11 +755,21 @@ def download_worker(task_id: str, url: str, quality: str = None,
         **get_yt_opts(),
         'outtmpl': output_template,
         'format': 'bestaudio/best',
-        'postprocessors': [{
-          'key': 'FFmpegExtractAudio',
-          'preferredcodec': 'mp3',
-          'preferredquality': '192',
-        }],
+        'writethumbnail': True,
+        'postprocessors': [
+          {
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+          },
+          {
+            'key': 'EmbedThumbnail',  # Embed video thumbnail as MP3 album art
+          },
+          {
+            'key': 'FFmpegMetadata',  # Embed title/artist metadata too
+            'add_metadata': True,
+          },
+        ],
         'progress_hooks': [lambda d: progress_hook(d, task_id)],
         'retries': 10,
         'fragment_retries': 10,
@@ -716,23 +859,47 @@ def download_worker(task_id: str, url: str, quality: str = None,
       
       # Apply trimming if specified
       if trim_start is not None or trim_end is not None:
-        trimmed_filename = f"trimmed_{filename}"
-        trimmed_filepath = os.path.join(TARGET_DIR, trimmed_filename)
+        ts = float(trim_start or 0)
+        te = float(trim_end) if trim_end is not None else float(info.get('duration', ts + 1))
+        clip_duration = te - ts
         
-        # Use ffmpeg to trim
-        cmd = [get_ffmpeg_path(), "-i", filepath, "-y"]
-        if trim_start:
-          cmd.extend(["-ss", str(trim_start)])
-        if trim_end:
-          cmd.extend(["-t", str(trim_end - (trim_start or 0))])
-        cmd.append(trimmed_filepath)
+        # Use a temp file for ffmpeg output, then rename back to original filename
+        file_ext = os.path.splitext(filename)[1]
+        temp_trimmed = os.path.join(TARGET_DIR, f"_tmp_trim_{uuid.uuid4().hex[:8]}{file_ext}")
         
-        subprocess.run(cmd, check=True)
+        # Use ffmpeg to trim: -ss BEFORE -i for fast input seek (no full-decode)
+        # -t specifies duration (safer than -to with input seeking)
+        # -c copy = stream copy, no re-encoding — much faster
+        cmd = [
+          get_ffmpeg_path(), '-y',
+          '-ss', str(ts),          # fast seek (input-side)
+          '-i', filepath,
+          '-t', str(clip_duration), # output duration
+          '-c', 'copy',             # no re-encode
+          '-avoid_negative_ts', 'make_zero',
+          temp_trimmed
+        ]
         
-        # Replace original with trimmed version
-        os.remove(filepath)
-        filename = trimmed_filename
-        filepath = trimmed_filepath
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+          print(f"[trim] FFmpeg error: {result.stderr[-500:]}")
+          # Fallback: try without stream copy (re-encode, slower but safer)
+          cmd_fallback = [
+            get_ffmpeg_path(), '-y',
+            '-ss', str(ts),
+            '-i', filepath,
+            '-t', str(clip_duration),
+            '-c:v', 'libx264', '-preset', 'fast', '-c:a', 'aac',
+            temp_trimmed
+          ]
+          subprocess.run(cmd_fallback, check=True)
+        
+        # Replace original with trimmed version (keep original filename clean)
+        if os.path.exists(filepath):
+          os.remove(filepath)
+        if os.path.exists(temp_trimmed):
+          os.rename(temp_trimmed, filepath)
+        # filename and filepath stay the same — original clean name
         
       # Schedule auto-deletion after 10 minutes only for web
       if not is_desktop:

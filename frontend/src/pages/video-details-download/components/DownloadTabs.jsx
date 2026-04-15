@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next"; import React, { useState, useMemo } from 'react';
+import { useTranslation } from "react-i18next"; import React, { useState, useMemo, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,12 +31,19 @@ const QUALITY_DESC = {
   'Audio Only': 'MP3 audio, no video'
 };
 
-const DownloadTabs = ({ videoData, onDownload }) => {
+const DownloadTabs = ({ videoData, onDownload, onSelect, selectedConfig }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('video');
   const [selectedQuality, setSelectedQuality] = useState(null);
   const [customFilename, setCustomFilename] = useState(videoData?.title || '');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Sync tab when parent changes selectedConfig (e.g. from VideoTrimmer toggle or warning overlay)
+  useEffect(() => {
+    if (selectedConfig?.type && selectedConfig.type !== activeTab) {
+      setActiveTab(selectedConfig.type);
+    }
+  }, [selectedConfig?.type]);
 
   const tabs = [
     { id: 'video', label: 'Video', icon: 'Video' },
@@ -160,7 +167,16 @@ const DownloadTabs = ({ videoData, onDownload }) => {
         {tabs.map((tab) =>
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setSelectedQuality(null); }}
+            onClick={() => {
+              setActiveTab(tab.id);
+              setSelectedQuality(null);
+              // Notify parent of tab switch — reset to best of new tab
+              if (onSelect) {
+                const newOpts = tab.id === 'audio' ? audioQualities : tab.id === 'thumbnail' ? thumbnailOptions : videoQualities;
+                const best = newOpts[0];
+                if (best) onSelect({ type: best.type || tab.id, quality: best.quality, format: best.ext || (tab.id === 'audio' ? 'mp3' : 'mp4'), format_id: best.format_id || null });
+              }
+            }}
             className={`
               relative z-10 flex items-center space-x- 2 px-5 py-2.5 rounded-xl text-sm font-medium
               transition-colors duration-300
@@ -303,7 +319,16 @@ const DownloadTabs = ({ videoData, onDownload }) => {
                 return (
                   <button
                     key={option.quality}
-                    onClick={() => setSelectedQuality(option.quality)}
+                    onClick={() => {
+                      setSelectedQuality(option.quality);
+                      // Notify parent of selection change (no download triggered)
+                      onSelect?.({
+                        type: option.type || activeTab,
+                        quality: option.quality,
+                        format: option.ext || (activeTab === 'audio' ? 'mp3' : 'mp4'),
+                        format_id: option.format_id || null,
+                      });
+                    }}
                     className={`
            p-3 rounded-xl border text-left transition-all spring-smooth
            ${isSelected ?

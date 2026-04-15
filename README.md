@@ -251,6 +251,199 @@ flowchart TD
 
 ---
 
+### 5.6 Precision Trimming Architecture
+
+_How the end-to-end trimming pipeline works — from UI range selection to the final trimmed file on disk._
+
+#### 5.6.1 Trimming Flow Overview
+
+```mermaid
+flowchart TD
+    A["User sets trim range\n(handles / presets / time input)"] --> B["Clicks Download"]
+    B --> C["Frontend sends POST /api/download\nwith trim_start & trim_end"]
+    C --> D["yt-dlp downloads full file\nto tempfiles/ directory"]
+    D --> E{"trim params\npresent?"}
+    E -->|No| H["File ready as-is"]
+    E -->|Yes| F["FFmpeg trims:\n-ss START -t DURATION -c copy"]
+    F -->|Success| G["Rename temp → original filename"]
+    F -->|Fail| F2["FFmpeg re-encode fallback:\nlibx264 + aac"]
+    F2 --> G
+    G --> H
+    H --> I{"isDesktop?"}
+    I -->|Desktop| J["File saved to\nYT Deluxe Downloads/Videos or Music"]
+    I -->|Web| K["Browser triggers download\n+ auto-cleanup after 10min"]
+```
+
+#### 5.6.2 FFmpeg Trim Pipeline (Backend)
+
+The trimming engine in `main.py` uses a **two-pass strategy** for maximum compatibility:
+
+**Pass 1 — Stream Copy (Fast, ~0.5s):**
+```bash
+ffmpeg -y -ss 30 -i input.mp4 -t 90 -c copy -avoid_negative_ts make_zero _tmp_trim_abc123.mp4
+```
+- `-ss` before `-i` = fast input-side seeking (no full decode)
+- `-c copy` = no re-encoding, preserves original quality
+- `-avoid_negative_ts make_zero` = fixes timestamp discontinuities
+
+**Pass 2 — Re-encode Fallback (Slower, always works):**
+```bash
+ffmpeg -y -ss 30 -i input.mp4 -t 90 -c:v libx264 -preset fast -c:a aac _tmp_trim_abc123.mp4
+```
+- Only triggered if Pass 1 fails (certain codecs don't support stream copy)
+- Uses `libx264` (video) + `aac` (audio) for broad compatibility
+
+**Clean Rename Strategy:**
+```python
+# Temp file → Original filename (no ugly prefixes)
+temp_trimmed = f"_tmp_trim_{uuid.uuid4().hex[:8]}{file_ext}"
+# After FFmpeg completes:
+os.remove(filepath)              # delete original
+os.rename(temp_trimmed, filepath) # rename temp → original name
+```
+
+> **Result:** User always gets the clean original title (e.g., `MONTAGEM ALQUIMIA (SLOWED).mp4`), never `trimmed_36a5caca_...`.
+
+#### 5.6.3 Trimming — Desktop vs Web Storage
+
+```mermaid
+flowchart LR
+    subgraph "Desktop Mode"
+        D1["yt-dlp downloads to\nYT Deluxe Downloads/Videos/"] --> D2["FFmpeg trims in-place\n(same directory)"]
+        D2 --> D3["File stays permanently\non user's disk"]
+        D3 --> D4["'Open in Explorer' button\nhighlights the file"]
+    end
+
+    subgraph "Web Mode"
+        W1["yt-dlp downloads to\nbackend/tempfiles/"] --> W2["FFmpeg trims in-place\n(same directory)"]
+        W2 --> W3["FileResponse streams\nto browser"]
+        W3 --> W4["Browser saves to\ndefault Downloads folder"]
+        W4 --> W5["Auto-cleanup daemon\ndeletes after 10 min"]
+    end
+```
+
+| Aspect | Desktop | Web |
+|--------|---------|-----|
+| **Download location** | `~/Downloads/YT Deluxe Downloads/Videos/` (or Music/) | `backend/tempfiles/` → browser Downloads |
+| **File persistence** | Permanent — stays on user's disk | Ephemeral — auto-deleted after 10 minutes |
+| **Trim execution** | Same as Web (server-side FFmpeg) | Server-side FFmpeg |
+| **History storage** | `~/.yt-deluxe/download_history.json` (JSON file) | `localStorage` (browser) |
+| **File access** | "Open in Explorer" button via `/api/desktop/open-file` | Standard browser download |
+
+#### 5.6.4 Preview Before Download
+
+Users can preview the trimmed range before committing to a download:
+
+```mermaid
+flowchart TD
+    P1["User clicks Preview"] --> P2{"Stream type?"}
+    P2 -->|"Direct Stream\n(most videos)"| P3["Browser seeks to startTime\nvideo.currentTime = startTime"]
+    P3 --> P4["Plays until endTime\nthen loops back to startTime"]
+    
+    P2 -->|"DASH/Protected\n(stream copy fails)"| P5["Backend generates clip:\n/api/preview-clip?start=X&duration=Y"]
+    P5 --> P6["FFmpeg extracts short clip\nstreams back as video/mp4"]
+    P6 --> P4
+```
+
+**Smart Resume:** Pausing and resuming continues from the paused position — it only jumps to `startTime` if the playhead is outside the trim range.
+
+#### 5.6.5 Audio Trimming & Embedded Thumbnails
+
+When downloading audio (MP3), the backend automatically:
+1. Downloads the best audio stream via yt-dlp
+2. Embeds the YouTube video's thumbnail as album art (`EmbedThumbnail` postprocessor)
+3. Trims with FFmpeg if a range was specified
+4. Final output: `.mp3` file with embedded cover art
+
+---
+
+### 5.7 Trimmer Component Architecture
+
+_How the frontend VideoTrimmer component manages state, syncs with DownloadTabs, and communicates with the backend._
+
+#### 5.7.1 Component Hierarchy & Props
+
+```mermaid
+graph TD
+    subgraph "index.jsx — Parent Page"
+        SC["selectedConfig\n{type, quality, format}"]
+        TS["trimSettings\n{startTime, endTime}"]
+        DL["downloads[]\n(active tasks)"]
+    end
+    
+    subgraph "DownloadTabs"
+        AT["activeTab\n(local, synced via useEffect)"]
+        QG["Quality Grid"]
+    end
+    
+    subgraph "VideoTrimmer"
+        TL["Timeline\n(drag handles)"]
+        PR["Presets"]
+        PV["Preview Player"]
+        TG["Trim as Toggle"]
+        OV["Thumbnail Overlay"]
+    end
+    
+    SC -->|"selectedConfig prop"| AT
+    SC -->|"selectedConfig prop"| TG
+    AT -->|"onSelect(config)"| SC
+    TG -->|"onSelectConfig(config)"| SC
+    OV -->|"onSelectConfig(config)"| SC
+    TL -->|"onTrimChange(start, end)"| TS
+    DL -->|"downloads prop"| PV
+```
+
+#### 5.7.2 Three-Way Toggle Sync
+
+Three separate UI elements all reflect the same download type (Video/Audio/Thumbnail):
+
+| Toggle Location | Purpose | How it Syncs |
+|----------------|---------|--------------|
+| **DownloadTabs** (main tabs) | Primary type selector | `useEffect` watches `selectedConfig.type` → updates local `activeTab` |
+| **"Trim as" toggle** (inside VideoTrimmer) | Quick switch within trimmer | Calls `onSelectConfig()` → updates parent → propagates everywhere |
+| **Warning overlay buttons** (glassmorphism card) | Exit thumbnail mode | Calls `onSelectConfig()` → dismisses overlay + updates tabs |
+
+**Single Source of Truth:** `selectedConfig` in `index.jsx` is the only state that matters. All three toggles derive from it and write back to it.
+
+#### 5.7.3 Player Visual States
+
+The preview player has 3 mutually exclusive visual states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Fetching: streamUrl loads
+    Fetching --> Ready: canplay event fires
+    Ready --> Playing: user clicks Play
+    Playing --> Buffering: waiting event (slow network)
+    Buffering --> Playing: playing event (buffer filled)
+    Playing --> Ready: user clicks Pause
+    Ready --> Trimming: user clicks Download
+    Trimming --> Ready: download completes at 100%
+```
+
+| State | Trigger | Visual Indicator |
+|-------|---------|-----------------|
+| **Fetching / Buffering** | `isMediaLoading \|\| isBuffering \|\| clipLoading` | Triple-layer spinner (ping + spin + pulse icon) |
+| **Trimming / Processing** | `activeDownload` found in `downloads[]` | Circular SVG progress ring + percentage + bottom glow bar |
+| **Ready / Playing** | None of above | Hover-aware Play/Pause button with glassmorphism overlay |
+
+#### 5.7.4 Estimated File Size Calculation
+
+The trimmer estimates output file size based on quality bitrate:
+
+| Quality | Bitrate (kbps) | Example: 2 min trim |
+|---------|---------------|-------------------|
+| 8K | 80,000 | ~1.2 GB |
+| 4K | 40,000 | ~600 MB |
+| 1080p | 8,000 | ~120 MB |
+| 720p | 4,000 | ~60 MB |
+| 480p | 2,000 | ~30 MB |
+| Audio (MP3) | 192 | ~2.9 MB |
+
+**Formula:** `estimatedBytes = (bitrate × 1000 / 8) × trimmedDuration`
+
+---
+
 ## 6. Installation and Setup (Local Development)
 
 Follow this setup to run both servers (React + FastAPI) locally on any development machine.
@@ -369,7 +562,8 @@ _By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API
 | `/api/search`                      | GET    | Search YouTube by keyword                        |
 | `/api/video`                       | GET    | Get video details and available formats          |
 | `/api/stream`                      | GET    | Stream video/audio content with range support    |
-| `/api/download`                    | POST   | Download video/audio with quality options        |
+| `/api/preview-clip`                | GET    | Generate a short FFmpeg clip for trim preview    |
+| `/api/download`                    | POST   | Download video/audio with quality & trim options |
 | `/api/batch-download`              | POST   | Download multiple videos simultaneously          |
 | `/api/progress/{id}`               | GET    | Get real-time download progress and ETA          |
 | `/api/history`                     | GET    | List local download history                      |
@@ -394,11 +588,17 @@ _By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API
 - Click any search result to extract all available DASH (High-Def) and Progressive (Standard-Def) formats directly from YouTube. You can also stream content directly without downloading.
 - **REST API**: `GET /api/video?url=youtube_url` | `GET /api/stream?url=youtube_url&quality=1080p`
 
-### 8.3 Download Management
+### 8.3 Download & Trimming Management
 
 - Configure your download with quality options (144p to 8K), format selection (MP4, MP3), and precision trimming.
+- **Trimming Workflow:**
+  1. Select your desired quality in the **Download Options** tab (Video/Audio)
+  2. Use the **Video Trimmer** below to select a range — drag the blue handles, type exact times (M:SS), or click quick presets (First 30s, Last 5m, etc.)
+  3. Click **Preview** to verify your selection plays the correct segment
+  4. Click **Download** — the backend downloads the full file, then FFmpeg trims it to your exact range
+- The trimmer shows estimated file size based on quality bitrate and selected duration
 - Integrated automatic PO Token negotiation ensures your IP remains safe from 403 blocks.
-- **REST API**: `POST /api/download`
+- **REST API**: `POST /api/download` with optional `trim_start` and `trim_end` parameters (in seconds)
 
 ### 8.4 Batch Processing
 
@@ -442,6 +642,17 @@ curl -X POST "http://localhost:8000/api/download" \
  -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
  -F "quality=720" \
  -F "format=mp4"
+```
+
+#### Download Trimmed Video (30s to 2:00)
+
+```bash
+curl -X POST "http://localhost:8000/api/download" \
+ -F "url=https://www.youtube.com/watch?v=VIDEO_ID" \
+ -F "quality=1080" \
+ -F "format=mp4" \
+ -F "trim_start=30" \
+ -F "trim_end=120"
 ```
 
 #### Download Progress

@@ -19,6 +19,8 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
   const [videoData, setVideoData] = useState(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(true);
   const [error, setError] = useState(null);
+  // Tracks the quality/type the user currently has selected in DownloadTabs
+  const [selectedConfig, setSelectedConfig] = useState(null);
 
   // Get video data from location state or URL params
   const initialVideo = location.state?.video;
@@ -127,6 +129,7 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
 
     const newDownload = {
       id: Date.now() + Math.random(),
+      url: downloadConfig?.url || videoData?.url,
       filename: `${downloadConfig?.filename || 'video'}.${downloadConfig?.format || 'mp4'}`,
       title: downloadConfig?.filename || videoData?.title || '',
       channel: videoData?.channel?.name || '',
@@ -154,8 +157,10 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
         quality: downloadConfig.quality,
         format: downloadConfig.format,
         rename: downloadConfig.filename,
-        trim_start: trimSettings?.startTime,
-        trim_end: trimSettings?.endTime,
+        // Prefer trim values from downloadConfig (e.g. from VideoTrimmer's own button),
+        // fallback to trimSettings state (set via onTrimChange)
+        trim_start: downloadConfig.trim_start ?? trimSettings?.startTime,
+        trim_end:   downloadConfig.trim_end   ?? trimSettings?.endTime,
         type: downloadConfig.type,
         channel: videoData?.channel?.name || '',
         thumbnail: videoData?.thumbnail || ''
@@ -400,6 +405,11 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
     setTrimSettings({ startTime, endTime });
   };
 
+  // Called by DownloadTabs when user changes quality/tab — no download triggered
+  const handleSelectConfig = (config) => {
+    setSelectedConfig(config);
+  };
+
   const handleQualityChange = (quality) => {
     console.log('Quality changed to:', quality);
   };
@@ -496,17 +506,23 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
        {/* Download Configuration */}
        <div className="space-y-6">
         <div className="flex items-center justify-between">
-         <h2 className="text-2xl font-bold text-foreground">{t("videoDetailsDownload.downloadOptions")}</h2>
+         <h2 id="download-options" className="text-2xl font-bold text-foreground">{t("videoDetailsDownload.downloadOptions")}</h2>
         </div>
 
         <DownloadTabs
                   videoData={videoData}
-                  onDownload={handleDownload} />
+                  onDownload={handleDownload}
+                  onSelect={handleSelectConfig}
+                  selectedConfig={selectedConfig} />
                 
 
         <VideoTrimmer
                   videoData={videoData}
-                  onTrimChange={handleTrimChange} />
+                  onTrimChange={handleTrimChange}
+                  onDownload={handleDownload}
+                  onSelectConfig={handleSelectConfig}
+                  selectedConfig={selectedConfig}
+                  downloads={downloads} />
                 
        </div>
       </div>
