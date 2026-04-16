@@ -231,7 +231,7 @@
     "disclaimerText1": "\"This free, open-source tool is strictly for non-commercial, educational purposes. We respect YouTube Community Guidelines and creator intellectual property. Please use responsibly.\"",
     "disclaimerText2": "The software is provided \"as is\", without warranty of any kind, express or implied. In no event shall the architects or contributors be held liable for any claim, damages or other liability arising from technical interactions with third-party service providers.",
     "auditEngine": "Audit Engine:",
-    "protocol": "Protocol Document v1.2.0 • Verified 2026"
+    "protocol": "Protocol Document v1.1.0 • Verified 2026"
   },
   "batchDownloadManager": {
     "addVideosToQueue": "Add Videos to Queue",
@@ -386,7 +386,6 @@
     "ytDeluxe": "YT Deluxe",
     "downloadYoutubeVideosWith": "Download YouTube videos with premium quality and advanced features.\n                                Search, preview, and download in multiple formats."
   },
-
   "videoDetailsDownload": {
     "downloads": "Downloads",
     "active": "active",

@@ -231,7 +231,7 @@
     "disclaimerText1": "\"Dieses kostenlose Open-Source-Tool ist ausschließlich für nichtkommerzielle, pädagogische Zwecke bestimmt. Wir respektieren die YouTube-Community-Richtlinien und das geistige Eigentum der Urheber. Bitte verantwortungsvoll verwenden.\"",
     "disclaimerText2": "Die Software wird \"wie besehen\" ohne jegliche weder ausdrückliche noch stillschweigende Gewährleistung zur Verfügung gestellt. In keinem Fall haften die Architekten oder Mitwirkenden für Ansprüche, Schäden oder sonstige Haftungen, die sich aus technischen Interaktionen mit Drittanbietern ergeben.",
     "auditEngine": "Prüfungsmaschine:",
-    "protocol": "Protokolldokument v1.2.0 • Verifiziert 2026"
+    "protocol": "Protokolldokument v1.1.0 • Verifiziert 2026"
   },
   "batchDownloadManager": {
     "addVideosToQueue": "Videos zur Warteschlange hinzufügen",
@@ -386,7 +386,6 @@
     "ytDeluxe": "YT Deluxe",
     "downloadYoutubeVideosWith": "Laden Sie YouTube-Videos in Premium-Qualität herunter."
   },
-
   "videoDetailsDownload": {
     "downloads": "Downloads",
     "active": "aktiv",

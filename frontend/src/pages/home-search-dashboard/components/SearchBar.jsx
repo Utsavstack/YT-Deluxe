@@ -62,14 +62,24 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
       }
     };
 
+    // Check initially
     checkClipboard();
 
-    const handleFocus = () => { checkClipboard(); };
-    const handleCopy = () => { setTimeout(checkClipboard, 100); };
+    // Check when window gets focus
+    const handleFocus = () => {
+      checkClipboard();
+    };
+
+    // Check when something is copied inside the app
+    const handleCopy = () => {
+      // Small delay to allow clipboard to update
+      setTimeout(checkClipboard, 100);
+    };
 
     window.addEventListener('focus', handleFocus);
     document.addEventListener('copy', handleCopy);
-
+    
+    // Also check periodically in case of background updates
     const intervalId = setInterval(checkClipboard, 1000);
 
     return () => {

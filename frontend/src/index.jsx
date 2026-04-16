@@ -5,21 +5,37 @@ import "./utils/i18n";
 import "./styles/tailwind.css";
 import "./styles/index.css";
 
+// Guard: stop calling pywebview bridge during page reload/unload
+window.__ytdeluxe_unloading = false;
+window.addEventListener('beforeunload', () => {
+  window.__ytdeluxe_unloading = true;
+});
+
 // Intercept clipboard read to bypass pywebview Edge Chromium permission dialog
 if (!navigator.clipboard) {
   navigator.clipboard = {};
 }
 const originalReadText = navigator.clipboard.readText;
 navigator.clipboard.readText = async function() {
-    if (window.pywebview && window.pywebview.api) {
-        try {
+    // Block ALL bridge calls during reload/unload
+    if (window.__ytdeluxe_unloading) return "";
+    try {
+        // Only call if pywebview bridge is FULLY initialized and stable
+        if (window.pywebview
+            && window.pywebview.api
+            && window.pywebview.api.read_clipboard
+            && window.pywebview._returnValuesCallbacks) {
             return await window.pywebview.api.read_clipboard();
-        } catch (e) {
-            console.error("Pywebview API clipboard read failed:", e);
         }
+    } catch (e) {
+        // Silently ignore
     }
     if (originalReadText) {
-        return originalReadText.bind(navigator.clipboard)();
+        try {
+            return await originalReadText.bind(navigator.clipboard)();
+        } catch (e) {
+            // Clipboard access denied
+        }
     }
     return "";
 };

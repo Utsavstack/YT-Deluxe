@@ -88,7 +88,7 @@ const AboutYTDeluxe = () => {
               {t('aboutUs.heroSubtitle')}
             </p>
             <div className="flex items-center justify-center space-x-2 pt-2">
-              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">v1.2.0</span>
+              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">v1.1.0</span>
               <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">{t('aboutUs.prodReady')}</span>
             </div>
           </div>

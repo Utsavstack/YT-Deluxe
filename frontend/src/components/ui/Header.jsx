@@ -9,19 +9,33 @@ const Header = ({ isScrolled: isScrolledProp }) => {
   const navigate = useNavigate();
   const [internalScrolled, setInternalScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Tooltip States
+  const [showStartupHint, setShowStartupHint] = useState(false);
+  const [isHoveringLogo, setIsHoveringLogo] = useState(false);
+  
+  // Fullscreen States
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isHoveringTop, setIsHoveringTop] = useState(false);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem('ytdeluxe_started')) {
+      sessionStorage.setItem('ytdeluxe_started', 'true');
+      setShowStartupHint(true);
+      const timer = setTimeout(() => setShowStartupHint(false), 5000); // 5 sec fade out
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Pages where sticky nav collapse is enabled
   const stickyNavRoutes = ['/', '/home-search-dashboard', '/search-results'];
   const isStickyNavPage = stickyNavRoutes.includes(location.pathname);
 
-  // If parent passes isScrolled (search results page), use that.
-  // Otherwise, listen to scroll ourselves — but ONLY on allowed pages.
-  // On other pages (Batch, History, Settings), nav always stays full.
   const isScrolled = isScrolledProp !== undefined ? isScrolledProp : (isStickyNavPage ? internalScrolled : false);
 
   useEffect(() => {
-    if (isScrolledProp !== undefined) return; // parent controls it
-    if (!isStickyNavPage) return; // don't listen on non-sticky pages
+    if (isScrolledProp !== undefined) return;
+    if (!isStickyNavPage) return;
     const onScroll = () => setInternalScrolled(window.scrollY > 80);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -44,6 +58,43 @@ const Header = ({ isScrolled: isScrolledProp }) => {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [menuOpen]);
 
+  const handleFullscreenToggle = () => {
+    setIsFullscreen(prev => !prev);
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.toggle_fullscreen();
+    } else {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const handleMinimize = () => {
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.minimize_window();
+    }
+  };
+
+  const handleClose = () => {
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.close_window();
+    }
+  };
+
+  // Handle F11 key for desktop fullscreen
+  useEffect(() => {
+    const handleF11 = (e) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        handleFullscreenToggle();
+      }
+    };
+    window.addEventListener('keydown', handleF11);
+    return () => window.removeEventListener('keydown', handleF11);
+  }, [handleFullscreenToggle]);
+
   const navigationItems = [
     { label: 'Home', path: '/home-search-dashboard', icon: 'Home', tooltip: 'Search and download videos' },
     { label: 'Batch', path: '/batch-download-manager', icon: 'Download', tooltip: 'Manage bulk downloads' },
@@ -60,8 +111,54 @@ const Header = ({ isScrolled: isScrolledProp }) => {
 
   return (
     <>
+      {/* Invisible Top Hover Trigger for Windows Control Ribbon in Fullscreen */}
+      {isFullscreen && (
+        <div 
+          className="fixed top-0 left-0 right-0 h-6 z-[1000] cursor-default" 
+          onMouseEnter={() => setIsHoveringTop(true)} 
+          onMouseLeave={() => setIsHoveringTop(false)}
+        >
+          {/* Windows Control Ribbon (Drops down from top) */}
+          <AnimatePresence>
+            {isHoveringTop && (
+              <motion.div
+                initial={{ y: "-100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "-100%" }}
+                transition={{ type: "tween", duration: 0.2, ease: "easeInOut" }}
+                className="absolute top-0 right-0 flex items-center bg-black dark:bg-[#1C1C1C] text-white shadow-xl pointer-events-auto border-b border-l border-white/10 rounded-bl-xl overflow-hidden"
+              >
+                <button
+                  onClick={handleMinimize}
+                  className="px-5 py-2.5 hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none"
+                  title="Minimize"
+                >
+                  <Icon name="Minus" size={16} strokeWidth={2} />
+                </button>
+                <button
+                  onClick={handleFullscreenToggle}
+                  className="px-5 py-2.5 hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none"
+                  title="Restore Down"
+                >
+                  <Icon name="Copy" size={14} strokeWidth={2.5} className="rotate-180" />
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="px-5 py-2.5 hover:bg-red-600 transition-colors flex items-center justify-center focus:outline-none"
+                  title="Close App"
+                >
+                  <Icon name="X" size={16} strokeWidth={2.5} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Floating Rounded Menus Container */}
-      <div className="fixed top-6 left-0 right-0 z-[110] pointer-events-none flex justify-center w-full px-6">
+      <div 
+        className="fixed top-6 left-0 right-0 z-[110] pointer-events-none flex justify-center w-full px-6"
+      >
         <div className="flex items-center justify-between max-w-7xl w-full relative">
 
           {/* Left: Logo */}
@@ -69,11 +166,19 @@ const Header = ({ isScrolled: isScrolledProp }) => {
             initial={{ y: -60, opacity: 0, scale: 0.9 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="pointer-events-auto shrink-0"
+            className="pointer-events-auto shrink-0 relative"
           >
             <div
-              className="menu-glass-card flex items-center space-x-4 p-2 pr-6 cursor-pointer group"
-              onClick={() => handleNavigation('/home-search-dashboard')}
+              className="menu-glass-card relative flex items-center space-x-4 p-2 pr-6 cursor-pointer group"
+              onClick={() => {
+                window.__ytdeluxe_unloading = true;
+                if (window.pywebview && window.pywebview._returnValuesCallbacks) {
+                  window.pywebview._returnValuesCallbacks = {};
+                }
+                setTimeout(() => window.location.reload(), 150);
+              }}
+              onMouseEnter={() => setIsHoveringLogo(true)}
+              onMouseLeave={() => setIsHoveringLogo(false)}
             >
               <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-white/60 to-white/20 dark:from-white/25 dark:to-white/5 border border-white/60 dark:border-white/30 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.2)] shrink-0 relative z-10 group-hover:rotate-6 transition-transform overflow-hidden">
                 <img src="/assets/images/logo-light.png" alt="YT-Deluxe" className="w-14 h-14 object-contain" />
@@ -83,6 +188,22 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                 <p className="text-[10px] text-muted-foreground leading-none tracking-tight opacity-70">Premium Media Downloader</p>
               </div>
             </div>
+
+            {/* Hint Tooltip - Shows on startup OR on hover */}
+            <AnimatePresence>
+              {(showStartupHint || isHoveringLogo) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25, delay: showStartupHint && !isHoveringLogo ? 0.3 : 0 }}
+                  className="absolute top-full mt-4 left-4 bg-zinc-800 dark:bg-zinc-800 text-white text-[11px] px-3 py-1.5 rounded-lg shadow-xl font-medium tracking-wide z-[999] pointer-events-none whitespace-nowrap border border-white/20"
+                >
+                  Click to refresh app if stuck
+                  <div className="absolute -top-1 left-5 w-2 h-2 bg-zinc-800 rotate-45 border-l border-t border-white/20" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Center: Nav — collapses when scrolled */}
@@ -141,6 +262,26 @@ const Header = ({ isScrolled: isScrolledProp }) => {
             {/* Stable flex row — items here never re-animate */}
             <div className="flex items-center">
               <ThemeToggle />
+              
+              {/* Fullscreen Button */}
+              <button
+                onClick={handleFullscreenToggle}
+                className={`menu-glass-card w-[44px] h-[44px] flex items-center justify-center transition-colors duration-300 ml-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.03]`}
+                title={isFullscreen ? "Exit Fullscreen (F11)" : "Enter Fullscreen (F11)"}
+                aria-label="Toggle Fullscreen"
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isFullscreen ? 'min' : 'max'}
+                    initial={{ scale: 0.5, opacity: 0, rotate: -45 }}
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    exit={{ scale: 0.5, opacity: 0, rotate: 45 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <Icon name={isFullscreen ? "Minimize" : "Maximize"} size={18} className="text-foreground transition-transform" />
+                  </motion.div>
+                </AnimatePresence>
+              </button>
 
               {/* Hamburger — appears when scrolled (desktop). 
                    This wrapper has fixed dimensions so toggling menu 

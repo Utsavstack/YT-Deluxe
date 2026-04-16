@@ -85,6 +85,27 @@ def wait_for_backend(timeout=30):
 
 
 class AppApi:
+    def __init__(self):
+        self._window = None
+
+    def toggle_fullscreen(self):
+        if self._window:
+            self._window.toggle_fullscreen()
+            return True
+        return False
+
+    def minimize_window(self):
+        if self._window:
+            self._window.minimize()
+            return True
+        return False
+
+    def close_window(self):
+        if self._window:
+            self._window.destroy()
+            return True
+        return False
+
     def read_clipboard(self):
         try:
             import subprocess
@@ -98,10 +119,7 @@ class AppApi:
 
     def write_clipboard(self, text):
         try:
-            # Native clipboard write via PowerShell to avoid UI freezes
             import subprocess
-            cmd = f'[link.text.copy]::Clear(); [System.Windows.Forms.Clipboard]::SetText("{text}")'
-            # Actually simpler to use Set-Clipboard in modern PS
             subprocess.run(
                 ["powershell", "-command", f"Set-Clipboard -Value '{text}'"],
                 creationflags=subprocess.CREATE_NO_WINDOW
@@ -143,12 +161,24 @@ def main():
         # Packaged: serve frontend via backend's local HTTP server
         # Using http:// instead of file:// gives YouTube embeds a valid origin
         # (fixes Error 153: Video player configuration error)
-        url = 'http://127.0.0.1:8000/'
+        # Using localhost instead of 127.0.0.1 to pass YouTube restriction checks
+        url = 'http://localhost:8000/'
     else:
         # Dev: Vite dev server must be running separately on port 5848
         url = 'http://localhost:5848'
 
     print(f"[YT Deluxe] Loading: {url}")
+
+    # ── Polyfill for Pywebview to suppress stale Javascript Exceptions ─────
+    import webview.window
+    original_evaluate_js = webview.window.Window.evaluate_js
+    def safe_evaluate_js(self, script, *args, **kwargs):
+        try:
+            return original_evaluate_js(self, script, *args, **kwargs)
+        except Exception:
+            pass # Silently ignore JS bridge errors during reloads
+    
+    webview.window.Window.evaluate_js = safe_evaluate_js
 
     # ── Step 3: Create Window ─────────────────────────────────────────────
     api = AppApi()
@@ -163,6 +193,7 @@ def main():
         text_select=True,
         maximized=True,
     )
+    api._window = window
 
     def on_closed():
         print("[YT Deluxe] Window closed. Terminating backend...")

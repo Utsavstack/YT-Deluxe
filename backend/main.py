@@ -15,14 +15,26 @@ import threading
 import time
 import atexit
 
+# ── GLOBAL SUBPROCESS FIX FOR WINDOWS GUI (.exe) ──────────────────────────
+# Prevent child processes (like ffmpeg spawned by yt-dlp) from flashing terminal windows
+if os.name == 'nt':
+    original_popen = subprocess.Popen
+    def patched_popen(*args, **kwargs):
+        # Override creationflags to suppress cmd windows
+        if 'creationflags' not in kwargs:
+            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+        return original_popen(*args, **kwargs)
+    subprocess.Popen = patched_popen
+# ────────────────────────────────────────────────────────────────────────
+
 def get_ffmpeg_path():
     """
     Returns correct ffmpeg binary path.
-    - In PyInstaller .exe: ffmpeg.exe is in sys._MEIPASS/
+    - In PyInstaller onefile: ffmpeg.exe is in the same folder as main.exe
     - In dev/Render: 'ffmpeg' must be in system PATH
     """
     if getattr(sys, 'frozen', False):
-        return os.path.join(sys._MEIPASS, 'ffmpeg.exe')
+        return os.path.join(os.path.dirname(sys.executable), 'ffmpeg.exe')
     return 'ffmpeg'
 
 def format_time_hhmmss(seconds: float) -> str:
@@ -124,6 +136,7 @@ def get_cookie_opts():
 
 def get_yt_opts():
   return {
+    'ffmpeg_location': get_ffmpeg_path(),
     'js_runtimes': {'node': {}},
     'extractor_args': {
       'youtube': {
@@ -141,6 +154,7 @@ def get_yt_opts():
 
 def get_yt_search_opts():
   return {
+    'ffmpeg_location': get_ffmpeg_path(),
     'js_runtimes': {'node': {}},
     'extractor_args': {
       'youtube': {

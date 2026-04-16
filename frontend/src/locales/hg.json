@@ -231,7 +231,7 @@
     "disclaimerText1": "\"Ye free tool hai, please ise zimmedari se use karein.\"",
     "disclaimerText2": "Software jaise hai waise milega, koi warranty nahi hai.",
     "auditEngine": "Audit Engine:",
-    "protocol": "Protocol Document v1.2.0 • Verified 2026"
+    "protocol": "Protocol Document v1.1.0 • Verified 2026"
   },
   "batchDownloadManager": {
     "addVideosToQueue": "Queue mein Video Dalein",
@@ -386,7 +386,6 @@
     "ytDeluxe": "YT Deluxe",
     "downloadYoutubeVideosWith": "Badiya quality ke sath YouTube video download karein."
   },
-
   "videoDetailsDownload": {
     "downloads": "Downloads",
     "active": "chalu hai",
