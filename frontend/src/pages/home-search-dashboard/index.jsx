@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/AppIcon';
 import Header from '../../components/ui/Header';
-import ProgressNotification from '../../components/ui/ProgressNotification';
 import SearchBar from './components/SearchBar';
 import TrendingHeader from './components/TrendingHeader';
 import TrendingSection from './components/TrendingSection';
@@ -13,6 +12,7 @@ import FloatingActionButton from './components/FloatingActionButton';
 
 import YTDeluxeAPI from '../../utils/api';
 import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
+import { useDownloadContext } from '../../context/DownloadContext';
 
 const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +31,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [hasMoreTrending, setHasMoreTrending] = useState(true);
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState(null);
-  const [downloads, setDownloads] = useState([]);
+  const { addDownload } = useDownloadContext();
   const [isSearchSticky, setIsSearchSticky] = useState(false);
   const [isTrendingSticky, setIsTrendingSticky] = useState(false);
   const [isTrendingCollapsed, setIsTrendingCollapsed] = useState(false);
@@ -336,93 +336,24 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
     localStorage.setItem('ytdeluxe_recent_searches', JSON.stringify(updatedSearches));
   };
 
-  const trackDownloadProgress = async (taskId, downloadId) => {
-    const progressInterval = setInterval(async () => {
-      try {
-        const progress = await YTDeluxeAPI.getDownloadProgress(taskId);
+  const handleQuickDownload = (video, format = 'mp4') => {
+    const videoUrl = video.url || `https://www.youtube.com/watch?v=${video.originalId || video.id?.split('_')?.[0]}`;
+    const dlType = format === 'jpg' ? 'thumbnail' : (format === 'mp3' ? 'audio' : 'video');
 
-        setDownloads((prev) => prev.map((dl) =>
-        dl.id === downloadId ?
-        {
-          ...dl,
-          progress: progress.progress || 0,
-          status: progress.status || 'downloading',
-          filename: progress.filename || dl.filename,
-          error: progress.error || null,
-          speed: progress.speed || 0,
-          timeRemaining: progress.eta || 0,
-          downloaded_bytes: progress.downloaded_bytes || 0,
-          total_bytes: progress.total_bytes || 0,
-          filepath: progress.filepath || dl.filepath
-        } :
-        dl
-        ));
-
-        if (progress.status === 'completed' || progress.status === 'error') {
-          clearInterval(progressInterval);
-
-          if (progress.status === 'completed' && progress.filename) {
-            const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
-            if (!isDesktop) {
-              // Trigger browser download for web version
-              const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/tempfiles/${encodeURIComponent(progress.filename)}`;
-              const a = document.createElement('a');
-              a.style.display = 'none';
-              a.href = downloadUrl;
-              a.download = progress.filename;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Progress tracking failed:', error);
-        clearInterval(progressInterval);
-      }
-    }, 1000);
-  };
-
-  const handleQuickDownload = async (video, format = 'mp4') => {
-    console.log('Starting quick download for:', video.title, 'Format:', format);
-    
-    const downloadId = Date.now() + Math.random();
-    const newDownload = {
-      id: downloadId,
-      filename: `${video.title || 'video'}.${format}`,
+    addDownload({
+      url: videoUrl,
+      quality: format === 'jpg' ? 'Max Resolution' : (format === 'mp4' ? '1080p' : '320kbps'),
+      format: format,
+      filename: video.title,
+      type: dlType,
+      thumbnail: video.thumbnail,
+      channel: video.channel?.name || '',
+    }, {
       title: video.title,
-      type: format === 'jpg' ? 'thumbnail' : (format === 'mp3' ? 'audio' : 'video'),
-      progress: 0,
-      status: 'pending',
-      thumbnail: video.thumbnail
-    };
-
-    setDownloads((prev) => [...prev, newDownload]);
-
-    try {
-      const apiConfig = {
-        url: video.url || `https://www.youtube.com/watch?v=${video.originalId || video.id?.split('_')?.[0]}`,
-        quality: format === 'jpg' ? 'Max Resolution' : (format === 'mp4' ? '1080p' : '320kbps'),
-        format: format,
-        rename: video.title,
-        type: newDownload.type
-      };
-
-      const response = await YTDeluxeAPI.downloadVideo(apiConfig);
-
-      if (response.task_id) {
-        trackDownloadProgress(response.task_id, downloadId);
-      } else {
-        throw new Error('No task ID received from server');
-      }
-
-    } catch (error) {
-      console.error('Quick download failed:', error);
-      setDownloads((prev) => prev.map((dl) =>
-        dl.id === downloadId ? { ...dl, status: 'error', error: error.message } : dl
-      ));
-      setError('Download failed. Please try again.');
-    }
+      duration: video.duration,
+      channel: video.channel,
+      thumbnail: video.thumbnail,
+    });
   };
 
   const handlePreview = (video) => {
@@ -468,7 +399,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
     <div className="min-h-screen bg-background overflow-x-hidden">
             <TheInfiniteGrid />
             <Header isScrolled={isSearchSticky} />
-            {downloads.length > 0 && <ProgressNotification downloads={downloads} />}
+
 
             <main className="pt-20 pb-32 lg:pb-8 px-4 lg:px-6">
                 <div className="max-w-7xl mx-auto">
@@ -562,44 +493,22 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                     </AnimatePresence>
 
                     {/* Smooth Placeholder for Sticky State */}
-                    <AnimatePresence mode="popLayout">
-                      {isTrendingSticky && !isTrendingCollapsed && (
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: 90 }}
-                          exit={{ height: 0 }}
-                          transition={{ duration: 0.4, ease: "easeInOut" }}
-                          className="w-full"
-                        />
-                      )}
-                    </AnimatePresence>
+                    {isTrendingSticky && !isTrendingCollapsed && (
+                      <div className="w-full h-[90px]" />
+                    )}
                     
-                    <AnimatePresence>
                     {!isTrendingCollapsed && (
-                      <motion.div
-                        layout
-                        initial={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.95, x: 50 }}
-                        animate={{ opacity: 1, height: 'auto', marginBottom: 24, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, height: 0, marginBottom: 0, scale: 0.95, x: 50, filter: 'blur(8px)' }}
-                        transition={{ 
-                          height: { duration: 0.4, ease: "easeInOut" },
-                          opacity: { duration: 0.3 },
-                          marginBottom: { duration: 0.4, ease: "easeInOut" },
-                          x: { type: "spring", stiffness: 300, damping: 30 },
-                          scale: { duration: 0.4 }
-                        }}
+                      <div
                         className={`
-                          origin-right
                           ${isTrendingSticky
                             ? 'fixed top-[94px] left-0 right-0 z-[104] flex justify-center px-4 lg:px-6 pointer-events-none mb-6'
-                            : 'relative overflow-hidden'
+                            : 'relative overflow-hidden mb-6'
                           }
                         `}
                       >
                         {/* Added pr-[52px] when sticky to avoid overlapping the fixed toggle on the right */}
-                        <motion.div layout transition={{ layout: { type: "spring", stiffness: 250, damping: 30 } }} className={`w-full pointer-events-auto ${isTrendingSticky ? 'max-w-7xl flex justify-center pr-[52px]' : ''}`}>
+                        <div className={`w-full pointer-events-auto transition-all ${isTrendingSticky ? 'max-w-7xl flex justify-center pr-[52px]' : ''}`}>
                           <TrendingHeader
-
                             onRefresh={() => loadTrendingVideos(activeCategory)}
                             lastUpdated={lastUpdated}
                             isLoading={isTrendingLoading}
@@ -608,10 +517,9 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                             onCategorySelect={handleCategorySelect}
                             isSticky={isTrendingSticky}
                           />
-                        </motion.div>
-                      </motion.div>
+                        </div>
+                      </div>
                     )}
-                    </AnimatePresence>
 
                     {/* Video Cards Grid — this is the only scrolling content */}
                     <div className="space-y-12">

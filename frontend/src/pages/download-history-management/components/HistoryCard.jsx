@@ -29,6 +29,16 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatTimestamp = (totalSeconds) => {
+    if (totalSeconds == null) return '';
+    const s = Math.round(totalSeconds);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const isTrimmed = (item?.trim_start > 0) || (item?.trim_end > 0 && item?.trim_end < (item?.duration - 1));
+
   const getFormatIcon = (format) => {
     switch (format?.toLowerCase()) {
       case 'mp4': return 'Video';
@@ -52,9 +62,8 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
   return (
     <motion.div
       layout
-      className={`glass-card hover:shadow-glass-lg transition-all duration-300 spring-smooth group relative overflow-hidden ${
-        isSelected ? 'ring-2 ring-primary border-primary/50' : 'border-border/40'
-      }`}
+      className={`glass-card hover:shadow-glass-lg transition-all duration-300 spring-smooth group relative overflow-hidden ${isSelected ? 'ring-2 ring-primary border-primary/50' : 'border-border/40'
+        }`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
@@ -63,7 +72,7 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
           {/* Selection Checkbox - Animated to remove gap by default */}
           <AnimatePresence initial={false}>
             {(showActions || isSelected) && (
-              <motion.div 
+              <motion.div
                 initial={{ width: 0, opacity: 0, marginRight: 0 }}
                 animate={{ width: 32, opacity: 1, marginRight: 16 }}
                 exit={{ width: 0, opacity: 0, marginRight: 0 }}
@@ -72,11 +81,10 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
               >
                 <button
                   onClick={() => onSelect(item?.id)}
-                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shadow-sm ${
-                    isSelected 
-                      ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-primary/30' 
-                      : 'border-border/60 bg-muted/50 hover:border-primary/50 dark:border-white/20 dark:bg-white/5'
-                  }`}
+                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shadow-sm ${isSelected
+                    ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-primary/30'
+                    : 'border-border/60 bg-muted/50 hover:border-primary/50 dark:border-white/20 dark:bg-white/5'
+                    }`}
                 >
                   {isSelected && <Icon name="Check" size={12} strokeWidth={3} />}
                 </button>
@@ -95,6 +103,12 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
               <div className="absolute bottom-1.5 right-1.5 bg-black/90 backdrop-blur-md text-[9px] font-black text-white px-1.5 py-0.5 rounded-lg shadow-lg border border-white/10 uppercase tracking-tighter">
                 {item?.duration ? formatDuration(item.duration) : '0:00'}
               </div>
+              {isTrimmed && (
+                <div className="absolute top-1.5 left-1.5 bg-violet-600/90 backdrop-blur-md text-[8px] font-black text-white px-1.5 py-0.5 rounded-md shadow-lg border border-violet-400/30 flex items-center gap-0.5">
+                  <Icon name="Scissors" size={8} />
+                  <span>Trimmed</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -113,24 +127,25 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
               </div>
 
               {/* Quick Actions - Floating Pill Style */}
-              <div className={`flex items-center p-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md transition-all duration-300 shadow-glass-sm ${
-                showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-              }`}>
+              <div className={`flex items-center p-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md transition-all duration-300 shadow-glass-sm ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+                }`}>
                 <button
                   onClick={() => onRedownload(item)}
                   className="p-1.5 rounded-full transition-all hover:bg-white/10 text-muted-foreground hover:text-foreground"
                   title={t("downloadHistoryManagement.redownload")}
                 >
-                  <Icon name="RefreshCw" size={14} />
+                  <Icon name="Download" size={14} />
                 </button>
 
-                <button
-                  onClick={() => onOpenLocation(item)}
-                  className="p-1.5 rounded-full transition-all hover:bg-white/10 text-muted-foreground hover:text-foreground"
-                  title="Open File Location"
-                >
-                  <Icon name="FolderOpen" size={14} />
-                </button>
+                {item.type !== 'saved' && (
+                  <button
+                    onClick={() => onOpenLocation(item)}
+                    className="p-1.5 rounded-full transition-all hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                    title="Open File Location"
+                  >
+                    <Icon name="FolderOpen" size={14} />
+                  </button>
+                )}
 
                 <button
                   onClick={() => onShare(item)}
@@ -155,24 +170,43 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
             {/* Metadata Footer - Improved Grid/Layout */}
             <div className="flex items-center justify-between mt-auto">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[9px] font-black text-foreground uppercase tracking-widest">
-                {/* File Format Badge */}
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm text-muted-foreground">
-                  <Icon name={getFormatIcon(item?.format)} size={10} className="text-primary/70" />
-                  <span>{item?.format || 'N/A'}</span>
-                </div>
+                {item.type !== 'saved' && (
+                  <>
+                    {/* File Format Badge */}
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm text-muted-foreground">
+                      <Icon name={getFormatIcon(item?.format)} size={10} className="text-primary/70" />
+                      <span>{item?.format || 'N/A'}</span>
+                    </div>
 
-                {/* Quality Badge (Hidden if thumbnail to avoid double labels) */}
-                {item?.quality && item.quality.toLowerCase() !== 'thumbnail' && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm">
-                    <span className={getQualityColor(item?.quality)}>{item?.quality}</span>
+                    {/* Quality Badge (Hidden if thumbnail to avoid double labels) */}
+                    {item?.quality && item.quality.toLowerCase() !== 'thumbnail' && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm">
+                        <span className={getQualityColor(item?.quality)}>{item?.quality}</span>
+                      </div>
+                    )}
+
+                    {/* Size Badge */}
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm text-muted-foreground">
+                      <Icon name="HardDrive" size={10} className="opacity-50" />
+                      <span>{formatFileSize(item?.fileSize || 0)}</span>
+                    </div>
+                  </>
+                )}
+
+                {item.type === 'saved' && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 shadow-sm text-primary">
+                    <Icon name="Bookmark" size={10} />
+                    <span>Saved Video</span>
                   </div>
                 )}
 
-                {/* Size Badge */}
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm text-muted-foreground">
-                  <Icon name="HardDrive" size={10} className="opacity-50" />
-                  <span>{formatFileSize(item?.fileSize || 0)}</span>
-                </div>
+                {/* Trimmed Badge */}
+                {isTrimmed && (
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 shadow-sm text-violet-500">
+                    <Icon name="Scissors" size={10} />
+                    <span>{formatTimestamp(item.trim_start)} – {formatTimestamp(item.trim_end)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2.5">
@@ -181,7 +215,9 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                   const qlty = (item?.quality || '').toLowerCase();
                   let type = 'Video';
                   let cls = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-                  if (fmt === 'mp3' || qlty.includes('audio') || qlty.includes('kbps')) {
+                  if (item.type === 'saved') {
+                    type = 'Saved'; cls = 'bg-primary/10 text-primary border-primary/20';
+                  } else if (fmt === 'mp3' || qlty.includes('audio') || qlty.includes('kbps')) {
                     type = 'Music'; cls = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
                   } else if (fmt === 'jpg' || fmt === 'png' || qlty.includes('thumbnail') || qlty.includes('resolution')) {
                     type = 'Thumbnail'; cls = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
@@ -194,14 +230,23 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                 })()}
                 <div className="flex items-center gap-1.5 text-[9px] font-black text-muted-foreground/40 uppercase tracking-wider">
                   <Icon name="Calendar" size={11} className="opacity-30" />
-                  <span>{formatDate(item?.downloadDate || new Date())}</span>
+                  <span>{formatDate(item?.downloadDate)}</span>
+                  <span className="opacity-30"><Icon name="Clock" size={11} /></span>
+                  <span>
+                    {(() => {
+                      try {
+                        const d = new Date(item?.downloadDate);
+                        return isNaN(d.getTime()) ? '--:--' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      } catch { return '--:--'; }
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Background Subtle Accent */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/2 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
     </motion.div>

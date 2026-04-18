@@ -373,10 +373,11 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
   };
   const estimatedSize = estimatedBytes > 0 ? fmtSize(estimatedBytes) : '—';
 
-  // Find active download/trimming task for this video
+  // Find active download/trimming task for this video that is specifically a trim task
   const activeDownload = (downloads || []).find(d =>
     d.url === videoData?.url &&
-    (d.status === 'downloading' || d.status === 'processing' || d.progress < 100)
+    d.trim_start !== undefined && 
+    (d.status === 'downloading' || d.status === 'processing' || d.status === 'pending')
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────

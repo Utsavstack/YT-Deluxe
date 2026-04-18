@@ -140,7 +140,7 @@ The application uses a sophisticated **Server-Merged Tempfile Architecture** to 
     - **Desktop Form**: FastAPI natively saves the file directly to your Custom Download Directory. An "Open Folder" button in the UI can execute a foreground Windows Explorer window to highlight the file.
 4. **Auto-Cleanup**: A background threading daemon automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
 5. **Anti-Bot Engine (PO Tokens)**: Deeply integrates a Node.js-based HTTP server inside the container alongside FastAPI that silently negotiates Proof-of-Origin limits with YouTube via mobile web profiles, effectively avoiding `HTTP 403 Forbidden` bans.
-6. **Hybrid Architecture (`isDesktop`)**: Automatically detects if it's running in a browser or as an installed Windows app via `window.pywebview` presence. This detection dictates the **{Environment Check}** step in the workflow — altering features (like hiding Storage Settings on the Web) seamlessly.
+6. **Hybrid Architecture (`isDesktop`)**: Automatically detects if it's running in a browser or as an installed Windows app via `window.pywebview` presence. This detection dictates the **{Environment Check}** step in the workflow altering features (like hiding Storage Settings on the Web) seamlessly.
 7. **Hybrid Storage & History Handling**:
    - `tempfiles/`: Used internally by the backend for processing FFmpeg merges.
    - `localStorage`: Fast, isolated history storage specifically for Web deployments.
@@ -253,7 +253,7 @@ flowchart TD
 
 ### 5.6 Precision Trimming Architecture
 
-_How the end-to-end trimming pipeline works — from UI range selection to the final trimmed file on disk._
+_How the end-to-end trimming pipeline works€ from UI range selection to the final trimmed file on disk._
 
 #### 5.6.1 Trimming Flow Overview
 
@@ -278,22 +278,27 @@ flowchart TD
 
 The trimming engine in `main.py` uses a **two-pass strategy** for maximum compatibility:
 
-**Pass 1 — Stream Copy (Fast, ~0.5s):**
+**Pass 1€ Stream Copy (Fast, ~0.5s):**
+
 ```bash
 ffmpeg -y -ss 30 -i input.mp4 -t 90 -c copy -avoid_negative_ts make_zero _tmp_trim_abc123.mp4
 ```
+
 - `-ss` before `-i` = fast input-side seeking (no full decode)
 - `-c copy` = no re-encoding, preserves original quality
 - `-avoid_negative_ts make_zero` = fixes timestamp discontinuities
 
-**Pass 2 — Re-encode Fallback (Slower, always works):**
+**Pass 2€ Re-encode Fallback (Slower, always works):**
+
 ```bash
 ffmpeg -y -ss 30 -i input.mp4 -t 90 -c:v libx264 -preset fast -c:a aac _tmp_trim_abc123.mp4
 ```
+
 - Only triggered if Pass 1 fails (certain codecs don't support stream copy)
 - Uses `libx264` (video) + `aac` (audio) for broad compatibility
 
 **Clean Rename Strategy:**
+
 ```python
 # Temp file → Original filename (no ugly prefixes)
 temp_trimmed = f"_tmp_trim_{uuid.uuid4().hex[:8]}{file_ext}"
@@ -304,7 +309,7 @@ os.rename(temp_trimmed, filepath) # rename temp → original name
 
 > **Result:** User always gets the clean original title (e.g., `MONTAGEM ALQUIMIA (SLOWED).mp4`), never `trimmed_36a5caca_...`.
 
-#### 5.6.3 Trimming — Desktop vs Web Storage
+#### 5.6.3 Trimming€ Desktop vs Web Storage
 
 ```mermaid
 flowchart LR
@@ -325,7 +330,7 @@ flowchart LR
 | Aspect | Desktop | Web |
 |--------|---------|-----|
 | **Download location** | `~/Downloads/YT Deluxe Downloads/Videos/` (or Music/) | `backend/tempfiles/` → browser Downloads |
-| **File persistence** | Permanent — stays on user's disk | Ephemeral — auto-deleted after 10 minutes |
+| **File persistence** | Permanent€ stays on user's disk | Ephemeral€ auto-deleted after 10 minutes |
 | **Trim execution** | Same as Web (server-side FFmpeg) | Server-side FFmpeg |
 | **History storage** | `~/.yt-deluxe/download_history.json` (JSON file) | `localStorage` (browser) |
 | **File access** | "Open in Explorer" button via `/api/desktop/open-file` | Standard browser download |
@@ -345,11 +350,12 @@ flowchart TD
     P6 --> P4
 ```
 
-**Smart Resume:** Pausing and resuming continues from the paused position — it only jumps to `startTime` if the playhead is outside the trim range.
+**Smart Resume:** Pausing and resuming continues from the paused position€ it only jumps to `startTime` if the playhead is outside the trim range.
 
 #### 5.6.5 Audio Trimming & Embedded Thumbnails
 
 When downloading audio (MP3), the backend automatically:
+
 1. Downloads the best audio stream via yt-dlp
 2. Embeds the YouTube video's thumbnail as album art (`EmbedThumbnail` postprocessor)
 3. Trims with FFmpeg if a range was specified
@@ -365,7 +371,7 @@ _How the frontend VideoTrimmer component manages state, syncs with DownloadTabs,
 
 ```mermaid
 graph TD
-    subgraph "index.jsx — Parent Page"
+    subgraph "index.jsx€ Parent Page"
         SC["selectedConfig\n{type, quality, format}"]
         TS["trimSettings\n{startTime, endTime}"]
         DL["downloads[]\n(active tasks)"]
@@ -466,7 +472,7 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 | fastapi | `0.133.0` | High-performance async API |
 | uvicorn[standard] | `0.41.0` | ASGI server |
 | yt-dlp | `>=2026.3.17` | YouTube video/audio extraction |
-| ffmpeg | `>=2025-09-25` | Video merging and MP3 conversion |
+| ffmpeg | `>=16.04.2026` | Video merging and MP3 conversion |
 | bgutil-pot-provider | `latest` | Automatic PO token generation |
 | requests | `2.32.5` | HTTP requests & Streaming |
 | python-multipart | `0.0.22` | Form-data parsing for FastAPI |
@@ -485,7 +491,7 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 - **Python**: `3.10+ (Tested on 3.13)`
 - **yt-dlp** `>=2026.3.17 (keep as soon as possible updated)` _for YouTube Downloads_
 
-- **FFmpeg**: `>=2025-09-25 (keep as soon as possible updated)` _for Merging Videos_
+- **FFmpeg**: `>=16.04.2026 (keep as soon as possible updated)` _for Merging Videos_
 
 ### 6.5 Frontend Setup (Local)
 
@@ -593,9 +599,9 @@ _By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API
 - Configure your download with quality options (144p to 8K), format selection (MP4, MP3), and precision trimming.
 - **Trimming Workflow:**
   1. Select your desired quality in the **Download Options** tab (Video/Audio)
-  2. Use the **Video Trimmer** below to select a range — drag the blue handles, type exact times (M:SS), or click quick presets (First 30s, Last 5m, etc.)
+  2. Use the **Video Trimmer** below to select a range€ drag the blue handles, type exact times (M:SS), or click quick presets (First 30s, Last 5m, etc.)
   3. Click **Preview** to verify your selection plays the correct segment
-  4. Click **Download** — the backend downloads the full file, then FFmpeg trims it to your exact range
+  4. Click **Download**€ the backend downloads the full file, then FFmpeg trims it to your exact range
 - The trimmer shows estimated file size based on quality bitrate and selected duration
 - Integrated automatic PO Token negotiation ensures your IP remains safe from 403 blocks.
 - **REST API**: `POST /api/download` with optional `trim_start` and `trim_end` parameters (in seconds)

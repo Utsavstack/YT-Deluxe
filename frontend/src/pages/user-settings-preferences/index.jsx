@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/AppIcon';
 import Header from '../../components/ui/Header';
-import ProgressNotification from '../../components/ui/ProgressNotification';
 import ThemeCustomization from './components/ThemeCustomization';
 import DownloadPreferences from './components/DownloadPreferences';
 import LanguageSettings from './components/LanguageSettings';
@@ -149,7 +148,7 @@ const UserSettingsPreferences = () => {
       </Helmet>
       <div className="min-h-screen bg-background">
         <Header />
-        <ProgressNotification />
+
 
         <div className="pt-24 pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

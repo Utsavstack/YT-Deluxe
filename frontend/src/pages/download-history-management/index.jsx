@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
-import ProgressNotification from '../../components/ui/ProgressNotification';
 import HistoryCard from './components/HistoryCard';
 import FilterBar from './components/FilterBar';
 import StorageUsage from './components/StorageUsage';
@@ -13,9 +13,12 @@ import ConfirmationModal from './components/ConfirmationModal';
 import YTDeluxeAPI from '../../utils/api';
 import ShareModal from '../../components/ui/ShareModal';
 import UndoToast from '../../components/ui/UndoToast';
+import { useDownloadContext } from '../../context/DownloadContext';
+import Icon from '../../components/AppIcon';
 
 const DownloadHistoryManagement = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('downloadDate');
@@ -42,6 +45,7 @@ const DownloadHistoryManagement = () => {
   const [activeDownloads, setActiveDownloads] = useState([]);
 
   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+  const { addDownload } = useDownloadContext();
 
   useEffect(() => {
     loadDownloadHistory();
@@ -73,7 +77,9 @@ const DownloadHistoryManagement = () => {
           fileSize: item.file_size || 0,
           downloadDate: item.downloaded_at ? new Date(item.downloaded_at) : new Date(),
           tags: item.tags || [],
-          type: 'all'
+          type: item.type || 'all',
+          trim_start: item.trim_start ?? null,
+          trim_end: item.trim_end ?? null,
         }));
         setDownloadHistory(transformed);
 
@@ -111,10 +117,11 @@ const DownloadHistoryManagement = () => {
   };
 
   const filteredAndSortedData = useMemo(() => {
-    if (activeTab === 'watchLater') {
-      let watchLaterItems = [];
+    if (activeTab === 'saved') {
+      let savedItems = [];
       try {
-        watchLaterItems = JSON.parse(localStorage.getItem('ytdeluxe_watch_later') || '[]').map((item) => ({
+        const list = JSON.parse(localStorage.getItem('ytdeluxe_saved') || '[]');
+        savedItems = list.map((item) => ({
           id: item.id,
           title: item.title,
           channel: item.channel || '',
@@ -125,21 +132,21 @@ const DownloadHistoryManagement = () => {
           fileSize: 0,
           downloadDate: new Date(item.savedAt || Date.now()),
           tags: [],
-          type: 'watchLater',
+          type: 'saved',
           url: item.url,
           views: item.views,
           uploadDate: item.uploadDate
         }));
       } catch {}
-
+      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        watchLaterItems = watchLaterItems.filter((item) =>
+        savedItems = savedItems.filter((item) =>
           item.title?.toLowerCase().includes(query) ||
           item.channel?.toLowerCase().includes(query)
         );
       }
-      return watchLaterItems;
+      return savedItems;
     }
 
     let filtered = [...downloadHistory];
@@ -195,14 +202,13 @@ const DownloadHistoryManagement = () => {
   }, [downloadHistory, activeTab, searchQuery, filters, sortBy, sortOrder]);
 
   const tabCounts = useMemo(() => {
-    let watchLaterCount = 0;
+    let savedCount = 0;
     try {
-      watchLaterCount = JSON.parse(localStorage.getItem('ytdeluxe_watch_later') || '[]').length;
+      savedCount = JSON.parse(localStorage.getItem('ytdeluxe_saved') || '[]').length;
     } catch {}
     return {
       all: downloadHistory.length,
-      watchLater: watchLaterCount,
-      bookmarks: 0
+      saved: savedCount
     };
   }, [downloadHistory]);
 
@@ -221,11 +227,9 @@ const DownloadHistoryManagement = () => {
   const handleSelectAll = () => setSelectedItems(filteredAndSortedData);
   const handleDeselectAll = () => setSelectedItems([]);
 
-  const handleRedownload = async (item) => {
-    // Try multiple sources for the video URL
+  const handleRedownload = (item) => {
     let videoUrl = item.url;
     
-    // Fallback: reconstruct from video ID if available
     if (!videoUrl && item.id) {
       const isYoutubeId = item.id.length === 11 && !item.id.includes('-');
       if (isYoutubeId) {
@@ -238,60 +242,40 @@ const DownloadHistoryManagement = () => {
       return;
     }
 
-    try {
-      const isDesktopEnv = typeof window !== 'undefined' && window.pywebview !== undefined;
-      const response = await YTDeluxeAPI.downloadVideo({
-        url: videoUrl,
-        quality: item.quality,
-        format: item.format,
-        is_desktop: isDesktopEnv
-      });
-
-      if (response.task_id) {
-        // Create a local download entry for progress tracking
-        const dlEntry = {
-          id: response.task_id,
-          filename: item.title || 'Re-downloading...',
-          title: item.title,
-          type: item.format === 'mp3' ? 'audio' : item.format === 'jpg' ? 'thumbnail' : 'video',
-          quality: item.quality,
-          format: item.format,
-          progress: 0,
-          status: 'downloading',
-          startedAt: new Date(),
-        };
-        setActiveDownloads(prev => [...prev, dlEntry]);
-
-        // Poll progress
-        const pollInterval = setInterval(async () => {
-          try {
-            const prog = await YTDeluxeAPI.getDownloadProgress(response.task_id);
-            setActiveDownloads(prev => prev.map(d =>
-              d.id === response.task_id
-                ? { ...d, progress: prog.progress || 0, status: prog.status || 'downloading', filename: prog.filename || d.filename, filepath: prog.filepath }
-                : d
-            ));
-
-            if (prog.status === 'completed' || prog.status === 'error') {
-              clearInterval(pollInterval);
-              // Reload history after successful re-download
-              if (prog.status === 'completed') {
-                setTimeout(() => loadDownloadHistory(), 1500);
-              }
-              // Auto-dismiss after 8 seconds
-              setTimeout(() => {
-                setActiveDownloads(prev => prev.filter(d => d.id !== response.task_id));
-              }, 8000);
-            }
-          } catch (e) {
-            clearInterval(pollInterval);
-          }
-        }, 1000);
-      }
-    } catch (err) {
-      console.error("Re-download failed:", err);
-      alert("Re-download failed. Please try again.");
+    if (item.type === 'saved') {
+      navigate('/video-details-download', { state: { video: item } });
+      return;
     }
+
+    const dlType = item.type === 'audio' ? 'audio' 
+      : item.type === 'thumbnail' ? 'thumbnail'
+      : (item.format === 'mp3' ? 'audio' : item.format === 'jpg' ? 'thumbnail' : 'video');
+
+    const config = {
+      url: videoUrl,
+      quality: item.quality,
+      format: item.format,
+      filename: item.title,
+      type: dlType,
+      channel: item.channel,
+      thumbnail: item.thumbnail,
+    };
+
+    if (item.trim_start != null || item.trim_end != null) {
+      config.trim_start = item.trim_start;
+      config.trim_end = item.trim_end;
+      config.trimSettings = {
+        startTime: item.trim_start,
+        endTime: item.trim_end,
+      };
+    }
+
+    addDownload(config, {
+      title: item.title,
+      duration: item.duration,
+      channel: { name: item.channel },
+      thumbnail: item.thumbnail,
+    });
   };
 
   const handleDelete = (item) => {
@@ -348,11 +332,18 @@ const DownloadHistoryManagement = () => {
           await YTDeluxeAPI.batchDeleteHistory(ids, deleteFile);
         }
       } else {
-        const current = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
-        const updated = current.filter(h => !ids.includes(h.id));
-        localStorage.setItem('ytdeluxe_web_history', JSON.stringify(updated));
+        const type = itemsToDelete[0]?.type;
+        
+        if (type === 'saved') {
+          const current = JSON.parse(localStorage.getItem('ytdeluxe_saved') || '[]');
+          const updated = current.filter(h => !ids.includes(h.id));
+          localStorage.setItem('ytdeluxe_saved', JSON.stringify(updated));
+        } else {
+          const current = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
+          const updated = current.filter(h => !ids.includes(h.id));
+          localStorage.setItem('ytdeluxe_web_history', JSON.stringify(updated));
+        }
       }
-      // Reload stats after deletion
       await loadDownloadHistory();
     } catch (err) {
       console.error("Deletion failed:", err);
@@ -363,13 +354,11 @@ const DownloadHistoryManagement = () => {
   const handleConfirmAction = (deleteFile = false) => {
     const itemsToDelete = confirmModal.data;
     
-    // Immediate UI feedback
     const remainingHistory = downloadHistory.filter(h => !itemsToDelete.some(it => it.id === h.id));
     setDownloadHistory(remainingHistory);
     setSelectedItems([]);
     setConfirmModal({ isOpen: false, type: '', data: null, title: '', message: '' });
 
-    // Show Undo Toast
     if (undoRef.current) clearTimeout(undoRef.current);
     
     setUndoState({
@@ -378,7 +367,6 @@ const DownloadHistoryManagement = () => {
       message: `${itemsToDelete.length} item${itemsToDelete.length > 1 ? 's' : ''} deleted`
     });
 
-    // Schedule actual deletion
     undoRef.current = setTimeout(() => {
       executeActualDeletion(itemsToDelete, deleteFile);
       setUndoState(prev => ({ ...prev, isOpen: false }));
@@ -388,9 +376,7 @@ const DownloadHistoryManagement = () => {
   const handleUndoDelete = () => {
     if (undoRef.current) clearTimeout(undoRef.current);
     
-    // Restore UI
     setDownloadHistory(prev => [...undoState.items, ...prev].sort((a,b) => {
-       // Restore sorting
        if (sortBy === 'downloadDate') return new Date(b.downloadDate) - new Date(a.downloadDate);
        return 0;
     }));
@@ -415,7 +401,7 @@ const DownloadHistoryManagement = () => {
       
       <div className="min-h-screen bg-background text-foreground">
         <Header />
-        <ProgressNotification downloads={activeDownloads} />
+
         
         <main className="pt-24 pb-12">
           <div className="container mx-auto px-4 max-w-7xl">

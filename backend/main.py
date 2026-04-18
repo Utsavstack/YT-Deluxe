@@ -31,10 +31,15 @@ def get_ffmpeg_path():
     """
     Returns correct ffmpeg binary path.
     - In PyInstaller onefile: ffmpeg.exe is in the same folder as main.exe
-    - In dev/Render: 'ffmpeg' must be in system PATH
+    - In dev mode: looks for ffmpeg.exe in the same folder as main.py, else calls 'ffmpeg' via PATH
     """
     if getattr(sys, 'frozen', False):
         return os.path.join(os.path.dirname(sys.executable), 'ffmpeg.exe')
+    
+    local_ffmpeg = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ffmpeg.exe')
+    if os.path.isfile(local_ffmpeg):
+        return local_ffmpeg
+        
     return 'ffmpeg'
 
 def format_time_hhmmss(seconds: float) -> str:
@@ -234,13 +239,17 @@ def search_videos(q: str):
       search_result = ydl.extract_info(f"ytsearch12:{q}", download=False)
     videos = []
     for entry in search_result.get('entries', []):
+      # Extract uploader/channel name safely and strip @ handle prefix
+      raw_uploader = entry.get('uploader') or entry.get('channel') or entry.get('uploader_id') or 'Unknown Channel'
+      uploader_name = raw_uploader.lstrip('@') if raw_uploader else 'Unknown Channel'
+      
       videos.append({
         'id': entry.get('id'),
         'title': entry.get('title'),
         'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
         'thumbnail': entry.get('thumbnail'),
         'duration': entry.get('duration'),
-        'uploader': entry.get('uploader'),
+        'uploader': uploader_name,
         'views': entry.get('view_count'),
       })
     return {"results": videos}
@@ -341,13 +350,19 @@ def get_video_details(url: str):
         'type': 'audio',
       })
     
+    # Extract channel info securely and strip @ handle prefix
+    raw_channel = info.get('channel') or info.get('uploader') or info.get('uploader_id') or 'Unknown Channel'
+    channel_name = raw_channel.lstrip('@') if raw_channel else 'Unknown Channel'
+    
     video = {
       'id': info.get('id'),
       'title': info.get('title'),
       'thumbnail': info.get('thumbnail'),
       'duration': info.get('duration'),
-      'uploader': info.get('uploader') or info.get('channel'),
-      'channel': info.get('channel') or info.get('uploader'),
+      'uploader': channel_name,
+      'channel': channel_name,
+      'channel_avatar': info.get('thumbnails', [{}])[-1].get('url') if info.get('channel_id') else None,
+      'channel_follower_count': info.get('channel_follower_count'),
       'description': info.get('description'),
       'view_count': info.get('view_count'),
       'upload_date': info.get('upload_date'),
@@ -955,7 +970,10 @@ def download_worker(task_id: str, url: str, quality: str = None,
         "thumbnail": download_tasks[task_id].get("thumbnail") or info.get('thumbnail', ''),
         "channel": download_tasks[task_id].get("channel") or info.get('uploader') or info.get('channel', ''),
         "duration": info.get('duration', 0),
-        "batch_id": batch_id
+        "batch_id": batch_id,
+        "trim_start": trim_start,
+        "trim_end": trim_end,
+        "type": type
       }
       download_history.append(history_entry)
       save_history()
@@ -1036,6 +1054,67 @@ def get_progress(task_id: str):
     "channel": task.get("channel"),
     "thumbnail": task.get("thumbnail")
   }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint: Cancel an active download task
+# ─────────────────────────────────────────────────────────────────────────────
+@app.post("/api/cancel/{task_id}")
+def cancel_download(task_id: str):
+  task = download_tasks.get(task_id)
+  if not task:
+    return JSONResponse({"error": "Task not found"}, status_code=404)
+  
+  # Mark as cancelled in task store
+  download_tasks[task_id]["status"] = "cancelled"
+  _save_tasks()
+
+  # Try to kill the associated subprocess if we stored it
+  proc = download_tasks[task_id].get("_process")
+  if proc:
+    try:
+      proc.terminate()
+    except Exception:
+      pass
+
+  return {"status": "cancelled", "task_id": task_id}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint: Desktop OS-level notification (Windows toast)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.post("/api/desktop/notify")
+async def desktop_notify(request: Request):
+  try:
+    data = await request.json()
+    title   = data.get("title", "YT Deluxe")
+    message = data.get("message", "")
+    notif_type = data.get("type", "info")  # "success" | "error" | "info"
+
+    # Only fire on Windows
+    if os.name != "nt":
+      return {"status": "skipped", "reason": "not_windows"}
+
+    try:
+      from winotify import Notification, audio as winaudio
+      toast = Notification(
+        app_id="YT Deluxe",
+        title=title,
+        msg=message,
+        duration="short",
+        icon=""
+      )
+      # Different audio cues by type
+      if notif_type == "error":
+        toast.set_audio(winaudio.Default, loop=False)
+      else:
+        toast.set_audio(winaudio.Default, loop=False)
+      toast.show()
+      return {"status": "success"}
+    except ImportError:
+      # winotify not installed — graceful fallback
+      print(f"[notify] winotify not installed. Toast: [{notif_type.upper()}] {title} — {message}")
+      return {"status": "fallback", "reason": "winotify_not_installed"}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
 
 def get_history_file_path():
   history_dir = os.path.join(os.path.expanduser("~"), ".yt-deluxe")

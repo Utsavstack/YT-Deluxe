@@ -1,6 +1,7 @@
-import { useTranslation } from "react-i18next";import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from 'react-router-dom';
-import ProgressNotification from '../../components/ui/ProgressNotification';
+import { useDownloadContext } from '../../context/DownloadContext';
 import VideoPlayer from './components/VideoPlayer';
 import VideoMetadata from './components/VideoMetadata';
 import DownloadTabs from './components/DownloadTabs';
@@ -13,7 +14,9 @@ import Header from '../../components/ui/Header';
 const VideoDetailsDownload = () => {const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const [downloads, setDownloads] = useState([]);
+  const { addDownload, cancelDownload, resumeDownload, downloads, dismissDownload } = useDownloadContext();
+  // Keep a local set of download IDs created by this page for DownloadProgress sidebar
+  const [localDownloadIds, setLocalDownloadIds] = useState([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [trimSettings, setTrimSettings] = useState(null);
   const [videoData, setVideoData] = useState(null);
@@ -51,6 +54,8 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
           const bestQuality = response.video.max_quality || (
           videoFormats.length ? videoFormats[0].quality : '1080p');
 
+          const fallbackUrl = initialVideo.url || `https://www.youtube.com/watch?v=${initialVideo.originalId || initialVideo.id?.split('_')?.[0] || response.video.id}`;
+          
           videoInfo = {
             id: response.video.id,
             title: response.video.title,
@@ -60,19 +65,23 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
             views: response.video.view_count || initialVideo && initialVideo.views || Math.floor(Math.random() * 1000000) + 10000,
             likes: Math.floor(Math.random() * 50000) + 1000,
             comments: Math.floor(Math.random() * 5000) + 100,
-            uploadDate: response.video.upload_date ?
+            uploadDate: (response.video.upload_date && response.video.upload_date.length >= 8) ?
             `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z` :
-            new Date().toISOString(),
+            (response.video.upload_date || new Date().toISOString()),
             channel: {
-              name: response.video.uploader || response.video.channel || initialVideo?.uploader || initialVideo?.channel?.name || '',
-              subscribers: '1M+',
-              avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
+              name: (typeof response.video.channel === 'object' ? response.video.channel?.name : response.video.channel) || 
+                    response.video.uploader || 
+                    initialVideo?.channel?.name || 
+                    initialVideo?.uploader || 
+                    'Unknown Channel',
+              subscribers: response.video.channel_follower_count || '1M+',
+              avatar: response.video.channel_avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
             },
             tags: ['tutorial', 'guide', 'learning'],
             formats: response.video.formats || [],
             max_quality: bestQuality,
-            url: initialVideo.url,
-            videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(initialVideo.url)}&quality=720p`
+            url: fallbackUrl,
+            videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(fallbackUrl)}&quality=720p`
           };
         }
       }
@@ -125,281 +134,44 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
     }
   };
 
-  const handleDownload = async (downloadConfig) => {
-
-    const newDownload = {
-      id: Date.now() + Math.random(),
-      url: downloadConfig?.url || videoData?.url,
-      filename: `${downloadConfig?.filename || 'video'}.${downloadConfig?.format || 'mp4'}`,
-      title: downloadConfig?.filename || videoData?.title || '',
-      channel: videoData?.channel?.name || '',
-      thumbnail: videoData?.thumbnail || '',
-      type: downloadConfig?.type,
-      quality: downloadConfig?.quality,
-      format: downloadConfig?.format,
-      size: downloadConfig?.size,
-      progress: 0,
-      status: 'downloading',
-      speed: 0,
-      timeRemaining: 0,
-      startedAt: new Date(),
-      trimSettings: trimSettings,
-      duration: videoData?.duration || 0
-    };
-
-    setDownloads((prev) => [...prev, newDownload]);
+  const handleDownload = (downloadConfig) => {
     setIsDownloading(true);
-
-    try {
-      // Prepare download configuration
-      const apiConfig = {
-        url: downloadConfig.url || videoData?.url,
-        quality: downloadConfig.quality,
-        format: downloadConfig.format,
-        rename: downloadConfig.filename,
-        // Prefer trim values from downloadConfig (e.g. from VideoTrimmer's own button),
-        // fallback to trimSettings state (set via onTrimChange)
-        trim_start: downloadConfig.trim_start ?? trimSettings?.startTime,
-        trim_end:   downloadConfig.trim_end   ?? trimSettings?.endTime,
-        type: downloadConfig.type,
-        channel: videoData?.channel?.name || '',
-        thumbnail: videoData?.thumbnail || ''
-      };
-
-      // Start download via API
-      const response = await YTDeluxeAPI.downloadVideo(apiConfig);
-
-      if (response.direct_url) {
-        // Direct CDN download via frontend
-        trackDirectCdnProgress(response.direct_url, response.filename, newDownload.id);
-      } else if (response.task_id) {
-        // Track API progress
-        trackDownloadProgress(response.task_id, newDownload.id);
-      } else {
-        throw new Error('No task ID or direct stream URL received from server');
-      }
-
-    } catch (error) {
-      console.error('Download setup failed:', error);
-      setDownloads((prev) => prev.map((download) =>
-      download.id === newDownload.id ?
-      { ...download, status: 'error', error: error.message } :
-      download
-      ));
-      setError('Download setup failed. Please try again.');
-      setIsDownloading(false);
-    }
+    const id = addDownload(
+      {
+        url: videoData?.url,
+        filename: videoData?.title || downloadConfig.filename,
+        ...downloadConfig,
+        trimSettings,
+      },
+      videoData
+    );
+    setLocalDownloadIds(prev => [...prev, id]);
+    // Reset isDownloading flag after a short moment (context handles the real tracking)
+    setTimeout(() => setIsDownloading(false), 1200);
   };
 
-  const trackDirectCdnProgress = async (url, filename, downloadId) => {
-    try {
-      // First try to fetch for progress tracking
-      const response = await fetch(url, { mode: 'cors' });
-
-      if (!response.ok || !response.body) {
-        throw new Error('Fetch failed or no body');
-      }
-
-      const contentLength = response.headers.get('content-length');
-      const total = contentLength ? parseInt(contentLength, 10) : 0;
-      let loaded = 0;
-
-      const reader = response.body.getReader();
-      const chunks = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        chunks.push(value);
-        loaded += value.length;
-
-        const progress = total ? Math.round(loaded / total * 100) : 0;
-        setDownloads((prev) => prev.map((d) =>
-        d.id === downloadId ?
-        { ...d, progress, status: 'downloading', downloaded_bytes: loaded, total_bytes: total } :
-        d
-        ));
-      }
-
-      const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
-      const objectUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = objectUrl;
-      a.download = filename || 'video.mp4';
-      document.body.appendChild(a);
-      a.click();
-
-      setTimeout(() => {
-        window.URL.revokeObjectURL(objectUrl);
-        document.body.removeChild(a);
-      }, 1000);
-
-      setDownloads((prev) => prev.map((d) => d.id === downloadId ? { ...d, progress: 100, status: 'completed' } : d));
-      setIsDownloading(false);
-
-    } catch (error) {
-      console.warn('Direct fetch failed (likely CORS), falling back to browser native download without progress tracking.', error);
-
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = filename || 'video.mp4';
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      setDownloads((prev) => prev.map((d) => d.id === downloadId ? { ...d, progress: 100, status: 'completed' } : d));
-      setIsDownloading(false);
-    }
-  };
-
-  const trackDownloadProgress = async (taskId, downloadId) => {
-    const progressInterval = setInterval(async () => {
-      try {
-        const progress = await YTDeluxeAPI.getDownloadProgress(taskId);
-
-        setDownloads((prev) => prev.map((download) =>
-        download.id === downloadId ?
-        {
-          ...download,
-          progress: progress.progress || 0,
-          status: progress.status || 'downloading',
-          filename: progress.filename || download.filename,
-          error: progress.error || null,
-          speed: progress.speed || 0,
-          timeRemaining: progress.eta || 0,
-          downloaded_bytes: progress.downloaded_bytes || 0,
-          total_bytes: progress.total_bytes || 0,
-          filepath: progress.filepath || download.filepath
-        } :
-        download
-        ));
-
-        // Stop tracking if download is complete or failed
-        if (progress.status === 'completed' || progress.status === 'error') {
-          clearInterval(progressInterval);
-          setIsDownloading(false);
-
-          if (progress.status === 'completed') {
-            // Update the download with 100% progress
-            setDownloads((prev) => {
-              const newDownloads = prev.map((download) =>
-              download.id === downloadId ?
-              {
-                ...download,
-                progress: 100,
-                status: 'completed',
-                completedAt: new Date().toISOString(),
-                filepath: progress.filepath || download.filepath
-              } :
-              download
-              );
-
-              const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
-              if (!isDesktop) {
-                const completedDownload = newDownloads.find((d) => d.id === downloadId);
-                if (completedDownload) {
-                  const historyItem = {
-                    id: completedDownload.id,
-                    title: completedDownload.title || videoData?.title || 'Downloaded Media',
-                    url: videoData?.url || '',
-                    filename: progress.filename || completedDownload.filename,
-                    filepath: progress.filepath,
-                    channel: completedDownload.channel || videoData?.channel?.name || '',
-                    thumbnail: completedDownload.thumbnail || videoData?.thumbnail || '',
-                    duration: completedDownload.duration || videoData?.duration || 0,
-                    format: completedDownload.format || 'mp4',
-                    quality: completedDownload.quality || 'Auto',
-                    fileSize: progress.total_bytes || 0,
-                    downloadDate: new Date().toISOString(),
-                    type: completedDownload.type || 'video'
-                  };
-                  const currentHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
-                  if (!currentHistory.some((h) => h.id === historyItem.id)) {
-                    currentHistory.unshift(historyItem);
-                    localStorage.setItem('ytdeluxe_web_history', JSON.stringify(currentHistory));
-                  }
-                }
-              }
-              return newDownloads;
-            });
-
-            // Show success notification
-            if (Notification.permission === 'granted') {
-              const completedDownload = downloads.find((d) => d.id === downloadId);
-              if (completedDownload) {
-                const fileType = completedDownload.type ?
-                completedDownload.type.charAt(0).toUpperCase() + completedDownload.type.slice(1) :
-                'File';
-                new Notification('Download Complete', {
-                  body: `${fileType} Downloaded Successfully!`,
-                  icon: '/favicon.ico'
-                });
-              }
-            }
-
-            // Actually trigger the browser download by navigating to the file URL
-            if (progress.filename) {
-              if (window.location.protocol !== 'file:' && !(typeof window !== 'undefined' && window.pywebview !== undefined)) {
-                try {
-                  // Create hidden anchor to download silently without redirecting main page
-                  const downloadUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/tempfiles/${encodeURIComponent(progress.filename)}`;
-                  const a = document.createElement('a');
-                  a.style.display = 'none';
-                  a.href = downloadUrl;
-                  a.download = progress.filename;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                } catch (e) {
-                  console.error("Failed to trigger download", e);
-                }
-              } else {
-                // In PyInstaller Desktop, backend successfully places it into native 'Downloads' folder already!
-                console.log("Desktop Native DL skipped browser fall-through.");
-              }
-            }
-          }
-        }
-
-      } catch (error) {
-        console.error('Progress tracking failed:', error);
-        clearInterval(progressInterval);
-      }
-    }, 1000); // Check progress every second
-  };
 
   const handleCancelDownload = (downloadId) => {
-    setDownloads((prev) => prev.map((download) =>
-    download.id === downloadId ?
-    { ...download, status: 'cancelled', progress: 0 } :
-    download
-    ));
+    cancelDownload(downloadId);
+    setIsDownloading(false);
   };
 
   const handleRetryDownload = (downloadId) => {
-    const download = downloads.find((d) => d.id === downloadId);
-    if (download) {
-      setDownloads((prev) => prev.map((d) =>
-      d.id === downloadId ?
-      { ...d, status: 'downloading', progress: 0, error: null } :
-      d
-      ));
-
-      // Retry the download
-      handleDownload({
+    const dl = downloads.find(d => d.id === downloadId);
+    if (dl) {
+      resumeDownload(downloadId);
+      const newId = addDownload({
         url: videoData?.url,
-        type: download.type,
-        quality: download.quality,
-        format: download.format,
-        filename: download.filename,
-        size: download.size
-      });
+        type: dl.type,
+        quality: dl.quality,
+        format: dl.format,
+        filename: dl.title || dl.filename,
+        size: dl.size,
+      }, videoData);
+      setLocalDownloadIds(prev => [...prev, newId]);
     }
   };
+
 
   const handleTrimChange = (startTime, endTime) => {
     setTrimSettings({ startTime, endTime });
@@ -475,7 +247,6 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background">
    <Header />
-   {downloads.length > 0 && <ProgressNotification downloads={downloads} />}
    <main className="pt-20 pb-8">
     <div className="max-w-7xl mx-auto px-4 lg:px-6">
      {/* Back Navigation */}
@@ -485,7 +256,7 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
               onClick={() => navigate(-1)}
               iconName="ArrowLeft"
               iconPosition="left"
-              className="px-6 rounded-xl border-2 hover:bg-accent/50 transition-all spring-smooth transition-all"> {t("videoDetailsDownload.backToSearch")} 
+              className="px-6 rounded-xl border-2 hover:bg-accent/50 transition-all spring-smooth"> {t("videoDetailsDownload.backToSearch")} 
 
 
             </Button>
@@ -594,9 +365,14 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
 
        {/* Download Progress */}
        <DownloadProgress
-                downloads={downloads}
+                downloads={downloads.filter(d => !d.dismissed && videoData?.url && d.url === videoData.url)}
                 onCancel={handleCancelDownload}
                 onRetry={handleRetryDownload}
+                onClearCompleted={() => {
+                  downloads
+                    .filter(d => videoData?.url && d.url === videoData.url && d.status === 'completed')
+                    .forEach(d => dismissDownload(d.id));
+                }}
                 onComplete={(download) => {
                   console.log('Download completed:', download);
                 }} />

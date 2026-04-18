@@ -30,10 +30,10 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   const navigate = useNavigate();
   const iframeRef = React.useRef(null);
 
-  // Check watch later status on mount
+  // Check saved status on mount
   useEffect(() => {
     const checkSaved = async () => {
-      const list = await YTDeluxeStorage.getItem(STORAGE_KEYS.WATCH_LATER, []);
+      const list = await YTDeluxeStorage.getItem(STORAGE_KEYS.SAVED, []);
       const exists = list.some((v) => v.id === (video?.originalId || video?.id));
       setIsSaved(exists);
     };
@@ -170,9 +170,9 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
     }
   };
 
-  const handleWatchLater = async (e) => {
+  const handleToggleSave = async (e) => {
     e?.stopPropagation();
-    const list = await YTDeluxeStorage.getItem(STORAGE_KEYS.WATCH_LATER, []);
+    const list = await YTDeluxeStorage.getItem(STORAGE_KEYS.SAVED, []);
     const videoId = video?.originalId || video?.id;
     const existsIndex = list.findIndex((v) => v.id === videoId);
     
@@ -198,7 +198,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
       added = true;
     }
     
-    await YTDeluxeStorage.setItem(STORAGE_KEYS.WATCH_LATER, newList);
+    await YTDeluxeStorage.setItem(STORAGE_KEYS.SAVED, newList);
     setIsSaved(added);
     setShowSavedToast(added ? 'saved' : 'removed');
   };
@@ -222,7 +222,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
               <Icon name={showSavedToast === 'saved' ? 'Check' : 'Trash2'} size={14} />
             </div>
             <span className="text-sm font-medium text-foreground">
-              {showSavedToast === 'saved' ? 'Saved to History' : 'Removed from History'}
+              {showSavedToast === 'saved' ? 'Added to Saved' : 'Removed from Saved'}
             </span>
           </div>
         </div>
@@ -384,9 +384,9 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
         
         <div className="flex items-center gap-1.5">
           <button 
-            onClick={handleWatchLater} 
+            onClick={handleToggleSave} 
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border shadow-sm active:scale-95 group/save ${isSaved ? 'bg-primary border-primary text-primary-foreground drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground/70 hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'}`}
-            title={isSaved ? "Remove from History" : "Save to History"}
+            title={isSaved ? "Remove from Saved" : "Save to Favorites"}
           >
             <Icon name={isSaved ? "BookmarkCheck" : "Bookmark"} size={13} strokeWidth={isSaved ? 2.5 : 2} className={`${isSaved ? 'scale-110' : 'group-hover/save:scale-110'} transition-transform`} />
           </button>

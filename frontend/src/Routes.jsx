@@ -5,6 +5,7 @@ import ErrorBoundary from "components/ErrorBoundary";
 import NotFound from "pages/NotFound";
 import PageSkeleton from "components/PageSkeleton";
 import GlobalPIPPlayer from "components/ui/GlobalPIPPlayer";
+import GlobalProgressFloater from "components/ui/GlobalProgressFloater";
 
 const BatchDownloadManager = lazy(() => import('./pages/batch-download-manager'));
 const HomeSearchDashboard = lazy(() => import('./pages/home-search-dashboard'));
@@ -18,28 +19,29 @@ const SearchResultsPage = lazy(() => import('./pages/search-results-page'));
 const AppRouter = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
 
 const Routes = () => {
- return (
-  <AppRouter>
-   <ErrorBoundary>
-    <ScrollToTop />
-    <Suspense fallback={<PageSkeleton />}>
-     <RouterRoutes>
-      {/* Define your route here */}
-      <Route path="/" element={<HomeSearchDashboard />} />
-      <Route path="/batch-download-manager" element={<BatchDownloadManager />} />
-      <Route path="/home-search-dashboard" element={<HomeSearchDashboard />} />
-      <Route path="/download-history-management" element={<DownloadHistoryManagement />} />
-      <Route path="/user-settings-preferences" element={<UserSettingsPreferences />} />
+    return (
+        <AppRouter>
+            <ErrorBoundary>
+                <ScrollToTop />
+                <Suspense fallback={<PageSkeleton />}>
+                    <RouterRoutes>
+                        {/* Define your route here */}
+                        <Route path="/" element={<HomeSearchDashboard />} />
+                        <Route path="/batch-download-manager" element={<BatchDownloadManager />} />
+                        <Route path="/home-search-dashboard" element={<HomeSearchDashboard />} />
+                        <Route path="/download-history-management" element={<DownloadHistoryManagement />} />
+                        <Route path="/user-settings-preferences" element={<UserSettingsPreferences />} />
 
-      <Route path="/video-details-download" element={<VideoDetailsDownload />} />
-      <Route path="/search-results" element={<SearchResultsPage />} />
-      <Route path="*" element={<NotFound />} />
-     </RouterRoutes>
-    </Suspense>
-    <GlobalPIPPlayer />
-    </ErrorBoundary>
-   </AppRouter>
-  );
- };
+                        <Route path="/video-details-download" element={<VideoDetailsDownload />} />
+                        <Route path="/search-results" element={<SearchResultsPage />} />
+                        <Route path="*" element={<NotFound />} />
+                    </RouterRoutes>
+                </Suspense>
+                <GlobalProgressFloater />
+                <GlobalPIPPlayer />
+            </ErrorBoundary>
+        </AppRouter>
+    );
+};
 
 export default Routes;

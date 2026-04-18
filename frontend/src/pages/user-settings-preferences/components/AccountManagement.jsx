@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
@@ -10,6 +11,7 @@ import { YTDeluxeStorage, STORAGE_KEYS, isDesktop } from '../../../utils/storage
 
 const AccountManagement = ({ user, onUserUpdate }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState({
     name: 'User',
     avatar: '',
@@ -144,8 +146,6 @@ const AccountManagement = ({ user, onUserUpdate }) => {
   };
 
   const handleResetData = async () => {
-    // We use a custom native-like prompt if needed, but standard confirm is okay for now.
-    // In a future pass we might use ConfirmationModal here.
     if (confirm(t('profile.resetConfirm'))) {
       try {
         if (isDesktop()) {
@@ -156,6 +156,21 @@ const AccountManagement = ({ user, onUserUpdate }) => {
       } catch (err) {
         console.error("Clear history failed:", err);
       }
+    }
+  };
+
+  const handleDeleteItem = async (e, id) => {
+    e.stopPropagation();
+    try {
+      if (isDesktop()) {
+        await YTDeluxeAPI.deleteHistoryItem(id, false);
+      }
+      const historyItems = await YTDeluxeStorage.getItem(STORAGE_KEYS.HISTORY_WEB, []);
+      const updated = historyItems.filter(item => item.id !== id);
+      await YTDeluxeStorage.setItem(STORAGE_KEYS.HISTORY_WEB, updated);
+      setDownloadHistory(prev => prev.filter(item => item.id !== id));
+    } catch (err) {
+      console.error("Failed to delete record:", err);
     }
   };
 
@@ -390,8 +405,18 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-center p-3.5 bg-muted/30 dark:bg-black/20 rounded-2xl border border-border/30 hover:bg-muted/60 dark:hover:bg-black/40 hover:border-border/60 transition-all duration-300 group/item"
+                onClick={() => navigate('/download-history-management')}
+                className="flex items-center p-3.5 bg-muted/30 dark:bg-black/20 rounded-2xl border border-border/30 hover:bg-muted/60 dark:hover:bg-black/40 hover:border-border/60 transition-all duration-300 group/item cursor-pointer relative"
               >
+                {/* Individual Delete Button */}
+                <button
+                  onClick={(e) => handleDeleteItem(e, item.id)}
+                  className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity shadow-lg z-20 hover:bg-red-600 active:scale-90"
+                  title="Remove record"
+                >
+                  <Icon name="X" size={12} strokeWidth={3} />
+                </button>
+
                 {/* Thumbnail */}
                 <div className="w-28 h-16 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/5 shadow-inner relative">
                   {item.thumbnail ? (
@@ -466,8 +491,15 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                   </div>
                   
                   <div className="flex items-center gap-1.5 text-[9px] font-black text-muted-foreground/40 uppercase tracking-wider mt-auto pt-2">
-                    <Icon name="Calendar" size={11} className="opacity-30" />
-                    <span>{formatDate(item.downloadDate)}</span>
+                    <div className="flex items-center gap-1">
+                      <Icon name="Calendar" size={11} className="opacity-30" />
+                      <span>{formatDate(item.downloadDate)}</span>
+                    </div>
+                    <span className="opacity-20">•</span>
+                    <div className="flex items-center gap-1">
+                      <Icon name="Clock" size={11} className="opacity-30" />
+                      <span>{new Date(item.downloadDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
                   </div>
                 </div>
               </motion.div>

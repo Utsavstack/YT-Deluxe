@@ -1,15 +1,59 @@
-import { useTranslation } from "react-i18next"; import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from "react-i18next";
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import ShareModal from '../../../components/ui/ShareModal';
 import { formatDate } from '../../../utils/dateFormat';
+import { YTDeluxeStorage, STORAGE_KEYS } from '../../../utils/storage';
 
 const VideoMetadata = ({ videoData }) => {
   const { t } = useTranslation();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showToast, setShowToast] = useState(null);
+
+  // Sync with storage
+  useEffect(() => {
+    const checkSaved = async () => {
+      if (!videoData?.id && !videoData?.url) return;
+      const list = await YTDeluxeStorage.getItem(STORAGE_KEYS.SAVED, []);
+      const rawId = videoData.id || videoData.url?.split('v=')?.[1]?.split('&')?.[0];
+      setIsSaved(list.some(v => v.id === rawId));
+    };
+    checkSaved();
+  }, [videoData]);
+
+  const handleToggleSave = async () => {
+    const list = await YTDeluxeStorage.getItem(STORAGE_KEYS.SAVED, []);
+    const videoId = videoData.id || videoData.url?.split('v=')?.[1]?.split('&')?.[0];
+    const existsIndex = list.findIndex(v => v.id === videoId);
+
+    let newList = [...list];
+    let saved = false;
+
+    if (existsIndex !== -1) {
+      newList.splice(existsIndex, 1);
+      saved = false;
+    } else {
+      newList.unshift({
+        id: videoId,
+        title: videoData.title,
+        thumbnail: videoData.thumbnail,
+        channel: videoData.channel?.name,
+        duration: videoData.duration,
+        views: videoData.views,
+        uploadDate: videoData.uploadDate,
+        url: videoData.url,
+        savedAt: new Date().toISOString()
+      });
+      saved = true;
+    }
+
+    await YTDeluxeStorage.setItem(STORAGE_KEYS.SAVED, newList);
+    setIsSaved(saved);
+  };
 
   const formatViews = (views) => {
     // Clean string format if it has commas like "1,746,153,552"
@@ -95,14 +139,12 @@ const VideoMetadata = ({ videoData }) => {
         <div className="flex items-center space-x-2">
 
           <Button
-            variant={isBookmarked ? "default" : "outline"}
+            variant={isSaved ? "default" : "outline"}
             size="sm"
-            onClick={() => setIsBookmarked(!isBookmarked)}
-            iconName="Bookmark"
+            onClick={handleToggleSave}
+            iconName={isSaved ? "BookmarkCheck" : "Bookmark"}
             iconPosition="left"
-            className="rounded-xl"> {t("videoDetailsDownload.save")}
-
-
+            className="rounded-xl"> {isSaved ? 'Saved' : 'Save'}
           </Button>
 
           <Button

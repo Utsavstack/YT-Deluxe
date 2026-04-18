@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";import React, { useState, useEffe
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 
-const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {const { t } = useTranslation();
+const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete, onClearCompleted }) => {const { t } = useTranslation();
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
@@ -117,9 +117,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete }) => {cons
             variant="ghost"
             size="sm"
             onClick={() => {
-              // Clear completed downloads
-              const activeDownloads = downloads?.filter((d) => d?.status !== 'completed');
-              console.log('Clear completed downloads');
+              if (onClearCompleted) onClearCompleted();
             }}> {t("videoDetailsDownload.clearCompleted")} 
 
 

@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
 import Header from '../../components/ui/Header';
-import ProgressNotification from '../../components/ui/ProgressNotification';
 import QuickPreviewModal from '../home-search-dashboard/components/QuickPreviewModal';
 import FloatingActionButton from '../home-search-dashboard/components/FloatingActionButton';
 import SearchResultsComponent from '../home-search-dashboard/components/SearchResults';
 import SearchBar from '../home-search-dashboard/components/SearchBar';
 import YTDeluxeAPI from '../../utils/api';
 import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
+import { useDownloadContext } from '../../context/DownloadContext';
 
 const SearchResultsPage = () => {
   const { t } = useTranslation();
@@ -25,7 +25,7 @@ const SearchResultsPage = () => {
 
   const [previewVideo, setPreviewVideo] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [downloads, setDownloads] = useState([]);
+  const { addDownload } = useDownloadContext();
   const [recentSearches, setRecentSearches] = useState([]);
 
   // Sticky search bar state
@@ -156,63 +156,24 @@ const SearchResultsPage = () => {
     setIsPreviewOpen(true);
   };
 
-  const trackDownloadProgress = async (taskId, downloadId) => {
-    const progressInterval = setInterval(async () => {
-      try {
-        const progress = await YTDeluxeAPI.getDownloadProgress(taskId);
-        setDownloads((prev) => prev.map((dl) =>
-          dl.id === downloadId ? {
-            ...dl,
-            progress: progress.progress || 0,
-            status: progress.status || 'downloading',
-            filename: progress.filename || dl.filename
-          } : dl
-        ));
+  const handleQuickDownload = (video, format = 'mp4') => {
+    const videoUrl = video.url || `https://www.youtube.com/watch?v=${video.originalId || video.id?.split('_')?.[0]}`;
+    const dlType = format === 'jpg' ? 'thumbnail' : (format === 'mp3' ? 'audio' : 'video');
 
-        if (progress.status === 'completed' || progress.status === 'error') {
-          clearInterval(progressInterval);
-        }
-      } catch (error) {
-        clearInterval(progressInterval);
-      }
-    }, 1000);
-  };
-
-  const handleQuickDownload = async (video, format = 'mp4') => {
-    const downloadId = Date.now() + Math.random();
-    const newDownload = {
-      id: downloadId,
-      filename: `${video.title || 'video'}.${format}`,
+    addDownload({
+      url: videoUrl,
+      quality: format === 'jpg' ? 'Max Resolution' : (format === 'mp4' ? '1080p' : '320kbps'),
+      format: format,
+      filename: video.title,
+      type: dlType,
+      thumbnail: video.thumbnail,
+      channel: video.channel?.name || '',
+    }, {
       title: video.title,
-      type: format === 'jpg' ? 'thumbnail' : (format === 'mp3' ? 'audio' : 'video'),
-      progress: 0,
-      status: 'pending',
-      thumbnail: video.thumbnail
-    };
-
-    setDownloads((prev) => [...prev, newDownload]);
-
-    try {
-      const apiConfig = {
-        url: video.url || `https://www.youtube.com/watch?v=${video.originalId || video.id?.split('_')?.[0]}`,
-        quality: format === 'jpg' ? 'Max Resolution' : (format === 'mp4' ? '1080p' : '320kbps'),
-        format: format,
-        rename: video.title,
-        type: newDownload.type
-      };
-
-      const response = await YTDeluxeAPI.downloadVideo(apiConfig);
-      if (response.task_id) {
-        trackDownloadProgress(response.task_id, downloadId);
-      } else {
-        throw new Error('No task ID received');
-      }
-    } catch (err) {
-      setDownloads((prev) => prev.map((dl) =>
-        dl.id === downloadId ? { ...dl, status: 'error', error: err.message } : dl
-      ));
-      setError('Download failed. Please try again.');
-    }
+      duration: video.duration,
+      channel: video.channel,
+      thumbnail: video.thumbnail,
+    });
   };
 
   const handleSearch = (newQuery) => {
@@ -235,7 +196,7 @@ const SearchResultsPage = () => {
     <div className="min-h-screen bg-background overflow-x-hidden">
       <TheInfiniteGrid />
       <Header isScrolled={isSearchSticky} />
-      {downloads.length > 0 && <ProgressNotification downloads={downloads} />}
+
 
       {/* Search Bar Container */}
       <div className="relative z-[90] w-full pt-[110px] pb-4 px-4 lg:px-6 max-w-7xl mx-auto">

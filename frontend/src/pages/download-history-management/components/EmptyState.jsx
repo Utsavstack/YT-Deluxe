@@ -20,27 +20,18 @@ const EmptyState = ({ type = 'all', searchQuery, hasFilters, onClearFilters }) =
   }
 
   switch (type) {
-   case 'watchLater':
+   case 'saved':
     return {
-     icon: 'Clock',
-     title: 'No videos in Watch Later',
-     description: 'Videos you mark to watch later will appear here.',
+     icon: 'Bookmark',
+     title: 'No saved videos',
+     description: 'Videos you save will appear here for easy access.',
      action: {
       label: 'Browse Videos',
       onClick: () => navigate('/home-search-dashboard')
      }
     };
    
-   case 'bookmarks':
-    return {
-     icon: 'Bookmark',
-     title: 'No bookmarked videos',
-     description: 'Videos you bookmark will be saved here for easy access.',
-     action: {
-      label: 'Find Videos',
-      onClick: () => navigate('/home-search-dashboard')
-     }
-    };
+
    
    default:
     return {

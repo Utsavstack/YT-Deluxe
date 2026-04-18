@@ -1,13 +1,14 @@
 import { useTranslation } from "react-i18next";import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
-import ProgressNotification from '../../components/ui/ProgressNotification';
+import { useDownloadContext } from '../../context/DownloadContext';
 import BatchInputSection from './components/BatchInputSection';
 import QueueManager from './components/QueueManager';
 import BatchProgressPanel from './components/BatchProgressPanel';
 import YTDeluxeAPI from '../../utils/api';
 
 const BatchDownloadManager = () => {const { t } = useTranslation();
+  const { addDownload } = useDownloadContext();
   const [queue, setQueue] = useState([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [batchId, setBatchId] = useState(null);
@@ -149,6 +150,19 @@ const BatchDownloadManager = () => {const { t } = useTranslation();
         setBatchId(response.batch_id);
         // Track batch progress
         trackBatchProgress(response.batch_id);
+
+        // Also register each pending item with DownloadContext for global tracking
+        queue.filter(item => item.status === 'pending').forEach(item => {
+          addDownload({
+            url: item.url,
+            type: 'video',
+            quality: item.quality || '720p',
+            format: 'mp4',
+            filename: item.title || 'Batch Download',
+            thumbnail: item.thumbnail || '',
+            channel: item.channel || '',
+          });
+        });
       } else {
         throw new Error('No batch ID received from server');
       }
@@ -263,66 +277,64 @@ const BatchDownloadManager = () => {const { t } = useTranslation();
 
   return (
     <>
-   <Helmet>
-    <title>{t("batchDownloadManager.batchDownloadManagerYt")}</title>
-    <meta name="description" content="Download multiple YouTube videos simultaneously with comprehensive queue management and progress tracking." />
-    <meta name="keywords" content="batch download, youtube downloader, queue management, bulk download" />
-   </Helmet>
+      <Helmet>
+        <title>{t("batchDownloadManager.batchDownloadManagerYt")}</title>
+        <meta name="description" content="Download multiple YouTube videos simultaneously with comprehensive queue management and progress tracking." />
+        <meta name="keywords" content="batch download, youtube downloader, queue management, bulk download" />
+      </Helmet>
 
-   <div className="min-h-screen bg-background">
-    <Header />
-    {queue.length > 0 && queue.some((item) => item.status === 'downloading' || item.status === 'completed') &&
-        <ProgressNotification downloads={queue.filter((item) => item.status === 'downloading' || item.status === 'completed')} />}
-    
-    <main className="pt-20 pb-32">
-     <div className="container mx-auto px-4 lg:px-6 max-w-6xl">
-      <div className="space-y-8">
-       {/* Page Header */}
-       <div className="text-center py-8">
-        <h1 className="text-4xl font-bold text-foreground mb-4"> {t("batchDownloadManager.batchDownloadManager")} 
+      <div className="min-h-screen bg-background">
+        <Header />
 
+        <main className="pt-20 pb-32">
+          <div className="container mx-auto px-4 lg:px-6 max-w-6xl">
+            <div className="space-y-8">
+              {/* Page Header */}
+              <div className="text-center py-8">
+                <h1 className="text-4xl font-bold text-foreground mb-4">
+                  {t("batchDownloadManager.batchDownloadManager")}
                 </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto"> {t("batchDownloadManager.processMultipleYoutubeVideos")} 
-
-
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                  {t("batchDownloadManager.processMultipleYoutubeVideos")}
                 </p>
-       </div>
+              </div>
 
-       {/* Error Display */}
-       {error &&
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-         <p className="text-red-800">{error}</p>
-        </div>
-              }
+              {/* Error Display */}
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-800">{error}</p>
+                </div>
+              )}
 
-       {/* Input Section */}
-       <BatchInputSection
+              {/* Input Section */}
+              <BatchInputSection
                 onAddUrls={handleAddUrls}
-                onImportFromClipboard={handleImportFromClipboard} />
-              
+                onImportFromClipboard={handleImportFromClipboard}
+              />
 
-       {/* Queue Manager */}
-       <QueueManager
+              {/* Queue Manager */}
+              <QueueManager
                 queue={queue}
                 onUpdateQueue={handleUpdateQueue}
                 onStartDownload={handleStartDownload}
                 onPauseDownload={handlePauseDownload}
-                onRemoveItems={handleRemoveItems} />
-              
-      </div>
-     </div>
-    </main>
+                onRemoveItems={handleRemoveItems}
+              />
+            </div>
+          </div>
+        </main>
 
-    {/* Batch Progress Panel */}
-    <BatchProgressPanel
+        {/* Batch Progress Panel */}
+        <BatchProgressPanel
           queue={queue}
           isDownloading={isDownloading}
           onStartAll={handleStartDownload}
           onPauseAll={handlePauseDownload}
-          onCancelAll={handleCancelAll} />
-        
-   </div>
-  </>);
+          onCancelAll={handleCancelAll}
+        />
+      </div>
+    </>
+  );
 
 };
 

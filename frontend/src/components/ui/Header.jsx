@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../AppIcon';
 import ThemeToggle from './ThemeToggle';
+import { useDownloadContext } from '../../context/DownloadContext';
 
 const Header = ({ isScrolled: isScrolledProp }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [internalScrolled, setInternalScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Notification bell state
+  const { downloads, activeCount, bellColor, cancelDownload, pauseDownload, resumeDownload, dismissDownload, clearHistory } = useDownloadContext();
+  const visibleDownloads = downloads.filter(d => !d.dismissed);
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef(null);
   
   // Tooltip States
   const [showStartupHint, setShowStartupHint] = useState(false);
@@ -57,6 +64,16 @@ const Header = ({ isScrolled: isScrolledProp }) => {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [menuOpen]);
+
+  // Close bell panel on outside click
+  useEffect(() => {
+    if (!bellOpen) return;
+    const handler = (e) => {
+      if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [bellOpen]);
 
   const handleFullscreenToggle = () => {
     setIsFullscreen(prev => !prev);
@@ -262,6 +279,194 @@ const Header = ({ isScrolled: isScrolledProp }) => {
             {/* Stable flex row — items here never re-animate */}
             <div className="flex items-center">
               <ThemeToggle />
+
+              {/* ── Notification Bell ── */}
+              <div ref={bellRef} className="relative ml-3">
+                <button
+                  onClick={() => setBellOpen(prev => !prev)}
+                  className="group menu-glass-card w-[44px] h-[44px] flex items-center justify-center transition-all duration-300 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] active:scale-[0.8] relative"
+                  title="Download notifications"
+                  aria-label="Open download notifications"
+                >
+                  <Icon name="Bell" size={18} className="text-foreground" />
+                  {/* Status dot */}
+                  {bellColor && (
+                    <span className={`absolute top-2 right-2.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background z-10 ${
+                      bellColor === 'yellow' ? 'bg-warning' :
+                      bellColor === 'green'  ? 'bg-success'  : 'bg-error'
+                    }`}>
+                      {bellColor === 'yellow' && (
+                        <span className="absolute inset-0 rounded-full bg-warning animate-ping opacity-75" />
+                      )}
+                    </span>
+                  )}
+                </button>
+
+                {/* ── Notification Panel Dropdown ── */}
+                <AnimatePresence>
+                  {bellOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.92, y: -8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                      transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                      className="absolute right-0 top-[calc(100%+12px)] w-[340px] max-h-[520px] rounded-2xl overflow-hidden shadow-glass-xl z-[500] flex flex-col bg-white/[0.65] dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/[0.08]"
+                    >
+                      {/* Panel header */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Icon name="Bell" size={15} className="text-primary" />
+                          <span className="text-sm font-semibold text-foreground">Downloads</span>
+                          {activeCount > 0 && (
+                            <span className="text-[10px] bg-warning/20 text-warning border border-warning/30 rounded-full px-2 font-mono font-bold">
+                              {activeCount} active
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {visibleDownloads.length > 0 && (
+                            <button
+                              onClick={() => { clearHistory(); }}
+                              className="text-[11px] text-muted-foreground hover:text-error px-2 py-1 rounded-lg hover:bg-error/10 transition-all"
+                            >
+                              Clear All
+                            </button>
+                          )}
+                          <button onClick={() => setBellOpen(false)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors">
+                            <Icon name="X" size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Scrollable list */}
+                      <div className="overflow-y-auto flex-1 px-3 py-2 space-y-1.5">
+                        {visibleDownloads.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-10 gap-2">
+                            <Icon name="BellOff" size={28} className="text-muted-foreground/40" />
+                            <p className="text-xs text-muted-foreground">No downloads yet</p>
+                          </div>
+                        ) : (
+                          ['downloading', 'pending', 'processing', 'completed', 'error', 'paused', 'cancelled'].map(status => {
+                            const group = visibleDownloads.filter(d => d.status === status);
+                            if (group.length === 0) return null;
+                            const sectionLabel = {
+                              downloading: 'Running', pending: 'Running', processing: 'Processing',
+                              completed: 'Completed', error: 'Failed',
+                              paused: 'Paused', cancelled: 'Cancelled',
+                            }[status] || status;
+                            return (
+                              <div key={status}>
+                                <div className="px-1 py-1.5 flex items-center">
+                                  <span className="text-[11px] font-bold text-muted-foreground tracking-wide bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 py-0.5 px-2 rounded-md shadow-sm">
+                                    {sectionLabel} ({group.length})
+                                  </span>
+                                </div>
+                                {group.map(dl => (
+                                  <div 
+                                    key={dl.id} 
+                                    className="flex items-center gap-2.5 px-2 py-2 rounded-xl border border-transparent hover:border-black/5 dark:hover:border-white/5 hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors group cursor-pointer"
+                                    onClick={(e) => {
+                                      if (!e.target.closest('button')) {
+                                        setBellOpen(false);
+                                        navigate('/download-history-management');
+                                      }
+                                    }}
+                                  >
+                                    {/* Status icon */}
+                                    <div className={`flex-shrink-0 ${
+                                      dl.status === 'completed' ? 'text-success' :
+                                      dl.status === 'error' ? 'text-error' :
+                                      dl.status === 'paused' || dl.status === 'cancelled' ? 'text-muted-foreground' :
+                                      'text-warning'
+                                    }`}>
+                                      <Icon
+                                        name={
+                                          dl.status === 'completed' ? 'CheckCircle2' :
+                                          dl.status === 'error' ? 'AlertCircle' :
+                                          dl.status === 'processing' ? 'Loader2' : 'Download'
+                                        }
+                                        size={14}
+                                        className={dl.status === 'processing' ? 'animate-spin' : ''}
+                                      />
+                                    </div>
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-medium text-foreground truncate">{dl.title || dl.filename}</p>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {(dl.status === 'downloading' || dl.status === 'pending') && (
+                                          <span className="text-[10px] text-primary font-mono">{dl.progress || 0}%</span>
+                                        )}
+                                        {dl.completedAt && (
+                                          <span className="text-[10px] text-muted-foreground">
+                                            {new Date(dl.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          </span>
+                                        )}
+                                        {dl.error && <span className="text-[10px] text-error truncate">{dl.error}</span>}
+                                        {dl.trimSettings && (dl.trimSettings.startTime > 0 || (dl.trimSettings.endTime > 0 && dl.trimSettings.endTime < (dl.duration - 1))) && (
+                                          <span className="text-[9px] text-violet-500 bg-violet-500/10 border border-violet-500/20 px-1.5 py-px rounded-md font-bold flex items-center gap-0.5">
+                                            <Icon name="Scissors" size={8} />
+                                            {Math.floor((dl.trimSettings.startTime || 0) / 60)}:{String(Math.round((dl.trimSettings.startTime || 0) % 60)).padStart(2,'0')} – {Math.floor((dl.trimSettings.endTime || 0) / 60)}:{String(Math.round((dl.trimSettings.endTime || 0) % 60)).padStart(2,'0')}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {/* Mini progress bar */}
+                                      {(dl.status === 'downloading' || dl.status === 'pending') && (
+                                        <div className="w-full h-1 bg-border/40 rounded-full mt-1 overflow-hidden">
+                                          <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${dl.progress || 0}%` }} />
+                                        </div>
+                                      )}
+                                    </div>
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                      {(dl.status === 'downloading') && (
+                                        <button onClick={(e) => { e.stopPropagation(); pauseDownload(dl.id); }} className="p-1 rounded text-muted-foreground hover:text-warning transition-colors" title="Pause">
+                                          <Icon name="PauseCircle" size={12} />
+                                        </button>
+                                      )}
+                                      {(dl.status === 'paused') && (
+                                        <button onClick={(e) => { e.stopPropagation(); resumeDownload(dl.id); }} className="p-1 rounded text-muted-foreground hover:text-success transition-colors" title="Resume">
+                                          <Icon name="Play" size={12} />
+                                        </button>
+                                      )}
+                                      {dl.status === 'completed' && window.pywebview && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/desktop/open-file`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: dl.filename, filepath: dl.filepath }) }).catch(() => {}); }}
+                                          className="p-1 rounded text-muted-foreground hover:text-primary transition-colors" title="Open file"
+                                        >
+                                          <Icon name="FolderOpen" size={12} />
+                                        </button>
+                                      )}
+                                      {dl.status === 'error' && (
+                                        <button onClick={(e) => { e.stopPropagation(); resumeDownload(dl.id); }} className="p-1 rounded text-muted-foreground hover:text-primary transition-colors" title="Retry">
+                                          <Icon name="RotateCcw" size={12} />
+                                        </button>
+                                      )}
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (dl.status === 'downloading' || dl.status === 'pending' || dl.status === 'processing') {
+                                            cancelDownload(dl.id);
+                                          } else {
+                                            dismissDownload(dl.id);
+                                          }
+                                        }} 
+                                        className="p-1 rounded text-muted-foreground hover:text-error transition-colors" 
+                                        title={dl.status === 'downloading' || dl.status === 'pending' ? "Cancel" : "Remove"}
+                                      >
+                                        <Icon name="X" size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               
               {/* Fullscreen Button */}
               <button

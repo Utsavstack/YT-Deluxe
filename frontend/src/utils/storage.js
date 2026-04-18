@@ -2,8 +2,7 @@ import YTDeluxeAPI from './api';
 
 const STORAGE_KEYS = {
   HISTORY_WEB: 'ytdeluxe_web_history',
-  WATCH_LATER: 'ytdeluxe_watch_later',
-  BOOKMARKS: 'ytdeluxe_bookmarks',
+  SAVED: 'ytdeluxe_saved',
   THEME: 'ytdeluxe_theme',
   ACCENT_COLOR: 'ytdeluxe_accent_color',
   LANGUAGE: 'ytdeluxe_language',

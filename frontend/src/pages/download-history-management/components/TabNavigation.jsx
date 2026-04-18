@@ -11,16 +11,10 @@ const TabNavigation = ({ activeTab, onTabChange, counts }) => {
    count: counts?.all || 0
   },
   {
-   id: 'watchLater',
-   label: 'Watch Later',
-   icon: 'Clock',
-   count: counts?.watchLater || 0
-  },
-  {
-   id: 'bookmarks',
-   label: 'Bookmarks',
+   id: 'saved',
+   label: 'Saved',
    icon: 'Bookmark',
-   count: counts?.bookmarks || 0
+   count: counts?.saved || 0
   }
  ];
 
