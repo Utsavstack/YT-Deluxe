@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
@@ -28,7 +28,9 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   const { openPip } = usePIP();
 
   const navigate = useNavigate();
-  const iframeRef = React.useRef(null);
+  const iframeRef    = useRef(null);
+  const nativeRef    = useRef(null);
+  const [nativeFallback, setNativeFallback] = useState(false);
 
   // Check saved status on mount
   useEffect(() => {
@@ -45,12 +47,12 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
     let timer;
     if (isHovered) {
       setEmbedError(false);
-      timer = setTimeout(() => {
-        setPlayVideo(true);
-      }, 600);
+      setNativeFallback(false);
+      timer = setTimeout(() => { setPlayVideo(true); }, 600);
     } else {
       setPlayVideo(false);
       setVideoReady(false);
+      setNativeFallback(false);
     }
     return () => clearTimeout(timer);
   }, [isHovered]);
@@ -89,6 +91,8 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
           setEmbedError(true);
           setPlayVideo(false);
           setVideoReady(false);
+          // Switch to native video fallback
+          setNativeFallback(true);
         }
         if (data.event === 'onStateChange' && (data.info === 1 || data.info === 3)) {
           setVideoReady(true);
@@ -274,13 +278,24 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
           </div>
         )}
 
-        {isHovered && embedError && (
-          <div className="absolute inset-0 z-30 bg-black/50 backdrop-blur-[2px] flex flex-col items-center justify-center animate-fade-in pointer-events-none">
-            <div className="bg-white/20 p-3 rounded-full mb-2 shadow-lg backdrop-blur-md border border-white/10">
-              <Icon name="EyeOff" size={20} className="text-white opacity-90" />
+        {/* ── Native video fallback when YouTube embed is restricted ── */}
+        {nativeFallback && isHovered && (
+          <div className="absolute inset-0 z-20 bg-black overflow-hidden">
+            <video
+              ref={nativeRef}
+              autoPlay
+              muted={isMuted}
+              className="w-full h-full object-cover"
+              src={`${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(video?.url || '')}&quality=480p`}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+              onLoadedMetadata={(e) => setDuration(e.target.duration)}
+            />
+            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm border border-white/10 text-white/70 text-[9px] font-bold px-2 py-0.5 rounded-full pointer-events-none">
+              <Icon name="HardDrive" size={9} />
+              Fallback
             </div>
-            <p className="text-white text-sm font-semibold px-4 text-center tracking-wide">{t("homeSearchDashboard.previewRestricted")}</p>
-            <p className="text-white/80 text-xs mt-0.5">{t("homeSearchDashboard.clickToOpenView")}</p>
           </div>
         )}
 

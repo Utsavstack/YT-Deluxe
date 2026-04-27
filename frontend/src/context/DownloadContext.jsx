@@ -241,6 +241,8 @@ export const DownloadProvider = ({ children }) => {
       type: config.type || 'video',
       quality: config.quality || 'Auto',
       format: config.format || 'mp4',
+      format_id: config.format_id || null,
+      audio_format_id: config.audio_format_id || null,
       size: config.size || null,
       progress: 0,
       status: 'pending', // pending → downloading → processing → completed|error
@@ -304,6 +306,10 @@ export const DownloadProvider = ({ children }) => {
           url: config.url,
           quality: config.quality,
           format: config.format,
+          format_id: config.format_id || null,              // Change H: was missing!
+          audio_format_id: config.audio_format_id || null,  // Change H: specific audio stream
+          container: config.container || null,               // Change H: output container
+          convert_to_mp3: config.convert_to_mp3 || false,   // Change H: transcode toggle
           rename: config.filename,
           trim_start: config.trim_start ?? config.trimSettings?.startTime,
           trim_end: config.trim_end ?? config.trimSettings?.endTime,
@@ -311,6 +317,7 @@ export const DownloadProvider = ({ children }) => {
           channel: videoData?.channel?.name || config.channel || '',
           thumbnail: videoData?.thumbnail || config.thumbnail || '',
         };
+
 
         const response = await YTDeluxeAPI.downloadVideo(apiConfig);
 

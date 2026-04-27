@@ -183,12 +183,7 @@ const GlobalPIPPlayer = () => {
           onMouseLeave={handleMouseLeave}
         >
           {/* IFrame Player */}
-          {embedError ? (
-            <div className="absolute inset-0 bg-zinc-900 flex flex-col items-center justify-center p-4">
-              <Icon name="EyeOff" size={24} className="text-white/60 mb-2" />
-              <p className="text-white text-xs text-center">Video playback restricted by YouTube.</p>
-            </div>
-          ) : (
+          {!embedError ? (
             <iframe
               ref={iframeRef}
               width="100%"
@@ -199,6 +194,23 @@ const GlobalPIPPlayer = () => {
               allow="autoplay; encrypted-media; fullscreen"
               className={`w-[140%] h-[140%] absolute top-[-20%] left-[-20%] object-cover transition-opacity duration-500 pointer-events-none ${videoReady ? 'opacity-100' : 'opacity-0'}`}
             />
+          ) : (
+            /* ── Native video fallback ── */
+            <>
+              <video
+                autoPlay
+                className="w-full h-full object-cover"
+                src={`${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(pipVideo?.url || '')}&quality=480p`}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={(e) => { setCurrentTime(e.target.currentTime); }}
+                onLoadedMetadata={(e) => setDuration(e.target.duration)}
+              />
+              <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm border border-white/10 text-white/70 text-[9px] font-bold px-2 py-0.5 rounded-full pointer-events-none z-10">
+                <Icon name="HardDrive" size={9} />
+                Fallback
+              </div>
+            </>
           )}
 
           {/* Fallback loading */}

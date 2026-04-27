@@ -85,6 +85,15 @@ class YTDeluxeAPI {
       if (downloadConfig.thumbnail) {
         formData.append('thumbnail', downloadConfig.thumbnail);
       }
+      if (downloadConfig.audio_format_id) {
+        formData.append('audio_format_id', downloadConfig.audio_format_id);
+      }
+      if (downloadConfig.container) {
+        formData.append('container', downloadConfig.container);
+      }
+      // Always send convert_to_mp3 (defaults false on backend)
+      formData.append('convert_to_mp3', downloadConfig.convert_to_mp3 ? 'true' : 'false');
+
       const downloadPath = localStorage.getItem('ytdeluxe_download_path');
       if (downloadPath) {
         formData.append('download_path', downloadPath);

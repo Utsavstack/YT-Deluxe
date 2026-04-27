@@ -57,6 +57,11 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
   const dlQuality = selectedConfig?.quality || videoData?.max_quality || '1080p';
   const dlFormat = selectedConfig?.format || 'mp4';
   const dlFmtId = selectedConfig?.format_id || null;
+  // Change R: new format control fields from DownloadTabs selection
+  const dlAudioFormatId = selectedConfig?.audio_format_id || null;
+  const dlContainer = selectedConfig?.container || 'mp4';
+  const dlConvertToMp3 = selectedConfig?.convert_to_mp3 || false;
+  const dlNativeExt = selectedConfig?.format && selectedConfig.format !== 'mp3' ? selectedConfig.format : 'opus';
   const isThumbnail = dlType === 'thumbnail';
 
   // trimType is derived from the global selectedConfig — no local state needed
@@ -64,19 +69,52 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
   const trimType = isThumbnail ? 'video' : dlType;
   const isAudio = trimType === 'audio';
 
-  // When user clicks "Trim as" toggle or overlay buttons → update parent's selectedConfig
+  // Track last explicit audio and video configs so toggling restores the user's choice
+  const lastAudioConfig = React.useRef(null);
+  const lastVideoConfig = React.useRef(null);
+
+  // Keep refs up-to-date whenever selectedConfig changes from DownloadTabs
+  React.useEffect(() => {
+    if (!selectedConfig) return;
+    if (selectedConfig.type === 'audio') {
+      lastAudioConfig.current = selectedConfig;
+    } else if (selectedConfig.type === 'video') {
+      lastVideoConfig.current = selectedConfig;
+    }
+  }, [selectedConfig]);
+
+  // When user clicks "Trim as" toggle — restore last config for that type,
+  // or auto-pick best native format if no previous config exists.
   const handleTrimTypeChange = (type) => {
     if (isThumbnail) return;
-    const format = type === 'audio' ? 'mp3' : (selectedConfig?.format || 'mp4');
-    // Prevent stale 'audio' quality carrying over when switching to video
-    const currentQ = selectedConfig?.quality;
-    const quality = type === 'audio'
-      ? 'audio'
-      : (currentQ && currentQ !== 'audio' ? currentQ : (videoData?.max_quality || '1080p'));
-    onSelectConfig?.({ type, format, quality, format_id: type === 'audio' ? null : dlFmtId });
+    if (type === 'audio') {
+      if (lastAudioConfig.current) {
+        // Restore previous explicit audio selection from DownloadTabs
+        onSelectConfig?.(lastAudioConfig.current);
+      } else {
+        // Auto: pick best native audio (WebM/Opus or whatever dlNativeExt is)
+        const audioFormat = dlConvertToMp3 ? 'mp3' : (dlNativeExt || 'opus');
+        onSelectConfig?.({ type: 'audio', format: audioFormat, quality: 'audio', format_id: null });
+      }
+    } else {
+      if (lastVideoConfig.current) {
+        // Restore previous explicit video selection from DownloadTabs
+        onSelectConfig?.(lastVideoConfig.current);
+      } else {
+        // Auto: pick best native video — clear any audio-only formats
+        const audioOnlyFormats = ['mp3', 'opus', 'm4a'];
+        const videoFormat = audioOnlyFormats.includes(dlFormat) ? 'mp4' : (dlFormat || 'mp4');
+        const videoQuality = (dlQuality && dlQuality !== 'audio')
+          ? dlQuality
+          : (videoData?.max_quality || '1080p');
+        const videoFmtId = audioOnlyFormats.includes(dlFormat) ? null : dlFmtId;
+        onSelectConfig?.({ type: 'video', format: videoFormat, quality: videoQuality, format_id: videoFmtId });
+      }
+    }
   };
 
-  const [isExpanded, setIsExpanded] = useState(true);
+
+  const [isExpanded, setIsExpanded] = useState(false);
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(dur);
   const [isDragging, setIsDragging] = useState(null); // 'start' | 'end'
@@ -91,16 +129,17 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
   const [isBuffering, setIsBuffering] = useState(false);
   const [isMediaLoading, setIsMediaLoading] = useState(true);
   const [showTrimGuide, setShowTrimGuide] = useState(false); // initial fetch/load of the stream
+  const [previewEnabled, setPreviewEnabled] = useState(false); // stream only loads after first interaction
 
   const timelineRef = useRef(null);
   const videoRef = useRef(null);
 
   // ── Stream URLs ──────────────────────────────────────────────────────────
-  // For video preview: use 360p stream. For audio: use bestaudio endpoint.
+  // For video preview: use 720p stream. For audio: use bestaudio endpoint.
   const streamUrl = videoData?.url
     ? isAudio
       ? `${API_BASE}/api/stream?url=${encodeURIComponent(videoData.url)}&quality=audio`
-      : `${API_BASE}/api/stream?url=${encodeURIComponent(videoData.url)}&quality=360p`
+      : `${API_BASE}/api/stream?url=${encodeURIComponent(videoData.url)}&quality=720p`
     : null;
 
   const buildClipUrl = useCallback((start, clipDur = 20) => {
@@ -149,6 +188,7 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
 
   const onHandleDown = (type) => (e) => {
     e.preventDefault();
+    setPreviewEnabled(true); // first drag → unlock stream
     setIsDragging(type);
   };
 
@@ -327,25 +367,33 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
 
   const handleStartInput = (val) => {
     setStartInput(val);
+    setPreviewEnabled(true); // manual input → unlock stream
     const secs = parseTime(val);
     applyTrim(secs, endTime);
   };
 
   const handleEndInput = (val) => {
     setEndInput(val);
+    setPreviewEnabled(true); // manual input → unlock stream
     const secs = parseTime(val);
     applyTrim(startTime, secs);
   };
 
-  // ── Download trimmed ──────────────────────────────────────────────────────
+  // Change R: handleDownloadTrimmed — sync all new format fields
   const handleDownloadTrimmed = () => {
     if (!onDownload || isThumbnail) return;
+    const isAudioTrim = trimType === 'audio';
     onDownload({
       url: videoData?.url,
       type: trimType,
       quality: dlQuality,
-      format: trimType === 'audio' ? 'mp3' : dlFormat,
-      format_id: trimType === 'audio' ? null : dlFmtId,
+      format: isAudioTrim
+        ? (dlConvertToMp3 ? 'mp3' : dlNativeExt)
+        : dlFormat,
+      format_id: isAudioTrim ? null : dlFmtId,
+      audio_format_id: isAudioTrim ? (dlAudioFormatId || null) : null,
+      container: !isAudioTrim ? dlContainer : null,
+      convert_to_mp3: isAudioTrim ? dlConvertToMp3 : false,
       filename: videoData?.title,
       trim_start: startTime,
       trim_end: endTime,
@@ -376,7 +424,7 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
   // Find active download/trimming task for this video that is specifically a trim task
   const activeDownload = (downloads || []).find(d =>
     d.url === videoData?.url &&
-    d.trim_start !== undefined && 
+    d.trim_start !== undefined &&
     (d.status === 'downloading' || d.status === 'processing' || d.status === 'pending')
   );
 
@@ -384,18 +432,39 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
   return (
     <div className="space-y-4">
       {/* Toggle header */}
-      <Button
-        variant="ghost"
+      <button
         onClick={() => setIsExpanded(!isExpanded)}
-        iconName={isExpanded ? 'ChevronUp' : 'ChevronDown'}
-        iconPosition="right"
-        className="w-full justify-between"
+        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group text-left focus:outline-none focus:ring-2 focus:ring-primary/30
+          ${isExpanded
+            ? 'bg-primary/10 border-primary/30 dark:bg-primary/10 dark:border-primary/30'
+            : 'bg-black/5 hover:bg-primary/5 border-border/50 hover:border-primary/20 dark:bg-white/5 dark:hover:bg-primary/5'
+          }`}
       >
-        <div className="flex items-center space-x-2">
-          <Icon name="Scissors" size={16} />
-          <span>{t('videoDetailsDownload.videoTrimmer')}</span>
+        <div className="flex items-start gap-4">
+          <div className={`mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300
+            ${isExpanded
+              ? 'bg-primary text-white shadow-[0_0_15px_rgba(var(--color-primary-rgb),0.3)]'
+              : 'bg-black/5 dark:bg-white/10 text-muted-foreground group-hover:text-primary group-hover:bg-primary/10'
+            }`}>
+            <Icon name="Scissors" size={18} className={isExpanded ? 'animate-pulse' : ''} />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-foreground text-sm tracking-wide">
+              {t('videoDetailsDownload.videoTrimmer')}
+            </span>
+            <span className="text-xs text-muted-foreground mt-1 max-w-[280px] leading-relaxed">
+              Cut out intros, select specific clips, or grab just the audio hook before downloading.
+            </span>
+          </div>
         </div>
-      </Button>
+        <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
+          ${isExpanded
+            ? 'bg-primary/20 text-primary rotate-180'
+            : 'bg-black/5 dark:bg-white/5 text-muted-foreground group-hover:text-foreground group-hover:bg-black/10 dark:group-hover:bg-white/10'
+          }`}>
+          <Icon name="ChevronDown" size={16} />
+        </div>
+      </button>
 
       {isExpanded && (
         <div className="relative glass-card p-6 space-y-6 animate-slide-down">
@@ -430,7 +499,8 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
                 <div className="flex gap-2 w-full">
                   {[
                     { type: 'video', icon: 'Video', label: 'Video', format: 'mp4', quality: videoData?.max_quality || '1080p' },
-                    { type: 'audio', icon: 'Music', label: 'Audio', format: 'mp3', quality: 'audio' },
+                    // Change R: Audio overlay no longer hardcodes 'mp3' — use native format
+                    { type: 'audio', icon: 'Music', label: 'Audio', format: dlConvertToMp3 ? 'mp3' : 'opus', quality: 'audio' },
                   ].map(({ type, icon, label, format, quality }) => (
                     <button
                       key={type}
@@ -447,163 +517,190 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
           )}
 
           {/* ── Preview Player ───────────────────────────────────────────── */}
-          {streamUrl && !isThumbnail && (
-            <div
-              className="relative aspect-video rounded-xl overflow-hidden bg-black/90 border border-white/5 shadow-glass-lg group/player"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-            >
-              {/* Render audio element for audio-only, video element otherwise */}
-              {isAudio ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 px-4 bg-black/80">
-                  {/* Thumbnail as background for context */}
-                  {videoData?.thumbnail && (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center opacity-20"
-                      style={{ backgroundImage: `url(${videoData.thumbnail})` }}
-                    />
-                  )}
-                  <div className="relative z-10 flex flex-col items-center gap-3">
-                    <div className="w-20 h-20 rounded-3xl bg-pink-500/30 flex items-center justify-center border border-pink-500/40 shadow-glass-md transition-transform hover:scale-110 backdrop-blur-sm">
-                      <Icon name="Music" size={32} color="var(--color-primary)" />
+          {!isThumbnail && (
+            previewEnabled && streamUrl ? (
+              <div
+                className="relative aspect-video rounded-xl overflow-hidden bg-black/90 border border-white/5 shadow-glass-lg group/player"
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+              >
+                {/* Render audio element for audio-only, video element otherwise */}
+                {isAudio ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 px-4 bg-black/80">
+                    {/* Thumbnail as background for context */}
+                    {videoData?.thumbnail && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center opacity-20"
+                        style={{ backgroundImage: `url(${videoData.thumbnail})` }}
+                      />
+                    )}
+                    <div className="relative z-10 flex flex-col items-center gap-3">
+                      <div className="w-20 h-20 rounded-3xl bg-pink-500/30 flex items-center justify-center border border-pink-500/40 shadow-glass-md transition-transform hover:scale-110 backdrop-blur-sm">
+                        <Icon name="Music" size={32} color="var(--color-primary)" />
+                      </div>
+                      <p className="text-sm font-semibold text-white">{t('videoDetailsDownload.audioPreview')}</p>
+                      <p className="text-xs font-medium text-white/70 text-center max-w-[80%] line-clamp-2">{videoData?.title}</p>
                     </div>
-                    <p className="text-sm font-semibold text-white">{t('videoDetailsDownload.audioPreview')}</p>
-                    <p className="text-xs font-medium text-white/70 text-center max-w-[80%] line-clamp-2">{videoData?.title}</p>
+                    <audio
+                      ref={videoRef}
+                      src={streamUrl}
+                      preload="metadata"
+                      className="hidden"
+                      crossOrigin="anonymous"
+                    />
                   </div>
-                  <audio
+                ) : (
+                  <video
                     ref={videoRef}
-                    src={streamUrl}
+                    src={usingClip ? undefined : streamUrl}
+                    className="w-full h-full object-contain"
                     preload="metadata"
-                    className="hidden"
+                    playsInline
                     crossOrigin="anonymous"
                   />
-                </div>
-              ) : (
-                <video
-                  ref={videoRef}
-                  src={usingClip ? undefined : streamUrl}
-                  className="w-full h-full object-contain"
-                  preload="metadata"
-                  playsInline
-                  crossOrigin="anonymous"
-                />
-              )}
+                )}
 
-              {/* ── STATE 1: Media Fetching / Buffering Spinner ── */}
-              {(isMediaLoading || isBuffering || clipLoading) && !activeDownload && (
-                <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-                  {/* Triple-layer spinner */}
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-[3px] border-primary/10 animate-[ping_2s_ease-in-out_infinite]" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 border-[3px] border-white/10 border-t-primary rounded-full animate-spin" />
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Icon name={isAudio ? 'Music' : 'Wifi'} size={16} className="text-primary/80 animate-pulse" />
+                {/* ── STATE 1: Media Fetching / Buffering Spinner ── */}
+                {(isMediaLoading || isBuffering || clipLoading) && !activeDownload && (
+                  <div className="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                    {/* Triple-layer spinner */}
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full border-[3px] border-primary/10 animate-[ping_2s_ease-in-out_infinite]" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 border-[3px] border-white/10 border-t-primary rounded-full animate-spin" />
+                      </div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon name={isAudio ? 'Music' : 'Wifi'} size={16} className="text-primary/80 animate-pulse" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* ── STATE 2: Trimming / Processing Progress ── */}
-              {activeDownload && (
-                <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                  {/* Circular progress indicator */}
-                  <div className="relative w-24 h-24 mb-3">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
-                      <circle
-                        cx="50" cy="50" r="42" fill="none"
-                        stroke="url(#trimGradient)" strokeWidth="6"
-                        strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 42}`}
-                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - (activeDownload.progress || 0) / 100)}`}
-                        className="transition-all duration-500 ease-out"
-                        style={{ filter: 'drop-shadow(0 0 6px rgba(var(--color-primary-rgb),0.6))' }}
-                      />
-                      <defs>
-                        <linearGradient id="trimGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="var(--color-primary)" />
-                          <stop offset="100%" stopColor="var(--color-primary-light, #60a5fa)" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-lg font-black text-white font-mono leading-none">
-                        {activeDownload.progress}%
+                {/* ── STATE 2: Trimming / Processing Progress ── */}
+                {activeDownload && (
+                  <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                    {/* Circular progress indicator */}
+                    <div className="relative w-24 h-24 mb-3">
+                      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+                        <circle
+                          cx="50" cy="50" r="42" fill="none"
+                          stroke="url(#trimGradient)" strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 42}`}
+                          strokeDashoffset={`${2 * Math.PI * 42 * (1 - (activeDownload.progress || 0) / 100)}`}
+                          className="transition-all duration-500 ease-out"
+                          style={{ filter: 'drop-shadow(0 0 6px rgba(var(--color-primary-rgb),0.6))' }}
+                        />
+                        <defs>
+                          <linearGradient id="trimGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="var(--color-primary)" />
+                            <stop offset="100%" stopColor="var(--color-primary-light, #60a5fa)" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-lg font-black text-white font-mono leading-none">
+                          {activeDownload.progress}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">
+                        {activeDownload.status === 'processing' ? t('videoDetailsDownload.processing') : t('videoDetailsDownload.trimming')}
+                      </span>
+                      <span className="text-xs font-semibold text-white/80 truncate max-w-[250px]">
+                        {videoData?.title}
                       </span>
                     </div>
+                    {/* Bottom progress bar */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary via-primary-light to-primary transition-all duration-500 ease-out"
+                        style={{
+                          width: `${activeDownload.progress}%`,
+                          boxShadow: '0 0 15px rgba(var(--color-primary-rgb),0.6), 0 0 30px rgba(var(--color-primary-rgb),0.3)',
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">
-                      {activeDownload.status === 'processing' ? t('videoDetailsDownload.processing') : t('videoDetailsDownload.trimming')}
-                    </span>
-                    <span className="text-xs font-semibold text-white/80 truncate max-w-[250px]">
-                      {videoData?.title}
-                    </span>
-                  </div>
-                  {/* Bottom progress bar */}
-                  <div className="absolute bottom-0 left-0 right-0 h-1">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary via-primary-light to-primary transition-all duration-500 ease-out"
-                      style={{
-                        width: `${activeDownload.progress}%`,
-                        boxShadow: '0 0 15px rgba(var(--color-primary-rgb),0.6), 0 0 30px rgba(var(--color-primary-rgb),0.3)',
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* ── Play/Pause Controls (hidden during loading, buffering, clip prep, or trimming) ── */}
-              {!isMediaLoading && !isBuffering && !clipLoading && !activeDownload && (
-                <div className={`
+                {/* ── Play/Pause Controls (hidden during loading, buffering, clip prep, or trimming) ── */}
+                {!isMediaLoading && !isBuffering && !clipLoading && !activeDownload && (
+                  <div className={`
                   absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 transition-all duration-500
                   ${isHovering || !isPlaying ? 'bg-black/20 opacity-100 backdrop-blur-[1px]' : 'bg-transparent opacity-0 pointer-events-none'}
                 `}>
-                  <button
-                    onClick={togglePreview}
-                    className="group/playbtn relative w-16 h-16 rounded-full bg-primary/90 text-white flex items-center justify-center hover:bg-primary hover:scale-110 transition-all shadow-glass-lg"
-                    title={isPlaying ? 'Pause preview' : 'Play preview in selected range'}
-                  >
-                    <Icon name={isPlaying ? 'Pause' : 'Play'} size={28} className="transition-transform group-hover/playbtn:scale-110" />
-                    {!isPlaying && (
-                      <div className="absolute -inset-2 rounded-full border-2 border-primary/30 animate-ping opacity-20" />
-                    )}
-                  </button>
+                    <button
+                      onClick={togglePreview}
+                      className="group/playbtn relative w-16 h-16 rounded-full bg-primary/90 text-white flex items-center justify-center hover:bg-primary hover:scale-110 transition-all shadow-glass-lg"
+                      title={isPlaying ? 'Pause preview' : 'Play preview in selected range'}
+                    >
+                      <Icon name={isPlaying ? 'Pause' : 'Play'} size={28} className="transition-transform group-hover/playbtn:scale-110" />
+                      {!isPlaying && (
+                        <div className="absolute -inset-2 rounded-full border-2 border-primary/30 animate-ping opacity-20" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Top: Current Seeking/Playback Time Overlay */}
+                <div className="absolute top-4 left-4 z-40 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 shadow-glass-sm flex items-center gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-red-500 animate-pulse' : 'bg-white/40'}`} />
+                  <span className="text-xs font-mono font-bold text-white tracking-widest leading-none">
+                    {fmtMmSs(playheadTime)} <span className="text-white/40">/</span> {fmtMmSs(dur)}
+                  </span>
                 </div>
-              )}
-
-              {/* Top: Current Seeking/Playback Time Overlay */}
-              <div className="absolute top-4 left-4 z-40 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 shadow-glass-sm flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-red-500 animate-pulse' : 'bg-white/40'}`} />
-                <span className="text-xs font-mono font-bold text-white tracking-widest leading-none">
-                  {fmtMmSs(playheadTime)} <span className="text-white/40">/</span> {fmtMmSs(dur)}
-                </span>
-              </div>
 
 
-              {/* Bottom: playback range indicator display */}
-              {!activeDownload && (
-                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40">
-                  <div className="px-4 py-2 rounded-2xl bg-gray-950 border border-white/10 text-white shadow-glass-lg whitespace-nowrap flex items-center gap-3 active:scale-95 transition-transform duration-200 cursor-default">
-                    <div className="flex items-center gap-2 text-white font-bold uppercase tracking-[0.15em] text-[9px]">
-                      <Icon name="Scissors" size={12} className="text-primary animate-pulse" />
-                      <span>{t('videoDetailsDownload.selectedRange')}</span>
-                    </div>
+                {/* Bottom: playback range indicator display */}
+                {!activeDownload && (
+                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40">
+                    <div className="px-4 py-2 rounded-2xl bg-gray-950 border border-white/10 text-white shadow-glass-lg whitespace-nowrap flex items-center gap-3 active:scale-95 transition-transform duration-200 cursor-default">
+                      <div className="flex items-center gap-2 text-white font-bold uppercase tracking-[0.15em] text-[9px]">
+                        <Icon name="Scissors" size={12} className="text-primary animate-pulse" />
+                        <span>{t('videoDetailsDownload.selectedRange')}</span>
+                      </div>
 
-                    <div className="h-4 w-px bg-white" />
+                      <div className="h-4 w-px bg-white" />
 
-                    <div className="flex items-center gap-2.5 font-mono font-black text-sm text-primary tracking-tight">
-                      <span className="drop-shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]">{fmtMmSs(startTime)}</span>
-                      <Icon name="ArrowRight" size={12} className="text-white" />
-                      <span className="drop-shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]">{fmtMmSs(endTime)}</span>
+                      <div className="flex items-center gap-2.5 font-mono font-black text-sm text-primary tracking-tight">
+                        <span className="drop-shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]">{fmtMmSs(startTime)}</span>
+                        <Icon name="ArrowRight" size={12} className="text-white" />
+                        <span className="drop-shadow-[0_0_8px_rgba(var(--color-primary-rgb),0.5)]">{fmtMmSs(endTime)}</span>
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+            ) : !previewEnabled ? (
+              /* Placeholder — shown before any user interaction */
+              <div
+                className="relative aspect-video rounded-xl overflow-hidden border border-dashed border-border/50 bg-black/5 dark:bg-white/[0.03] flex flex-col items-center justify-center gap-4 group/placeholder cursor-pointer select-none"
+                onClick={() => setPreviewEnabled(true)}
+              >
+                {videoData?.thumbnail && (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-10 blur-sm"
+                    style={{ backgroundImage: `url(${videoData.thumbnail})` }}
+                  />
+                )}
+                <div className="relative z-10 flex flex-col items-center gap-3 text-center px-6">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center group-hover/placeholder:bg-primary/20 group-hover/placeholder:border-primary/40 transition-all duration-300">
+                    <Icon name="Play" size={24} className="text-primary ml-1" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-bold text-foreground">Load Preview</p>
+                    <p className="text-xs text-muted-foreground max-w-[220px] leading-relaxed">
+                      Drag a handle, type a time, or pick a preset preview loads automatically.
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : null
           )}
+
 
           {/* ── Range selector label + Trim Guide ──────────────────────── */}
           <div className="flex items-center justify-between">
@@ -613,11 +710,10 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
             <div className="relative">
               <button
                 onClick={() => setShowTrimGuide(!showTrimGuide)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
-                  showTrimGuide
-                    ? 'bg-primary text-white shadow-glass-sm'
-                    : 'text-muted-foreground/60 hover:text-primary hover:bg-primary/10'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${showTrimGuide
+                  ? 'bg-primary text-white shadow-glass-sm'
+                  : 'text-muted-foreground/60 hover:text-primary hover:bg-primary/10'
+                  }`}
               >
                 <Icon name="HelpCircle" size={13} />
                 <span className="hidden sm:inline">{t('videoDetailsDownload.trimmerGuide')}</span>
@@ -629,11 +725,10 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
                   {/* Backdrop to close */}
                   <div className="fixed inset-0 z-40" onClick={() => setShowTrimGuide(false)} />
                   <div
-                    className={`absolute right-0 top-full mt-2 z-50 w-[320px] rounded-2xl border p-5 shadow-xl animate-scale-in ${
-                      isDark
-                        ? 'bg-gray-900 border-white/10'
-                        : 'bg-white border-gray-200'
-                    }`}
+                    className={`absolute right-0 top-full mt-2 z-50 w-[320px] rounded-2xl border p-5 shadow-xl animate-scale-in ${isDark
+                      ? 'bg-gray-900 border-white/10'
+                      : 'bg-white border-gray-200'
+                      }`}
                     style={{
                       boxShadow: isDark
                         ? '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)'
@@ -696,7 +791,7 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
                 return (
                   <button
                     key={label}
-                    onClick={() => applyTrim(s, e)}
+                    onClick={() => { setPreviewEnabled(true); applyTrim(s, e); }}
                     className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all spring-smooth
                       ${active
                         ? 'bg-primary border-primary text-white shadow-glass-sm'
@@ -990,7 +1085,18 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
 
           {/* ── Selected quality badge ────────────────────────────────────── */}
           {!isThumbnail && (() => {
-            const effectiveFormat = isAudio ? 'MP3' : (dlFormat || 'mp4').toUpperCase();
+            // Derive the exact format label from selectedConfig — same logic as DownloadTabs
+            let effectiveFormat;
+            if (isAudio) {
+              if (dlConvertToMp3) {
+                effectiveFormat = 'MP3';
+              } else {
+                // dlNativeExt is already derived from selectedConfig.format at the top of the component
+                effectiveFormat = (dlNativeExt || 'opus').toUpperCase();
+              }
+            } else {
+              effectiveFormat = (dlFormat || 'mp4').toUpperCase();
+            }
             const effectiveQuality = isAudio
               ? 'Best Audio'
               : (dlQuality && dlQuality !== 'audio' ? dlQuality : (videoData?.max_quality || '1080p'));
@@ -1018,8 +1124,8 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
                 {/* Info hint */}
                 <div
                   className="relative ml-auto flex items-center gap-1.5 text-muted-foreground/50 hover:text-primary transition-colors cursor-pointer group/hint"
-                  title="Change quality in Download Options above"
-                  onClick={() => document.getElementById('download-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                  title="Change quality in Advanced Options above"
+                  onClick={() => document.getElementById('advanced-options')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                 >
                   <Icon name="ArrowUp" size={13} className="group-hover/hint:animate-bounce" />
                   <span className="text-[9px] italic hidden sm:block group-hover/hint:underline">{t('videoDetailsDownload.changeInOptions')}</span>
@@ -1029,7 +1135,7 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
           })()}
 
           <div className="grid grid-cols-3 gap-3">
-            {/* Range */}
+            {/* Range — shows 0:00 → 0:00 until user actually trims */}
             <div className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-2xl bg-primary/5 border border-primary/15 hover:border-primary/25 transition-colors">
               <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center mb-0.5">
                 <Icon name="Scissors" size={15} className="text-primary" />
@@ -1038,18 +1144,19 @@ const VideoTrimmer = ({ videoData, onTrimChange, onDownload, onSelectConfig, sel
                 {t('videoDetailsDownload.rangeBadge')}
               </p>
               <p className="text-[13px] font-black text-primary font-mono text-base">
-                {fmtMmSs(startTime)} → {fmtMmSs(endTime)}
+                {isTrimmed ? `${fmtMmSs(startTime)} → ${fmtMmSs(endTime)}` : '0:00 → 0:00'}
               </p>
             </div>
 
-            {/* Trimmed Duration */}
-            <div className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-2xl bg-accent/10 border border-primary/15 hover:border-primary/25 transition-colors">             <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center mb-0.5">
-              <Icon name="Clock" size={15} className="text-foreground/70" />
-            </div>
+            {/* Trimmed Duration — shows 0s until user actually trims */}
+            <div className="flex flex-col items-center gap-1.5 px-3 py-4 rounded-2xl bg-accent/10 border border-primary/15 hover:border-primary/25 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center mb-0.5">
+                <Icon name="Clock" size={15} className="text-foreground/70" />
+              </div>
               <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.15em] leading-tight text-center">
                 {t('videoDetailsDownload.trimmedDurationBadge')}
               </p>
-              <p className="text-base font-black text-foreground font-mono">{fmtDisplay(trimmedDur)}</p>
+              <p className="text-base font-black text-foreground font-mono">{isTrimmed ? fmtDisplay(trimmedDur) : '0s'}</p>
             </div>
 
             {/* Reset — full card clickable */}

@@ -127,6 +127,18 @@ const DownloadCard = ({ download, onCancel, onPause, onResume, onDismiss, onOpen
                   <span className="text-[10px] font-bold text-primary uppercase tracking-wide">{download.type}</span>
                 </div>
               )}
+              {download.format_id && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-violet-500/30 bg-violet-500/10 shadow-sm">
+                  <Icon name="Layers" size={10} className="text-violet-500" />
+                  <span className="text-[10px] font-bold text-violet-500 tracking-wide">id:{download.format_id}</span>
+                </div>
+              )}
+              {download.audio_format_id && !download.format_id && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-violet-500/30 bg-violet-500/10 shadow-sm">
+                  <Icon name="Layers" size={10} className="text-violet-500" />
+                  <span className="text-[10px] font-bold text-violet-500 tracking-wide">id:{download.audio_format_id}</span>
+                </div>
+              )}
               {(isCompleted || isFailed || isPaused) && download.completedAt && (
                 <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-foreground/10 bg-foreground/5 shadow-sm">
                   <Icon name="Clock" size={10} className="text-muted-foreground" />

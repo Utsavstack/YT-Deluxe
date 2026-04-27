@@ -319,4 +319,34 @@
   45% { transform: rotateZ(5deg); }
   60% { transform: rotateZ(-5deg); }
   75% { transform: rotateZ(2deg); }
+}
+
+/* Custom Scrollbar */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.3);
+    border-radius: 10px;
+  }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: rgba(156, 163, 175, 0.8);
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
 }

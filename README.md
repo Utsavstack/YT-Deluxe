@@ -9,7 +9,7 @@
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
 [![PO Token Provider](https://img.shields.io/github/v/release/Brainicism/bgutil-ytdlp-pot-provider?label=PO%20Token%20Provider&style=for-the-badge)](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
 
-**YT Deluxe** is a Free & OpenSource, Full-stack, Feature-rich YouTube Downloader and Media Management Web Application with a premium **"Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to search, preview, and download YouTube videos and audio with a streamlined, premium experience.
+**YT Deluxe** is a *Free & OpenSource, Full-stack, Feature-rich* **YouTube Downloader and Media Management Hybrid (Web & Desktop) Application** with a **"Premium Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to **Search**, **Preview**, and **Download** YouTube Videos and Audio with a streamlined, premium experience.
 
 ---
 
@@ -55,7 +55,7 @@ In today’s digital-first world, YouTube is one of the largest sources of video
 
 ## 3. Demo
 
-> _Add screenshots or a GIF here to showcase the UI and features!_
+> *Add screenshots or a GIF here to showcase the UI and features!*
 
 ---
 
@@ -91,171 +91,670 @@ yt-deluxe/
 
 ## 5. Architecture & Workflows
 
-### 5.1 Unified Download Flow (yt-dlp to User Output)
+### 5.1 Complete User Lifecycle
 
-_How a video converts from a YouTube URL into a file on your device._
+*The full step-by-step journey from URL/keyword input to a saved media file on your device.*
 
 ```mermaid
 flowchart TD
-    UI[User Clicks Download] --> API[Backend API Receives Request]
-    API --> YTDLP[yt-dlp fetches Metadata & Streams]
-    
-    YTDLP -- Resolution <= 720p --> Stream[Direct Single Stream File]
-    YTDLP -- Resolution >= 1080p / Trimming --> Split[Separate Video & Audio Streams]
-    
-    Split --> FFMPEG[FFmpeg Processes & Merges Streams]
-    FFMPEG --> Temp[Temporary Multiplexed .mp4/.mp3 File]
-    Stream --> Temp
-    
-    Temp --> Output{Environment Check \n isDesktop flag}
-    Output -- Web App Mode --> Web[Browser Triggers Download \n File Saves to Default Downloads]
-    Output -- Windows Desktop Mode --> PC[File Moves to Local \n YT Deluxe Downloads/Videos]
+    A["User enters URL or keyword\n(Search page)"] --> B["GET /api/search\nyt-dlp / YouTube search API\nReturns title, thumbnail, duration, channel"]
+    B --> C["VideoCard rendered in search grid"]
+    C --> D{"User hover > 600ms?"}
+    D -- Yes --> E["YouTube iframe loads\n(Hybrid Player Layer 1)\nor backend stream fallback"]
+    D -- No --> F["User clicks card"]
+    E --> F
+    F --> G["Navigate to VideoDetailsDownload\nGET /api/video?url=...\nyt-dlp extracts full format list"]
+    G --> H["Backend builds formats + all_formats\n(recommended + every raw stream)"]
+    H --> I["videoData set in index.jsx\nDownloadTabs + VideoTrimmer receive props"]
+    I --> J["User sees:\nQuick Actions sidebar\nQuick Download preset cards\nAdvanced Options quality grid"]
+    J --> K{"User action?"}
+    K -- "Quick Actions\n(1-click)" --> L["handleDownload direct\nno format_id\nbackend auto-selects"]
+    K -- "Preset card\nor quality grid" --> M["handlePresetDownload /\nhandleCustomDownload\nformat_id + container resolved"]
+    K -- "Advanced Grid\n(Show All Formats)" --> N["advancedSelectedId set\nexact stream format_id locked"]
+    L & M & N --> O["POST /api/download\nFormData: url, quality, format, format_id,\naudio_format_id, container, convert_to_mp3,\nrename, trim_start, trim_end"]
+    O --> P["download_worker() spawned\nas background task"]
+    P --> Q{"Which backend path?"}
+    Q -- "format_id set\n(Exact stream)" --> R["FORMAT_ID PATH\nDerives native container\nCodec-compatible audio spec"]
+    Q -- "type=audio or\nconvert_to_mp3" --> S["AUDIO PATH\nMP3 transcode or\nNative M4A / Opus"]
+    Q -- "Quality label only\n(no format_id)" --> T["QUALITY PATH\nbestvideo height<=N\n+bestaudio"]
+    R & S & T --> U["yt-dlp downloads streams\nFFmpeg merges if needed"]
+    U --> V{"Trim requested?"}
+    V -- Yes --> W["Unique _ytd_taskid prefix\nFFmpeg -ss START -t DUR -c copy\nRename to clean filename"]
+    V -- No --> X["Snapshot diff file detection\nNew file identified"]
+    W & X --> Y{"isDesktop?"}
+    Y -- Desktop --> Z["File saved to\nYT Deluxe Downloads/\nVideos or Music folder"]
+    Y -- Web --> AA["FileResponse streamed\nto browser\nAuto-cleanup after 10 min"]
+    Z & AA --> AB["History logged\ntask status = completed\nFrontend progress reaches 100%"]
 ```
 
-**Detailed Step-by-Step Flow Explanation:**
+> **In plain words:** Think of this as the master map of the entire app. You type a song or video name, the app searches YouTube, shows you results with a tiny preview on hover. You click one, the app quietly fetches every quality option YouTube has for that video. You pick what you want or let the app decide click Download, and the file lands in your folder. Everything between those two actions (search and saved file) is what this diagram shows.
 
-1. **Request Initiation**: When a user selects a format and clicks Download, the React frontend sends a `POST` request to the `/api/download` endpoint with the video URL and selected quality parameters.
-2. **Metadata Extraction**: The FastAPI backend invokes `yt-dlp` to fetch metadata. If a "PO Token" is required to bypass bot detection, it is automatically generated and injected into the request.
-3. **Stream Selection Logic**:
-   - **Standard Quality (<= 720p)**: YouTube provides these as "progressive" streams (Video and Audio combined). The app downloads this as a single coherent file directly to the temporary processing directory.
-   - **High Quality (>= 1080p) & MP3**: YouTube serves these as separate "DASH" streams. The background task downloads the high-res video (without audio) and the high-bitrate audio (without video) as two distinct temporary files.
-4. **Processing & Merging (FFmpeg)**:
-   - If streams were split (High Quality), `FFmpeg` is automatically triggered to multiplex (merge) the video and audio into a single `.mp4` container.
-   - If "Trimming" was requested, `FFmpeg` cuts the file at the specified `start` and `end` timestamps without re-encoding when possible, ensuring zero quality loss.
-5. **Environment Check (`isDesktop` Flag)**:
-   - **Web Mode**: Once the file is ready in the `tempfiles/` folder, the backend returns a success status. The frontend then uses a hidden `<a>` tag to trigger a native browser download, saving the file to the user's default browser downloads folder.
-   - **Desktop Mode**: The `isDesktop` flag (detected via `window.pywebview`) tells the backend to handle the file writes natively. The file is downloaded directly to the user's local `YT Deluxe Downloads/` subdirectories (Videos, Music, or Thumbnails) instead of a temporary folder. The user can then click "Open in Explorer" in the UI to trigger a background API call that natively highlights the file in Windows Explorer.
-6. **Auto-Cleanup**: After the user receives the file, a self-destruct timer wipes the file from the server's temporary storage to keep it lightweight.
+### Step-by-step breakdown
 
 ---
 
-### 5.2 Download Architecture Details
+#### Step 1: Search or URL Entry
 
-The application uses a sophisticated **Server-Merged Tempfile Architecture** to ensure the smoothest user experience:
+**Component:** `SearchPage` | **API:** `GET /api/search?q=...`
 
-1. **Background Tasks**: All extraction (including `<720p` progressive and `1080p+` DASH formats) occurs in a robust background worker inside the FastAPI backend.
-2. **WebSocket/Polling Progress**: Frontend seamlessly pulls download speed, ETA, and progress from the backend without heavy page reloads, showing a smooth in-app progress bar.
-3. **Seamless Native Delivery**: Upon 100% completion in the backend `tempfiles` directory, the UI assesses the `{Environment Check}` via the `isDesktop` flag (detected through `window.pywebview`).
-    - **Web Form**: A hidden `<a download>` tag silently triggers the browser's native file saving window.
-    - **Desktop Form**: FastAPI natively saves the file directly to your Custom Download Directory. An "Open Folder" button in the UI can execute a foreground Windows Explorer window to highlight the file.
-4. **Auto-Cleanup**: A background threading daemon automatically sets self-destruct timers for completed files, wiping them from the `tempfiles` folder exactly 10 minutes after download to eliminate permanent server storage bloat.
-5. **Anti-Bot Engine (PO Tokens)**: Deeply integrates a Node.js-based HTTP server inside the container alongside FastAPI that silently negotiates Proof-of-Origin limits with YouTube via mobile web profiles, effectively avoiding `HTTP 403 Forbidden` bans.
-6. **Hybrid Architecture (`isDesktop`)**: Automatically detects if it's running in a browser or as an installed Windows app via `window.pywebview` presence. This detection dictates the **{Environment Check}** step in the workflow altering features (like hiding Storage Settings on the Web) seamlessly.
-7. **Hybrid Storage & History Handling**:
-   - `tempfiles/`: Used internally by the backend for processing FFmpeg merges.
-   - `localStorage`: Fast, isolated history storage specifically for Web deployments.
-   - `~/.yt-deluxe/`: Persistent local JSON for Desktop installations.
+The user types a keyword (e.g., "lofi beats") or pastes a direct YouTube URL into the search bar and presses Enter. The frontend calls `GET /api/search?q=<query>`. The backend runs `yt-dlp` with `ytsearch10:<query>` to get the top 10 results from YouTube, returning for each: title, channel name, duration, view count, publish date, and thumbnail URL. If a direct URL is pasted, the search is skipped and the user is routed straight to the details page.
 
-### 5.3 End-to-End System Structure
+> The app never talks to the YouTube website directly from your browser all YouTube communication goes through the backend, which also handles cookies and PO Token negotiation invisibly.
 
-_How the entire platform communicates during a download lifecycle._
+---
+
+#### Step 2: Search Results Grid
+
+**Component:** `VideoCard`
+
+The 10 results are rendered as a responsive card grid. Each card shows the thumbnail image, video title, channel name, duration badge, and view count. Cards are lazy-loaded so images only fetch when they scroll into view. No video data or stream URLs are fetched at this point only the lightweight metadata from Step 1:.
+
+---
+
+#### Step 3: Hover Preview (Hybrid Player)
+
+**Component:** `VideoCard` | **API:** `GET /api/stream` (fallback only)
+
+When the user hovers over a card for more than 600ms, a video preview activates inside the card thumbnail area. The app first tries to load a YouTube iframe embed (`youtube.com/embed/{videoId}?autoplay=1&muted=1`). If YouTube allows it, the preview plays from YouTube's CDN zero backend cost. If YouTube blocks embedding (age-gate, copyright restriction), the app silently switches to `GET /api/stream?url=...&quality=360p` and plays via a native `<video>` tag. Moving the cursor away resets the state; the next hover starts fresh.
+
+> The 600ms delay is intentional it prevents accidental previews when the user is just scanning through results.
+
+---
+
+#### Step 4: User Clicks a Card
+
+**Component:** React Router
+
+Clicking a card triggers a client-side navigation to `/video?url=<youtube_url>`. No page reload happens React Router mounts the `VideoDetailsDownload` page component and passes the URL as a query parameter.
+
+---
+
+#### Step 5: Video Details Page & Format Fetch
+
+**Component:** `index.jsx` | **API:** `GET /api/video?url=...`
+
+As soon as `VideoDetailsDownload` mounts, `index.jsx` calls `YTDeluxeAPI.getVideoDetails(url)`. The backend runs `yt-dlp` with `skip_download: True` to extract the full stream manifest without downloading anything. It processes every format in the manifest:
+
+- **Audio streams** filtered by codec, sorted by bitrate, deduplicated to one per codec family (Opus, AAC, other), max 3 total
+- **Video streams** the single best stream per resolution height (by `tbr` then `filesize`) is kept for `formats`; every raw stream is kept for `all_formats`
+
+The response returns two lists: `formats` (recommended, 5–8 entries) and `all_formats` (every unique stream, often 20–40 entries).
+
+---
+
+#### Step 6: Formats Populate the UI
+
+**Component:** `DownloadTabs`, `VideoTrimmer`
+
+`index.jsx` stores the API response in `videoData` state and passes it as props to both `<DownloadTabs>` and `<VideoTrimmer>`. Inside `DownloadTabs`, `useMemo` hooks filter `videoData.formats` into `videoQualities` (type=video, sorted by height desc) and `audioQualities` (type=audio, sorted by quality index). These power the Quick Download preset cards and the full quality grid. `videoData.all_formats` powers the "Show All Advanced Formats" dropdown.
+
+---
+
+#### Step 7: User Selects Quality / Format / Container
+
+**Component:** `DownloadTabs`
+
+The user has three download surfaces to choose from:
+
+| Surface | What it does |
+|---------|-------------|
+| **Quick Actions** (sidebar) | Three hardcoded 1-click buttons Best Video, Audio Only, Thumbnail. No configuration, no format_id. Backend auto-selects. |
+| **Quick Download** (preset cards) | Three auto-picked cards: best, middle, lowest quality. Clicking one sets `selectedQuality` and resolves `format_id`. |
+| **Advanced Options** (quality grid + dropdown) | Full quality grid from all `videoQualities`/`audioQualities`. "Show All Advanced Formats" exposes every raw stream by `format_id`. Container dropdown selects MP4/MKV/WebM/MOV or Auto (native). |
+
+Any selection calls `onSelect(config)` which updates `selectedConfig` in `index.jsx` the single source of truth for the current download configuration.
+
+---
+
+#### Step 8: Optional: VideoTrimmer Engagement
+
+**Component:** `VideoTrimmer` | **API:** `GET /api/stream`
+
+The `VideoTrimmer` is rendered below `DownloadTabs` but starts in a dormant state no network requests, just a static thumbnail placeholder. It only fetches a stream URL when the user explicitly interacts: drags a handle, types a time, clicks a preset chip (First 30s, Last 5m, etc.), or clicks the Preview button.
+
+Once unlocked (`previewEnabled = true`), the trimmer loads the backend stream URL into a `<video>` tag and enables the seek/preview controls. The user sets `trimStart` and `trimEnd` values which are stored in `selectedConfig.trim_start` and `selectedConfig.trim_end`.
+
+> Lazy loading means opening the details page costs zero extra server requests for users who don't need trimming.
+
+---
+
+#### Step 9: User Clicks Download
+
+**Component:** `DownloadContext` | **API:** `POST /api/download`
+
+Clicking Download calls `addDownload(config, videoData)` in `DownloadContext`. This maps `selectedConfig` to an API payload and builds a `FormData` object with all fields:
+
+```
+url, quality, format, format_id, audio_format_id,
+container, convert_to_mp3, rename, trim_start, trim_end,
+type, channel, thumbnail
+```
+
+`POST /api/download` is sent. The backend immediately returns a `task_id` (UUID) and spawns `download_worker()` as a FastAPI `BackgroundTask`. The frontend begins polling `GET /api/progress/{task_id}` every second to update the progress bar.
+
+---
+
+#### Step 10: Backend Download Worker
+
+**Component:** `main.py: download_worker()` | **API:** internal
+
+The worker takes one of three paths based on the payload:
+
+| Path | Triggered when | Strategy |
+|------|---------------|----------|
+| **FORMAT_ID** | `format_id` is set and `type != 'audio'` | Looks up stream native ext, derives safe container, builds codec-compatible audio spec, sets `merge_output_format` only if needed |
+| **AUDIO** | `type == 'audio'` or `convert_to_mp3 == True` | MP3: `FFmpegExtractAudio` + `EmbedThumbnail`. M4A: `writethumbnail` + `EmbedThumbnail`. Opus/WebM: `FFmpegMetadata` only |
+| **QUALITY LABEL** | No `format_id`, quality string only | `bestvideo[height<=N][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=N]+bestaudio/best` |
+
+`yt-dlp.download([url])` runs and streams progress events back to the task status store. FFmpeg merges audio+video streams if they were downloaded separately (DASH format).
+
+---
+
+#### Step 11: File Detection & Trim
+
+**Component:** `main.py` (post-download logic)
+
+After `yt-dlp` completes, the backend must locate the output file:
+
+- **Trimmed requests** `outtmpl` was prefixed with `_ytd_{task_id[:12]}` before download. The backend finds the file by scanning for that unique prefix 100% deterministic.
+- **Normal requests** uses a snapshot diff: directory listing before download vs after. New files are matched by title prefix. Two fallbacks exist: files modified in the last 90s matching the title (covers in-place overwrite), then the most-recently-modified file in the last 60s.
+
+If `trim_start`/`trim_end` were set, FFmpeg runs: `ffmpeg -ss START -t DURATION -c copy output.ext`. Stream copy (`-c copy`) preserves 100% quality. If copy fails, it re-encodes. The temp prefixed file is then renamed to the clean user-facing filename.
+
+---
+
+#### Step 12: File Delivery
+
+**Component:** `DownloadProgress` | **API:** `GET /api/progress/{task_id}`, `GET /api/download-file/{task_id}`
+
+The frontend's polling detects `status: completed`. Depending on environment:
+
+| Mode | Delivery |
+|------|---------|
+| **Desktop (isDesktop = true)** | File was already written directly to `~/YT Deluxe Downloads/Videos/` or `Music/`. Frontend shows "Open File" and "Open Folder" buttons that call `POST /api/desktop/open-file`. |
+| **Web (isDesktop = false)** | `FileResponse` streams the file to the browser. The browser's native download dialog triggers and saves to the user's Downloads folder. |
+
+---
+
+#### Step 13: History & Cleanup
+
+**Component:** `DownloadContext`, `main.py` | **API:** `GET /api/history`
+
+A history entry is written to `~/.yt-deluxe/history.json` containing: title, channel, thumbnail URL, file path, file size, format, quality, and timestamp. On Web mode, a background cleanup task auto-deletes the temp server file after 10 minutes. The frontend's history panel reads `GET /api/history` and shows all past downloads with re-download and delete options.
+
+---
+
+### 5.2 Hybrid Video Player Architecture
+
+*How YT-Deluxe plays video across three different contexts with zero unnecessary backend load and a seamless fallback when YouTube restricts embedding.*
+
+#### 5.2.1 The Two-Layer Strategy
+
+All three video surfaces in YT-Deluxe follow the same decision tree:
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant YouTube (yt-dlp)
-    
-    User->>Frontend: Submit URL
-    Frontend->>Backend: Request Download Status
-    Backend->>YouTube: Validate URL & Fetch Formats
-    YouTube-->>Backend: Return Available Audio/Video
-    Backend-->>Frontend: Send Formats to UI
-    User->>Frontend: Select 1080p & Hit Download
-    Frontend->>Backend: POST /api/download
-    Backend-->>Frontend: Return Progress Tracking ID
-    Backend->>YouTube: Download Raw Streams to Temp Folder
-    Backend->>Backend: FFmpeg Merges Audio/Video
-    Backend-->>Frontend: Progress Reaches 100%
-    Frontend->>User: Deliver Media File
+flowchart TD
+    Start([User triggers video play]) --> IFrame
+
+    subgraph Primary["Layer 1 YouTube IFrame Embed (Zero Server Cost)"]
+        IFrame["Load YouTube embed\nhttps://youtube.com/embed/{videoId}\n?enablejsapi=1&controls=0"]
+        IFrame --> Ping["Ping iframe every 250ms\nvia postMessage to activate YT IFrame API"]
+        Ping --> Listen["Listen for YouTube events\nonStateChange / infoDelivery / onError"]
+        Listen --> ErrCheck{Embed Error?\ninfo=150 or 101}
+    end
+
+    ErrCheck -- No --> Playing["Video plays via YouTube CDN\nFull custom controls via postMessage\nZero backend bandwidth"]
+
+    ErrCheck -- Yes --> Fallback
+
+    subgraph Fallback["Layer 2 Backend Stream Fallback"]
+        Fallback["Switch to native HTML5 video tag\nsrc = /api/stream?url=...&quality=Xp"]
+        Fallback --> Native["Video plays via backend\nyt-dlp extracts direct stream URL\nFFmpeg pipes to browser"]
+    end
+
+    Playing --> Controls["Custom Controls\nPlay/Pause · Seek · Volume · Speed · Fullscreen"]
+    Native --> Controls
 ```
 
-**End-to-End Sequence Breakdown:**
+> **In plain words:** Every video that plays inside YT-Deluxe tries to use YouTube's own player first zero server cost, just like watching on youtube.com. If YouTube blocks embedding for that video (age-gate, copyright, etc.), the app silently switches to a backend stream without you noticing anything. You always get video, one way or another.
 
-1. **Discovery**: The user enters a search term or URL. The frontend calls the backend which uses `yt-dlp` to fetch all available metadata (resolutions, formats, thumbnails).
-2. **Configuration**: The backend sends the available formats back to the UI. The user selects their desired quality (e.g., 1080p MP4) and optional settings like "Trimming".
-3. **Task Initiation**: Clicking "Download" sends a `POST` request. The backend initializes a `Background Task`, generates a unique `task_id`, and returns it immediately to the frontend.
-4. **Active Processing**: While the backend is busy downloading and merging streams using FFmpeg, the frontend uses the `task_id` to poll for real-time progress updates.
-5. **Final Delivery**: Once progress reaches 100%, the backend prepares the final file. The frontend then triggers the final download/move logic based on the detected environment.
+> **Layer 1** covers ~90% of cases. **Layer 2** is the silent safety net for age-gated, copyrighted, or embedding-disabled videos.
 
 ---
 
-### 5.4 Hosted Web Application Architecture
+#### 5.2.2 Component-Level Breakdown
 
-_How the platform operates when hosted on cloud servers._
+Each of the three player surfaces has a slightly different role and fallback behavior:
 
 ```mermaid
 flowchart LR
-    subgraph Client Browser
-        UI[React Frontend]
-        Local[localStorage / History]
+    subgraph VideoCard["VideoCard Search Grid Hover Preview"]
+        VC1["Hover for 600ms\n→ playVideo = true"]
+        VC2["YouTube iframe loads\n(autoplay, muted=user state)"]
+        VC3{embedError?}
+        VC4["Native video\n/api/stream?quality=480p\nautoPlay, muted"]
+        VC5["Custom mini-controls\nPlay · Mute · Seekbar\nvia postMessage"]
+        VC1 --> VC2 --> VC3
+        VC3 -- No --> VC5
+        VC3 -- Yes --> VC4
     end
-    
-    subgraph Cloud Server Infrastructure
-        API[FastAPI Backend]
-        Temp[Volatile tempfiles/ Dir]
-        YTDLP[yt-dlp + FFmpeg Core]
+
+    subgraph PIP["GlobalPIPPlayer Picture-in-Picture"]
+        PIP1["openPip called\nwith video object"]
+        PIP2["YouTube iframe\n(340px floating window)"]
+        PIP3{embedError?}
+        PIP4["Native video\n/api/stream?quality=480p"]
+        PIP5["Controls: Play · ±10s\nSeek · Mute · Fullscreen\nDownload redirect"]
+        PIP1 --> PIP2 --> PIP3
+        PIP3 -- No --> PIP5
+        PIP3 -- Yes --> PIP4
     end
-    
-    UI <--> |API Requests / Polling| API
-    API --> YTDLP
-    YTDLP --> Temp
-    Temp -- Final Media Stream --> UI
-    UI -- Log Action --> Local
+
+    subgraph VP["VideoPlayer Details Page"]
+        VP1["Page loads\nuseIframe = true"]
+        VP2["YouTube iframe\nfull-width aspect-video"]
+        VP3{embedError?}
+        VP4["Native video\nvideo Data.videoUrl\n/api/stream?quality=720p"]
+        VP5["Full custom controls\nPlay · ±10s skip · Speed\nVolume · Seek · Fullscreen"]
+        VP1 --> VP2 --> VP3
+        VP3 -- No --> VP5
+        VP3 -- Yes --> VP4
+    end
 ```
 
-**Web Deployment Workflow:**
-
-- **Client Layer**: The React frontend is served as static assets. It uses `localStorage` for local persistence of history and settings, ensuring that user data stays private and localized to their browser.
-- **API Layer**: The FastAPI backend handles heavy lifting. It must be hosted on a service that supports persistent or scale-to-zero compute with `FFmpeg` installed.
-- **Volatile Storage**: The `tempfiles/` directory acts as a high-speed workspace for stream merging. Files here are ephemeral and auto-deleted after 10 minutes to maintain server health.
-- **Streaming**: The final file is streamed back to the user via an HTTP `FileResponse`, allowing the browser to handle the bitstream as a standard file download.
+> **In plain words:** There are three places video plays in the app: (1) the hover preview on search result cards, (2) the floating Picture-in-Picture mini-player, and (3) the full-size player on the video details page. All three follow the same rule YouTube embed first, server stream as backup. Each has a slightly different fallback timeout to balance speed against reliability.
 
 ---
 
-### 5.5 Native Windows Desktop Architecture
+#### 5.2.3 IFrame API Control Flow (Primary Mode)
 
-_How the platform operates when installed locally as an .exe via the Launcher._
+When the YouTube iframe is active, all player controls go through the **YouTube IFrame PostMessage API** no direct DOM manipulation:
+
+```mermaid
+sequenceDiagram
+    participant UI as React Controls
+    participant Iframe as YouTube iframe
+    participant YT as YouTube CDN
+
+    UI->>Iframe: postMessage {event:'command', func:'playVideo'}
+    Iframe->>YT: Resume CDN stream
+    YT-->>Iframe: Video frames
+    Iframe-->>UI: postMessage {event:'infoDelivery'}\n{currentTime, duration, volume, playerState}
+    UI->>UI: Update state (currentTime, isPlaying, isMuted...)
+
+    Note over UI,Iframe: Error path
+    Iframe-->>UI: postMessage {event:'onError', info: 150}\nor info=101 (embed restricted)
+    UI->>UI: setEmbedError(true)\nsetUseIframe(false)
+    UI->>UI: Switch to native <video> fallback
+```
+
+> **In plain words:** When the YouTube player is active, your custom Play/Pause/Seek controls send invisible messages to the YouTube frame (like a remote control over browser messaging). YouTube replies with the current time and player state, and the app's buttons update to match. If YouTube signals an error at any point (blocked video), the app catches it and automatically switches to the backend stream.
+
+---
+
+#### 5.2.4 Fallback Badge & UX
+
+When the backend stream fallback activates, a subtle pill badge appears on the player to inform the user:
+
+| Badge | When shown | Context |
+|---|---|---|
+| `Stream Fallback` | `embedError = true` | VideoPlayer (details page) |
+| `Fallback` | `embedError = true` | VideoCard hover & PIP player |
+
+The badge is non-intrusive a small `bg-black/60 backdrop-blur` pill in the top-left corner so playback is uninterrupted.
+
+---
+
+#### 5.2.5 Quality by Context
+
+| Surface | Iframe Resolution | Fallback Resolution | Rationale |
+|---|---|---|---|
+| **VideoCard Hover** | YouTube adaptive (auto) | `480p` | Small card, low bandwidth needed |
+| **PIP Player** | YouTube adaptive (auto) | `480p` | Floating window, same rationale |
+| **VideoPlayer** | YouTube adaptive (auto) | `720p` | Full-size player, higher quality expected |
+
+---
+
+#### 5.2.6 State Reset on Navigation
+
+- **VideoCard**: When the user moves their cursor away (`onMouseLeave`), both `playVideo`, `videoReady`, and `nativeFallback` reset to `false`. Next hover starts fresh.
+- **PIP Player**: When `closePip()` is called, `AnimatePresence` unmounts the iframe cleanly.
+- **VideoPlayer**: `useIframe` and `embedError` are component-scoped reset automatically when navigating to a new video details page.
+
+---
+
+### 5.3 Format Fetch, Preset Display & Download System
+
+This section documents exactly how formats become visible in the UI after a video is loaded, how each download surface works, and how a user's selection travels from click to a file on disk.
+
+---
+
+#### 5.3.1 Phase 1 Video Fetch & Format Collection (`GET /api/video`)
+
+When a user navigates to the Video Details page, `index.jsx` immediately calls `YTDeluxeAPI.getVideoDetails(url)`. The backend endpoint `GET /api/video` runs `yt-dlp` with `skip_download: True` to extract the full stream list without downloading anything.
+
+**Backend processing pipeline (`main.py: get_video_details`):**
+
+```
+yt-dlp extracts full info dict
+          ↓
+Loop through all raw formats:
+  ├── Audio-only (vcodec == 'none'):
+  │     Skip mhtml/vtt and 0-bitrate
+  │     Append every valid stream to audio_formats[]
+  └── Video streams (has height + vcodec):
+        Collect ALL into all_video_formats_raw[]
+        Keep BEST per height (by tbr/filesize) in seen_heights{}
+          ↓
+Deduplicate audio sort by ABR desc,
+keep 1 representative per codec family (opus / m4a / other), max 3
+          ↓
+Build `formats` list (Recommended 1 best video per height + up to 3 audio)
+Build `all_formats` list (Every stream all video heights × codecs + audio)
+```
+
+**Two distinct format lists returned:**
+
+| Field | Purpose | Size |
+|-------|---------|------|
+| `formats` | Recommended list shown in Quick Download & Quality Grid | 1 per height + max 3 audio |
+| `all_formats` | Raw stream list shown in "Show All Advanced Formats" | Every unique format_id |
+
+**Key fields on each format entry:**
+
+| Field | Video | Audio | Description |
+|-------|-------|-------|-------------|
+| `format_id` | Yes | Yes | yt-dlp's unique stream identifier |
+| `quality` | `1080p` / `4K` | `High Quality` / `Medium Quality` | Human label |
+| `ext` | `mp4` / `webm` | `webm` / `m4a` | Actual container extension |
+| `native_ext` | - | `opus` / `m4a` | Real extension (never `mp3`) |
+| `codec_family` | `avc1` / `vp9` / `av01` | - | For badge rendering |
+| `codec_display` | - | `Opus` / `AAC` | Human-readable codec name |
+| `tbr` / `abr` | Total bitrate | Audio bitrate | For size estimation |
+| `filesize` | Yes | Yes | Approximate bytes |
+| `type` | `video` | `audio` | For filtering in UI |
+
+---
+
+#### 5.3.2 Phase 2 Data Flow into the Page (`index.jsx`)
+
+After the API responds, `index.jsx` maps the response into `videoData` state:
+
+```js
+videoInfo = {
+  formats: response.video.formats,          // Recommended list → DownloadTabs
+  all_formats: response.video.all_formats,  // Full stream list → Advanced Grid
+  max_quality: bestQuality,                 // For Quick Actions badge
+  ...
+};
+setVideoData(videoInfo);
+```
+
+`videoData` is passed as a prop to both `<DownloadTabs>` and `<VideoTrimmer>`. Any change (tab switch, quality click, advanced selection) calls `onSelect(config)` → `handleSelectConfig(config)` → `setSelectedConfig(config)` in the parent. This `selectedConfig` is the **single source of truth** for the current user selection.
+
+---
+
+#### 5.3.3 Quick Actions (Sidebar `index.jsx`)
+
+The **Quick Actions** panel lives in the sidebar of `index.jsx`. It renders three hardcoded one-click buttons that bypass `DownloadTabs` entirely and call `handleDownload()` directly.
+
+```mermaid
+flowchart LR
+    QA["Quick Actions Sidebar"]
+    B1["Best Video (MP4)"]
+    B2["Audio Only (MP3)"]
+    B3["Thumbnail (JPG)"]
+    DL["handleDownload()"]
+    CTX["DownloadContext.addDownload()"]
+
+    QA --> B1 & B2 & B3
+    B1 & B2 & B3 --> DL --> CTX
+```
+
+> **In plain words:** Clicking "Show All Advanced Formats" opens a full list of every stream YouTube has for this video broken into Video Streams and Audio Streams sections. Each row shows the exact codec, resolution, bitrate, file size, and a unique stream ID. Clicking any row locks that precise stream for download. The backend will download exactly that stream no guessing, no auto-selection.
+
+| Button | Payload sent |
+|--------|-------------|
+| **Best Video** | `{ type:'video', quality: max_quality, format:'mp4' }` no `format_id`, backend auto-selects |
+| **Audio Only** | `{ type:'audio', quality:'High Quality', format:'mp3', convert_to_mp3:true }` |
+| **Thumbnail** | `{ type:'thumbnail', quality:'Max Resolution', format:'jpg' }` |
+
+> These buttons ignore any selection made in `DownloadTabs`. They are intentionally simple "one-click" shortcuts.
+
+---
+
+#### 5.3.4 Quick Download Section (`DownloadTabs.jsx` Preset Cards)
+
+The **Quick Download** section renders 3 preset cards built from `getPresetButtons()`:
+
+```js
+// Always picks: first (Best), middle, last (Lowest)
+const presets = [opts[0], opts[mid], opts[len-1]];
+```
+
+**Source of options by tab:**
+
+| Tab | Source | Computed by |
+|-----|--------|-------------|
+| Video | `videoQualities` filtered from `videoData.formats` where `type === 'video'`, sorted height desc | `useMemo` |
+| Audio | `audioQualities` filtered from `videoData.formats` where `type === 'audio'`, sorted by `quality_index` | `useMemo` |
+| Thumbnail | `thumbnailOptions` static array of 3 fixed options | Constant |
+
+Each preset card displays:
+
+- Quality label (e.g., `4K`, `High Quality`)
+- Format chip (e.g., `.webm`, `.m4a`)
+- Approximate file size
+- Codec badge with hover tooltip (`bestFor` string)
+- Bitrate (audio only)
+
+Clicking a preset card calls `handlePresetDownload(option)`:
+
+```js
+onDownload({
+  type: option.type || activeTab,
+  quality: option.quality,
+  format: isAudio ? (option.native_ext || option.ext) : option.ext,
+  format_id: isAudio ? null : option.format_id,
+  audio_format_id: isAudio ? option.format_id : null,
+  container: !isAudio ? selectedContainer : null,
+  convert_to_mp3: false,
+  filename: customFilename,
+});
+```
+
+> If `advancedSelectedId` is set (user previously picked from advanced grid), it overrides the preset and the exact advanced stream is downloaded instead.
+
+---
+
+#### 5.3.5 Advanced Options Section (`DownloadTabs.jsx`)
+
+The **Advanced Options** section (`id="advanced-options"`) is always visible below Quick Download. It contains:
+
+1. **Type tab bar** duplicate Video / Audio / Thumbnail tabs (same `activeTab` state, sliding pill animation)
+2. **Quality Grid** full list of recommended formats (not just 3 presets)
+3. **HelpCircle Guide tooltips** Video Guide / Audio Guide
+4. **MP3 Card** dedicated card always at the end of audio tab
+5. **Show All Advanced Formats** collapsible dropdown grid
+6. **Container Format dropdown** video tab only
+7. **Custom Filename** input with live extension chip/dropdown
+8. **Download Button** triggers `handleCustomDownload()`
+
+**Quality Grid (`Change M` in code):**
+
+Renders every entry from `activeOptions` (all `videoQualities` or `audioQualities`, not just 3). Each card:
+
+- Highlights when selected with `ring-[1.5px] ring-{color}` + spring-animated gradient glow
+- Shows: quality label, format chip, size, resolution, fps, bitrate, codec badge
+- On click: sets `selectedQuality`, clears `advancedSelectedId`, calls `onSelect()`
+
+**MP3 Dedicated Card (Audio Tab only):**
+
+A visually distinct amber/gold card appended after all native audio cards. Uses the sentinel value `MP3_SENTINEL = 'mp3'` as `selectedQuality`.
+
+```js
+// On click:
+setSelectedQuality(MP3_SENTINEL);  // 'mp3'
+onSelect({ type:'audio', format:'mp3', convert_to_mp3: true, ... });
+```
+
+When selected, all download functions check `isMp3Selected = (selectedQuality === 'mp3')` and route to the MP3 transcode path (`convert_to_mp3: true`).
+
+---
+
+#### 5.3.6 Show All Advanced Formats Grid
+
+The **"Show All Advanced Formats"** toggle uses a `CustomDropdown` component. Clicking the toggle button (`showAllFormats` state) expands a scrollable list sourced from `videoData.all_formats` (every raw yt-dlp stream, not just the recommended ones).
 
 ```mermaid
 flowchart TD
-    subgraph User PC
-        Exe[YT-Deluxe-Setup.exe]
-        Launcher[launcher.py Spawns Processes]
-        WebView[PyWebView Chromium Window]
-        API["Locally Bundled Backend server\n(also serves Frontend via HTTP)"]
-        
-        Disk[(YT Deluxe Downloads / \n Videos, Music, Thumbnails)]
-        Hist[(~/.yt-deluxe/download_history.json)]
-    end
-    
-    Exe --> |Installs| Launcher
-    Launcher --> |Starts Background| API
-    Launcher --> |"Opens http://127.0.0.1:8000"| WebView
-    WebView <--> |"HTTP Requests (same origin)"| API
-    API -- Saves Raw Files --> Disk
-    API -- Read/Writes --> Hist
+    Toggle["Show All Advanced Formats (23 Available)"]
+    Toggle -->|expand| Grid["Floating CustomDropdown Panel"]
+    Grid --> VS["Video Streams header"]
+    Grid --> AS["Audio Streams header"]
+    VS --> VR["Each row: .ext | quality | resolution | CodecBadge | TBR | Size | id:xxx"]
+    AS --> AR["Each row: .ext | quality | CodecBadge | ABR | Size | id:xxx"]
+    VR -->|click| SEL["setAdvancedSelectedId(format_id)"]
+    AR -->|click| SEL
+    SEL --> CLOSE["setShowAllFormats(false)"]
+    SEL --> ONSEL["onSelect({ format_id, ... })"]
 ```
 
-**Desktop Integration Workflow:**
+> **In plain words:** When you click Download, everything you picked (quality, format, filename, trim range) is packaged and sent to the server. The server figures out the best way to fetch your file, downloads it from YouTube using the appropriate path (exact stream, audio, or quality-label), runs FFmpeg to merge or trim if needed, identifies the output file, then delivers it to you either streaming it to your browser or saving it directly to your hard drive.
 
-- **HTTP-Based Frontend Serving**: In packaged mode, the backend statically serves the React build at `http://127.0.0.1:8000`. The PyWebView wrapper loads this URL instead of a `file:///` path. This provides a valid HTTP origin, which is **critical** for YouTube iframe embeds (fixes Error 153: Video player configuration) and enables standard `BrowserRouter` routing.
-- **Dynamic Path Resolution (YTDELUXE_FRONTEND_DIR)**: `launcher.py` safely evaluates the bundled frontend location at runtime and proxies it to the isolated `--onefile` backend via standard environment variables (`os.environ.get('YTDELUXE_FRONTEND_DIR')`). This fundamentally replaces hardcoded or `sys._MEIPASS` dependency checking, enabling modular pyinstaller build strategies.
-- **Port Conflict Awareness**: If a developer launches the `YT-Deluxe.exe` application while their local Uvicorn dev server is active on `port 8000`, the bundled backend silently crashes (`winerror 10048 address already in use`), and the UI inadvertently communicates with the uncompiled dev server (resulting in a blank `{"detail":"Not Found"}` SPA fallback). Users must close dev shells before executing native wrapper tests.
-- **Desktop Detection**: The frontend detects desktop mode natively via the `window.pywebview` object (injected by the compiled GUI framework), disregarding archaic `file:` protocol checks. This ensures reliable native download triggers.
-- **Deep OS Access**:
-  - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
-  - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
-- **One-Click Launch**: The `launcher.py` entry point ensures that both the server and the UI window open and close together gracefully.
+**When `advancedSelectedId` is set:**
+
+- The dropdown trigger button shows the selected stream's info (ext, quality, resolution, codec badge, size, id)
+- An amber/blue indicator bar shows: `Custom format selected (id: 303) ✕`
+- All download paths (`handlePresetDownload`, `handleCustomDownload`) detect this and override everything with the exact advanced stream
+
+**Clearing the selection:**
+
+- Clicking the `✕` on the indicator bar calls `setAdvancedSelectedId(null)`
+- Clicking a quality grid card also clears `advancedSelectedId`
 
 ---
 
-### 5.6 Precision Trimming Architecture
+#### 5.3.7 Container Format Dropdown (Video Tab Only)
 
-_How the end-to-end trimming pipeline works€ from UI range selection to the final trimmed file on disk._
+The **Container Format** dropdown (video tab only) controls `selectedContainer` state (default: `'auto'`).
 
-#### 5.6.1 Trimming Flow Overview
+| Option | Value | Effect |
+|--------|-------|--------|
+| Auto Native Stream (Recommended!) | `auto` | Backend skips FFmpeg re-mux; stream saved in its native container |
+| MP4 Universal | `mp4` | Forces MP4 container via `merge_output_format = 'mp4'` |
+| MKV Lossless merge | `mkv` | Forces MKV container |
+| WebM Web optimized | `webm` | Forces WebM container |
+| MOV Apple compatible | `mov` | Forces MOV container |
+
+**Container Compatibility Warning:** When `selectedContainer === 'mp4'` and the selected stream uses VP9 or AV1, an animated amber warning banner appears with a "Switch to MKV instead" action link.
+
+---
+
+#### 5.3.8 Download Data Flow Full End-to-End
+
+```mermaid
+flowchart TD
+    A["User clicks Download\n(preset card / custom button / Quick Actions)"]
+    A --> B["handlePresetDownload / handleCustomDownload\n(DownloadTabs.jsx)"]
+    B --> C["Builds config object:\n{ type, quality, format, format_id,\n  audio_format_id, container,\n  convert_to_mp3, filename }"]
+    C --> D["onDownload(config) → index.jsx handleDownload()"]
+    D --> E["addDownload(config, videoData)\n(DownloadContext.jsx)"]
+    E --> F["Maps to apiConfig:\nformat_id, audio_format_id,\ncontainer, convert_to_mp3,\nrename, trim_start, trim_end"]
+    F --> G["api.js downloadVideo()\nBuilds FormData → POST /api/download"]
+    G --> H["Backend: download_video endpoint\nCreates task_id, spawns download_worker()"]
+    H --> I{Which path?}
+
+    I -->|"format_id + type=video\n(exact stream selected)"| J["FORMAT_ID PATH\nDerives safe_container from native ext\nBuilds codec-compatible audio spec\nSets merge_output_format if needed"]
+    I -->|"type=audio OR convert_to_mp3"| K["AUDIO PATH\nMP3: FFmpegExtractAudio + EmbedThumbnail\nM4A native: writethumbnail + EmbedThumbnail\nOpus/WebM native: FFmpegMetadata only"]
+    I -->|"quality label only\n(Quick Actions / preset no format_id)"| L["QUALITY PATH\nformat_spec = bestvideo[height<=N]+bestaudio\nOptional merge_output_format"]
+
+    J & K & L --> M["yt-dlp downloads streams\nFFmpeg merges if needed"]
+    M --> N["File Detection:\nTrimmed? → find _ytd_{task_id} prefix\nNot trimmed? → new_files diff → fallback A/B"]
+    N --> O["If trim requested:\nFFmpeg -ss START -t DUR -c copy\nRename clean base_filename"]
+    O --> P["task status → 'completed'\nFrontend polls /api/progress/{task_id}\nTriggers file download or Desktop save"]
+```
+
+> **In plain words:** You drag the timeline handles to pick a start and end point. When you hit Download, the app first downloads the entire video (YouTube doesn't allow mid-video downloads). Then FFmpeg cuts exactly the segment you chose trying a fast no-quality-loss cut first, falling back to a re-encode only if necessary. The final file is saved with a clean original title, never with ugly temp-file prefixes.
+
+**FormData fields sent to backend:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | YouTube video URL |
+| `quality` | string | e.g., `1080p`, `High Quality` |
+| `format` | string | e.g., `mp4`, `webm`, `m4a`, `opus`, `mp3` |
+| `format_id` | string | Exact yt-dlp stream ID (video) or null |
+| `audio_format_id` | string | Exact yt-dlp stream ID (audio) or null |
+| `container` | string | `auto`, `mp4`, `mkv`, `webm`, `mov` or null |
+| `convert_to_mp3` | bool | `true` = transcode to MP3 |
+| `rename` | string | Custom filename (no extension) |
+| `trim_start` | float | Trim start in seconds (optional) |
+| `trim_end` | float | Trim end in seconds (optional) |
+| `type` | string | `video`, `audio`, or `thumbnail` |
+| `channel` | string | Channel name (for history) |
+| `thumbnail` | string | Thumbnail URL (for history) |
+
+---
+
+#### 5.3.9 Backend Download Worker Three Paths
+
+**Path 1: format_id Video (Exact Stream)**
+
+- Triggered when `format_id` is set and `type != 'audio'`
+- Looks up the stream in `info['formats']` to get its native `ext`
+- If `container == 'auto'` → derives `safe_container` from stream's native `ext` (VP9 stays `.webm`, H264 stays `.mp4`)
+- Audio spec is codec-compatible: WebM container → Opus audio; MP4/MKV → M4A audio
+- Only sets `merge_output_format` when `safe_container` is explicitly known
+
+**Path 2: Audio Download**
+
+- Triggered when `type == 'audio'` or `convert_to_mp3 == True`
+- **MP3 path:** `FFmpegExtractAudio` + `EmbedThumbnail` + `FFmpegMetadata` (re-encodes to 192kbps MP3, embedded album art)
+- **M4A native path:** `writethumbnail: True` + `EmbedThumbnail` + `FFmpegMetadata` (thumbnail embeds natively)
+- **Opus/WebM native path:** `FFmpegMetadata` only (WebM container does not support embedded thumbnails)
+- Format spec is built per-format: `bestaudio[ext=m4a]/...` for M4A, `bestaudio[ext=webm][acodec=opus]/...` for Opus
+
+**Path 3: Quality-Label Video (No format_id)**
+
+- Triggered by Quick Actions or preset cards without explicit `format_id`
+- Uses height-constrained format spec: `bestvideo[height<=N][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=N]+bestaudio/best`
+- Applies `merge_output_format` only when an explicit container is selected (not `auto`)
+
+---
+
+#### 5.3.10 Session-Safe File Detection
+
+After `yt-dlp.download()` completes, the backend must locate the downloaded file:
+
+```
+Trimmed request?
+  YES → find files with _ytd_{task_id[:12]} in name (100% unique per task)
+  NO  →
+    PRIMARY:   new_files = current_dir_listing - pre_download_snapshot
+               → match by title prefix → most likely candidate
+    FALLBACK A: files modified in last 90s matching title prefix (covers in-place overwrite)
+    FALLBACK B: most recently modified file in last 60s (last resort)
+```
+
+> **Why this matters:** Previously, the backend used a simple `startswith(title)` match. If you downloaded the same video twice in the same session (different quality/format), the old file would be returned instead of the newly downloaded one. The snapshot-diff method prevents this entirely.
+
+**Trimmed downloads use task_id-prefixed `outtmpl`:**
+
+```python
+# Inserted before download:
+ydl_opts['outtmpl'] = '.../{base_filename}_ytd_{task_id[:12]}.%(ext)s'
+# After trim completes:
+os.rename(trimmed_file, clean_base_filename)  # Clean name for user
+```
+
+---
+
+### 5.4 Precision Trimming Architecture
+
+*How the end-to-end trimming pipeline works from UI range selection to the final trimmed file on disk.*
+
+#### 5.4.1 Trimming Flow Overview
 
 ```mermaid
 flowchart TD
@@ -274,11 +773,13 @@ flowchart TD
     I -->|Web| K["Browser triggers download\n+ auto-cleanup after 10min"]
 ```
 
-#### 5.6.2 FFmpeg Trim Pipeline (Backend)
+> **In plain words:** On the desktop app, your trimmed file is saved permanently to your YT Deluxe folder on your hard drive and you can open it in Explorer with one click. On the web version, the server processes and trims the file, streams it to your browser's Downloads folder, then automatically deletes the server copy after 10 minutes to save disk space.
+
+#### 5.4.2 FFmpeg Trim Pipeline (Backend)
 
 The trimming engine in `main.py` uses a **two-pass strategy** for maximum compatibility:
 
-**Pass 1€ Stream Copy (Fast, ~0.5s):**
+**Pass 1 Stream Copy (Fast, ~0.5s):**
 
 ```bash
 ffmpeg -y -ss 30 -i input.mp4 -t 90 -c copy -avoid_negative_ts make_zero _tmp_trim_abc123.mp4
@@ -288,7 +789,7 @@ ffmpeg -y -ss 30 -i input.mp4 -t 90 -c copy -avoid_negative_ts make_zero _tmp_tr
 - `-c copy` = no re-encoding, preserves original quality
 - `-avoid_negative_ts make_zero` = fixes timestamp discontinuities
 
-**Pass 2€ Re-encode Fallback (Slower, always works):**
+**Pass 2 Re-encode Fallback (Slower, always works):**
 
 ```bash
 ffmpeg -y -ss 30 -i input.mp4 -t 90 -c:v libx264 -preset fast -c:a aac _tmp_trim_abc123.mp4
@@ -309,7 +810,7 @@ os.rename(temp_trimmed, filepath) # rename temp → original name
 
 > **Result:** User always gets the clean original title (e.g., `MONTAGEM ALQUIMIA (SLOWED).mp4`), never `trimmed_36a5caca_...`.
 
-#### 5.6.3 Trimming€ Desktop vs Web Storage
+#### 5.4.3 Trimming Desktop vs Web Storage
 
 ```mermaid
 flowchart LR
@@ -327,15 +828,17 @@ flowchart LR
     end
 ```
 
+> **In plain words:** Before committing to a download, you can hit Preview and the app plays exactly the segment you trimmed. For most videos, your browser simply jumps to the start point and plays until the end point. For protected or DASH-only videos where direct seeking doesn't work, the server quickly generates a short clip and streams just that portion back to you.
+
 | Aspect | Desktop | Web |
 |--------|---------|-----|
 | **Download location** | `~/Downloads/YT Deluxe Downloads/Videos/` (or Music/) | `backend/tempfiles/` → browser Downloads |
-| **File persistence** | Permanent€ stays on user's disk | Ephemeral€ auto-deleted after 10 minutes |
+| **File persistence** | Permanent stays on user's disk | Ephemeral auto-deleted after 10 minutes |
 | **Trim execution** | Same as Web (server-side FFmpeg) | Server-side FFmpeg |
 | **History storage** | `~/.yt-deluxe/download_history.json` (JSON file) | `localStorage` (browser) |
 | **File access** | "Open in Explorer" button via `/api/desktop/open-file` | Standard browser download |
 
-#### 5.6.4 Preview Before Download
+#### 5.4.4 Preview Before Download
 
 Users can preview the trimmed range before committing to a download:
 
@@ -350,9 +853,11 @@ flowchart TD
     P6 --> P4
 ```
 
-**Smart Resume:** Pausing and resuming continues from the paused position€ it only jumps to `startTime` if the playhead is outside the trim range.
+> **In plain words:** All download settings which tab you're on, what quality, which format live in one central "brain" object called `selectedConfig` in the parent page. Both the DownloadTabs panel and the VideoTrimmer read from and write back to this same object. This means if you switch from Video to Audio in DownloadTabs, the Trimmer automatically switches too. There is no way for the two panels to get out of sync.
 
-#### 5.6.5 Audio Trimming & Embedded Thumbnails
+**Smart Resume:** Pausing and resuming continues from the paused position it only jumps to `startTime` if the playhead is outside the trim range.
+
+#### 5.4.5 Audio Trimming & Embedded Thumbnails
 
 When downloading audio (MP3), the backend automatically:
 
@@ -363,15 +868,15 @@ When downloading audio (MP3), the backend automatically:
 
 ---
 
-### 5.7 Trimmer Component Architecture
+### 5.5 Trimmer Component Architecture
 
-_How the frontend VideoTrimmer component manages state, syncs with DownloadTabs, and communicates with the backend._
+*How the frontend VideoTrimmer component manages state, syncs with DownloadTabs, and communicates with the backend.*
 
-#### 5.7.1 Component Hierarchy & Props
+#### 5.5.1 Component Hierarchy & Props
 
 ```mermaid
 graph TD
-    subgraph "index.jsx€ Parent Page"
+    subgraph "index.jsx Parent Page"
         SC["selectedConfig\n{type, quality, format}"]
         TS["trimSettings\n{startTime, endTime}"]
         DL["downloads[]\n(active tasks)"]
@@ -399,7 +904,9 @@ graph TD
     DL -->|"downloads prop"| PV
 ```
 
-#### 5.7.2 Three-Way Toggle Sync
+> **In plain words:** The trimmer's mini-player has exactly three faces it can show at once: a loading spinner while the stream warms up, a circular download progress ring while your clip is being processed, and the normal play/pause controls when it's ready to play. Only one of these three states can be visible at a time they never overlap.
+
+#### 5.5.2 Three-Way Toggle Sync
 
 Three separate UI elements all reflect the same download type (Video/Audio/Thumbnail):
 
@@ -411,7 +918,7 @@ Three separate UI elements all reflect the same download type (Video/Audio/Thumb
 
 **Single Source of Truth:** `selectedConfig` in `index.jsx` is the only state that matters. All three toggles derive from it and write back to it.
 
-#### 5.7.3 Player Visual States
+#### 5.5.3 Player Visual States
 
 The preview player has 3 mutually exclusive visual states:
 
@@ -427,13 +934,15 @@ stateDiagram-v2
     Trimming --> Ready: download completes at 100%
 ```
 
+> **In plain words:** The trimmer does not fetch any video from the server until you actually interact with the trim controls. Until then, it shows a static thumbnail as a placeholder. The instant you drag a handle, type a time, click a preset chip, or hit Play it starts loading the stream. This means no wasted server calls if you're just browsing, reading the video description, or haven't decided to trim yet.
+
 | State | Trigger | Visual Indicator |
 |-------|---------|-----------------|
 | **Fetching / Buffering** | `isMediaLoading \|\| isBuffering \|\| clipLoading` | Triple-layer spinner (ping + spin + pulse icon) |
 | **Trimming / Processing** | `activeDownload` found in `downloads[]` | Circular SVG progress ring + percentage + bottom glow bar |
 | **Ready / Playing** | None of above | Hover-aware Play/Pause button with glassmorphism overlay |
 
-#### 5.7.4 Estimated File Size Calculation
+#### 5.5.4 Estimated File Size Calculation
 
 The trimmer estimates output file size based on quality bitrate:
 
@@ -447,6 +956,140 @@ The trimmer estimates output file size based on quality bitrate:
 | Audio (MP3) | 192 | ~2.9 MB |
 
 **Formula:** `estimatedBytes = (bitrate × 1000 / 8) × trimmedDuration`
+
+---
+
+#### 5.5.5 Lazy Stream Loading `previewEnabled` Gate
+
+*How the VideoTrimmer avoids unnecessary backend API calls until the user actually engages with the trim controls.*
+
+`previewEnabled` is a boolean gate that controls whether the `<video>` element receives a `src` at all:
+
+```jsx
+// VideoTrimmer.jsx
+const [previewEnabled, setPreviewEnabled] = useState(false); // false = no stream fetch
+
+// Only feed src to the video element when the gate is open
+const videoSrc = previewEnabled ? streamUrl : null;
+
+<video ref={videoRef} src={videoSrc} ... />
+```
+
+The `<video>` tag is always rendered (so the DOM ref stays stable), but `src` is `null` until the user explicitly interacts meaning **zero HTTP requests to the backend** until the user is ready.
+
+##### When `previewEnabled` Becomes `true`
+
+```mermaid
+flowchart TD
+    A([Trimmer opens\npreviewEnabled = false]) --> B{User action?}
+
+    B -- Drags start/end handle --> C["onHandleDown()\nsetPreviewEnabled(true)"]
+    B -- Types in start input --> D["handleStartInput()\nsetPreviewEnabled(true)"]
+    B -- Types in end input --> E["handleEndInput()\nsetPreviewEnabled(true)"]
+    B -- Clicks a preset chip --> F["applyPreset()\nsetPreviewEnabled(true)"]
+    B -- Clicks Play / Preview --> G["togglePreview()\nsetPreviewEnabled(true)"]
+    B -- No action --> H["Placeholder thumbnail\nshown zero API calls"]
+
+    C & D & E & F & G --> I["streamUrl assigned to video.src\nBrowser fetches /api/stream\nPreview ready to play"]
+```
+
+##### State Comparison
+
+| State | `previewEnabled` | `video.src` | Backend request |
+|---|---|---|---|
+| Trimmer just expanded | `false` | `null` | None |
+| User drags a handle | `true` | `/api/stream?quality=720p` | Fetched |
+| User types a time | `true` | `/api/stream?quality=720p` | Fetched |
+| User clicks a preset | `true` | `/api/stream?quality=720p` | Fetched |
+| User clicks Play | `true` | `/api/stream?quality=720p` | Fetched |
+
+##### Placeholder Before Unlock
+
+While `previewEnabled = false`, the player area shows a **static thumbnail** of the video with an overlay prompt ("Drag handles or select a preset to enable preview"), making it immediately clear to the user how to activate the preview without any spinner or false loading state.
+
+Once `previewEnabled` becomes `true`, the placeholder fades out and the actual stream seamlessly takes over.
+
+##### Stream Quality in Preview
+
+| Mode | Stream URL | Quality | Rationale |
+|---|---|---|---|
+| **Video preview** | `/api/stream?quality=720p` | 720p | Sufficient to judge trim points; low cost |
+| **Audio preview** | `/api/stream?quality=audio` | Best audio | No video needed for audio trim |
+| **Clip fallback** | `/api/preview-clip?start=X&clip_duration=Y` | Server-cut | When direct stream seek fails |
+
+---
+
+### 5.6 Hosted Web Application Architecture
+
+*How the platform operates when hosted on cloud servers.*
+
+```mermaid
+flowchart LR
+    subgraph Client Browser
+        UI[React Frontend]
+        Local[localStorage / History]
+    end
+    
+    subgraph Cloud Server Infrastructure
+        API[FastAPI Backend]
+        Temp[Volatile tempfiles/ Dir]
+        YTDLP[yt-dlp + FFmpeg Core]
+    end
+    
+    UI <--> |API Requests / Polling| API
+    API --> YTDLP
+    YTDLP --> Temp
+    Temp -- Final Media Stream --> UI
+    UI -- Log Action --> Local
+```
+
+> **In plain words:** When you install the Windows app, double-clicking the EXE opens a mini Chrome-like browser window (powered by PyWebView) alongside a hidden background server both running on your own PC. No cloud involved. The server saves files directly to your hard drive, your download history is a plain JSON file in your home folder, and everything runs locally at full speed without any internet dependency beyond fetching from YouTube itself.
+
+**Web Deployment Workflow:**
+
+- **Client Layer**: The React frontend is served as static assets. It uses `localStorage` for local persistence of history and settings, ensuring that user data stays private and localized to their browser.
+- **API Layer**: The FastAPI backend handles heavy lifting. It must be hosted on a service that supports persistent or scale-to-zero compute with `FFmpeg` installed.
+- **Volatile Storage**: The `tempfiles/` directory acts as a high-speed workspace for stream merging. Files here are ephemeral and auto-deleted after 10 minutes to maintain server health.
+- **Streaming**: The final file is streamed back to the user via an HTTP `FileResponse`, allowing the browser to handle the bitstream as a standard file download.
+
+---
+
+### 5.7 Native Windows Desktop Architecture
+
+*How the platform operates when installed locally as an .exe via the Launcher.*
+
+```mermaid
+flowchart TD
+    subgraph User PC
+        Exe[YT-Deluxe-Setup.exe]
+        Launcher[launcher.py Spawns Processes]
+        WebView[PyWebView Chromium Window]
+        API["Locally Bundled Backend server\n(also serves Frontend via HTTP)"]
+        
+        Disk[(YT Deluxe Downloads / \n Videos, Music, Thumbnails)]
+        Hist[(~/.yt-deluxe/download_history.json)]
+    end
+    
+    Exe --> |Installs| Launcher
+    Launcher --> |Starts Background| API
+    Launcher --> |"Opens http://127.0.0.1:8000"| WebView
+    WebView <--> |"HTTP Requests (same origin)"| API
+    API -- Saves Raw Files --> Disk
+    API -- Read/Writes --> Hist
+```
+
+> **In plain words:** When you install YT-Deluxe as a Windows app, everything runs on your own computer. The installer sets up a mini server quietly in the background, opens a browser-like window pointing to it, and your downloads go straight to your Downloads folder. No cloud, no internet dependency for the app itself only for fetching YouTube content.
+
+**Desktop Integration Workflow:**
+
+- **HTTP-Based Frontend Serving**: In packaged mode, the backend statically serves the React build at `http://127.0.0.1:8000`. The PyWebView wrapper loads this URL instead of a `file:///` path. This provides a valid HTTP origin, which is **critical** for YouTube iframe embeds (fixes Error 153: Video player configuration) and enables standard `BrowserRouter` routing.
+- **Dynamic Path Resolution (YTDELUXE_FRONTEND_DIR)**: `launcher.py` safely evaluates the bundled frontend location at runtime and proxies it to the isolated `--onefile` backend via standard environment variables (`os.environ.get('YTDELUXE_FRONTEND_DIR')`). This fundamentally replaces hardcoded or `sys._MEIPASS` dependency checking, enabling modular pyinstaller build strategies.
+- **Port Conflict Awareness**: If a developer launches the `YT-Deluxe.exe` application while their local Uvicorn dev server is active on `port 8000`, the bundled backend silently crashes (`winerror 10048 address already in use`), and the UI inadvertently communicates with the uncompiled dev server (resulting in a blank `{"detail":"Not Found"}` SPA fallback). Users must close dev shells before executing native wrapper tests.
+- **Desktop Detection**: The frontend detects desktop mode natively via the `window.pywebview` object (injected by the compiled GUI framework), disregarding archaic `file:` protocol checks. This ensures reliable native download triggers.
+- **Deep OS Access**:
+  - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
+  - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
+- **One-Click Launch**: The `launcher.py` entry point ensures that both the server and the UI window open and close together gracefully.
 
 ---
 
@@ -489,9 +1132,9 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 
 - **Node.js**: `v18 or LTS`
 - **Python**: `3.10+ (Tested on 3.13)`
-- **yt-dlp** `>=2026.3.17 (keep as soon as possible updated)` _for YouTube Downloads_
+- **yt-dlp** `>=2026.3.17 (keep as soon as possible updated)` *for YouTube Downloads*
 
-- **FFmpeg**: `>=16.04.2026 (keep as soon as possible updated)` _for Merging Videos_
+- **FFmpeg**: `>=16.04.2026 (keep as soon as possible updated)` *for Merging Videos*
 
 ### 6.5 Frontend Setup (Local)
 
@@ -557,7 +1200,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 │  └── tempfiles/       # Ephemeral processing directory
 ```
 
-_By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API_BASE_URL` in your `.env` if this differs._
+*By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API_BASE_URL` in your `.env` if this differs.*
 
 ---
 
@@ -589,51 +1232,46 @@ _By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API
 - Enter keywords in the search bar to fetch top YouTube results including thumbnails, durations, and channel metadata.
 - **REST API**: `GET /api/search?q=search_term`
 
-### 8.2 Format Selection, Metadata & Streaming
+### 8.2 Download & Trimming Management
 
-- Click any search result to extract all available DASH (High-Def) and Progressive (Standard-Def) formats directly from YouTube. You can also stream content directly without downloading.
-- **REST API**: `GET /api/video?url=youtube_url` | `GET /api/stream?url=youtube_url&quality=1080p`
-
-### 8.3 Download & Trimming Management
-
-- Configure your download with quality options (144p to 8K), format selection (MP4, MP3), and precision trimming.
+- Configure your download with quality options (144p to 8K), format selection (MP4, WebM, MKV, M4A, Opus, MP3), and precision trimming.
 - **Trimming Workflow:**
   1. Select your desired quality in the **Download Options** tab (Video/Audio)
-  2. Use the **Video Trimmer** below to select a range€ drag the blue handles, type exact times (M:SS), or click quick presets (First 30s, Last 5m, etc.)
+  2. Use the **Video Trimmer** below to select a range drag the blue handles, type exact times (M:SS), or click quick presets (First 30s, Last 5m, etc.)
   3. Click **Preview** to verify your selection plays the correct segment
-  4. Click **Download**€ the backend downloads the full file, then FFmpeg trims it to your exact range
+  4. Click **Download** the backend downloads the full file, then FFmpeg trims it to your exact range
 - The trimmer shows estimated file size based on quality bitrate and selected duration
 - Integrated automatic PO Token negotiation ensures your IP remains safe from 403 blocks.
 - **REST API**: `POST /api/download` with optional `trim_start` and `trim_end` parameters (in seconds)
 
-### 8.4 Batch Processing
+### 8.3 Batch Processing
 
 - Paste multiple YouTube URLs into the Batch Manager to download entire playlists or series simultaneously.
 - **REST API**: `POST /api/batch-download`
 
-### 8.5 Real-time Performance Tracking
+### 8.4 Real-time Performance Tracking
 
 - Monitor download speed (MB/s), percentage completed, and estimated time remaining (ETA) via a circular or linear visual progress bar.
 - **REST API**: `GET /api/progress/{task_id}`
 
-### 8.6 History and Storage Management
+### 8.5 History and Storage Management
 
 - Access your download history to re-download files, delete single entries, or clear multiple items at once. You can also monitor your local disk usage statistics.
 - **REST API**: `GET /api/history` (List all), `DELETE /api/history/{id}` (Remove single entry), `POST /api/history/delete` (Batch remove), and `POST /api/system/storage` (Check disk availability).
 
-### 8.7 Native Desktop Integrations
+### 8.6 Native Desktop Integrations
 
 - For users on the Windows Desktop App, file exploration is deeply integrated. You can click to open specific files or their parent folders seamlessly inside Windows Explorer.
 - **REST API**: `POST /api/desktop/open-file` and `POST /api/desktop/open-folder`
 
-### 8.8 User Feedback
+### 8.7 User Feedback
 
 - Submit bug reports or suggestions directly from the application UI.
 - **REST API**: `POST /api/feedback`
 
 ---
 
-### 8.9 API Usage Examples (CLI/cURL)
+### 8.8 API Usage Examples (CLI/cURL)
 
 #### Search for Videos
 
@@ -676,7 +1314,7 @@ To host YT Deluxe publicly on the internet (Vercel, Render, Heroku):
 ### 9.1 Backend (Cloud Web Service)
 
 - Deploy the `backend/` directory as a standard Python Web Service.
-- **Critical Build Logic**: The server _must_ install FFmpeg alongside Python.
+- **Critical Build Logic**: The server *must* install FFmpeg alongside Python.
   - Build Command: `pip install -r requirements.txt && apt-get update && apt-get install -y ffmpeg`
 - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
                         OR
@@ -725,7 +1363,7 @@ cd frontend
 npm run build 
 ```
 
-_(Packages React into optimized HTML/JS inside `frontend/build`. The desktop `build.spec` copies this folder into the final bundle)._
+*(Packages React into optimized HTML/JS inside `frontend/build`. The desktop `build.spec` copies this folder into the final bundle).*
 
 ### 10.3 Bundle Backend via PyInstaller
 
@@ -734,7 +1372,7 @@ cd backend
 .venv\Scripts\pyinstaller.exe main.spec --clean -y
 ```
 
-_(Packages Python, FastAPI, and `ffmpeg.exe` into a headless `backend/dist/main.exe`)._ **Note:** You must re-run this step anytime `main.py` is edited so changes are included in the bundle.
+*(Packages Python, FastAPI, and `ffmpeg.exe` into a headless `backend/dist/main.exe`).* **Note:** You must re-run this step anytime `main.py` is edited so changes are included in the bundle.
 
 ### 10.4 Build UI Launcher via PyInstaller
 
@@ -744,13 +1382,13 @@ cd desktop
 ..\backend\.venv\Scripts\pyinstaller.exe build.spec --clean -y
 ```
 
-_(Creates the massive `desktop/dist/YT-Deluxe` application folder containing the PyWebView edge browser, the copied backend server, and the static frontend assets)._
+*(Creates the massive `desktop/dist/YT-Deluxe` application folder containing the PyWebView edge browser, the copied backend server, and the static frontend assets).*
 
 ### 10.5 Post-Build Testing (Port 8000 Conflict Awareness)
 
 Before distributing your app, you should manually run the generated wrapper at `desktop/dist/YT-Deluxe/YT-Deluxe.exe`.
 
-⚠️ **CRITICAL WARNING:** You **MUST CLOSE** any running local development servers (`uvicorn main:app --reload`) before double-clicking the generated `.exe`.
+**CRITICAL WARNING:** You **MUST CLOSE** any running local development servers (`uvicorn main:app --reload`) before double-clicking the generated `.exe`.
 If a dev server is active, it occupies `port 8000`. The bundled `.exe` will launch, silently crash in the background due to `winerror 10048 address already in use`, and the UI window will mistakenly hit your uncompiled Dev server resulting in a blank `{"detail":"Not Found"}` SPA response.
 
 ### 10.6 Create the Final Setup Installer (Inno Setup)
@@ -829,4 +1467,4 @@ For issues and questions:
 
 **Made With❤️UP7**
 
-_Last Updated: April 2026_
+*Last Updated: April 2026*

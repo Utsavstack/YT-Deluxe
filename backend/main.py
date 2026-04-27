@@ -23,6 +23,11 @@ if os.name == 'nt':
         # Override creationflags to suppress cmd windows
         if 'creationflags' not in kwargs:
             kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+        # Force UTF-8 encoding to prevent UnicodeDecodeError (cp1252) on Windows
+        # when yt-dlp output contains Hindi/special characters in video titles
+        if kwargs.get('encoding') is None and kwargs.get('text') is None:
+            kwargs.setdefault('encoding', 'utf-8')
+            kwargs.setdefault('errors', 'replace')
         return original_popen(*args, **kwargs)
     subprocess.Popen = patched_popen
 # ────────────────────────────────────────────────────────────────────────
@@ -136,7 +141,7 @@ def get_cookie_opts():
     print(f"[cookies] Using temp/cookies.txt ({os.path.getsize(temp_cookie_path)} bytes)")
     return {'cookiefile': temp_cookie_path}
   
-  print("[cookies] No cookies available — YouTube may block requests on cloud")
+  print("[cookies] No cookies available. YouTube may block requests on cloud!")
   return {}
 
 def get_yt_opts():
@@ -272,28 +277,55 @@ def get_video_details(url: str):
     if not info:
       return JSONResponse({"error": "Failed to extract video info. The video may require sign-in, be unavailable, or the format is unsupported by the current client."}, status_code=400)
       
+    # ── Helper functions (Changes A+B) ──────────────────────────────────────
+    def _audio_quality_label(idx):
+      return ['High Quality', 'Medium Quality', 'Low Quality'][idx] if idx < 3 else 'Audio'
+
+    def _codec_display_name(acodec_str):
+      c = (acodec_str or '').lower()
+      if 'opus' in c: return 'Opus'
+      if any(x in c for x in ('mp4a', 'aac')): return 'AAC'
+      return acodec_str.upper()[:6] if acodec_str else 'Audio'
+
+    def _real_ext(af):
+      c = (af.get('acodec') or '').lower()
+      if any(x in c for x in ('mp4a', 'aac')): return 'm4a'
+      return af.get('ext', 'webm')  # opus usually comes as webm container
+
+    def _codec_family(vcodec_str):
+      c = (vcodec_str or '').lower()
+      if 'avc' in c or 'h264' in c: return 'avc1'
+      if 'vp9' in c: return 'vp9'
+      if 'av01' in c or 'av1' in c: return 'av01'
+      return 'other'
+
     # Build deduplicated, quality-grouped format list
     # Collect all unique heights from real video formats
     seen_heights = {}
     audio_formats = []
-    
+    all_video_formats_raw = []  # for all_formats response
+
     for f in info.get('formats', []):
       height = f.get('height')
       vcodec = f.get('vcodec', 'none')
       acodec = f.get('acodec', 'none')
       ext = f.get('ext', '')
-      
-      # Collect best audio-only formats
+
+      # Change A: Collect ALL valid audio-only formats (append, not replace)
       if vcodec == 'none' and acodec != 'none':
         abr = f.get('abr') or 0
-        if not audio_formats or abr > (audio_formats[0].get('abr') or 0):
-          audio_formats = [f]
+        if ext in ('mhtml', 'vtt') or abr == 0:
+          continue
+        audio_formats.append(f)
         continue
-      
+
       # Only include real video formats with a height
       if not height or vcodec == 'none':
         continue
-      
+
+      # Collect every distinct video stream for all_formats
+      all_video_formats_raw.append(f)
+
       # Keep only the best format per height (prefer highest bitrate/filesize)
       existing = seen_heights.get(height)
       if existing is None:
@@ -302,21 +334,40 @@ def get_video_details(url: str):
         # Compare by total bitrate (tbr) or approximate filesize
         curr_size = f.get('tbr') or f.get('filesize') or f.get('filesize_approx') or 0
         prev_size = existing.get('tbr') or existing.get('filesize') or existing.get('filesize_approx') or 0
-        
         # If sizes are roughly equal, slightly prefer mp4 container
         if curr_size > prev_size * 1.05 or (curr_size >= prev_size * 0.95 and f.get('ext') == 'mp4' and existing.get('ext') != 'mp4'):
           seen_heights[height] = f
-    
-    # Sort heights descending (8K → 144p)
+
+    # Change B: Deduplicate audio — keep best per codec family, max 3 options
+    audio_formats.sort(key=lambda x: x.get('abr') or 0, reverse=True)
+    seen_audio_families = {}
+    deduped_audio = []
+    for af in audio_formats:
+      acodec_raw = af.get('acodec', '').lower()
+      if 'opus' in acodec_raw:
+        family = 'opus'
+      elif any(x in acodec_raw for x in ('mp4a', 'aac')):
+        family = 'm4a'
+      else:
+        family = 'other'
+      if family not in seen_audio_families:
+        seen_audio_families[family] = True
+        deduped_audio.append(af)
+      if len(deduped_audio) >= 3:
+        break
+    audio_formats = deduped_audio
+
+    # Sort heights descending (8K to 144p)
     sorted_heights = sorted(seen_heights.keys(), reverse=True)
-    
+
     # Build quality label map
     height_labels = {
       4320: '8K', 2160: '4K', 1440: '2K',
       1080: '1080p', 720: '720p', 480: '480p',
       360: '360p', 240: '240p', 144: '144p',
     }
-    
+
+    # Recommended formats (1 best per height) — for default UI view
     formats = []
     for h in sorted_heights:
       f = seen_heights[h]
@@ -331,29 +382,82 @@ def get_video_details(url: str):
         'vcodec': f.get('vcodec', 'none'),
         'acodec': f.get('acodec', 'none'),
         'fps': f.get('fps'),
+        'tbr': f.get('tbr'),
+        'codec_family': _codec_family(f.get('vcodec', '')),
         'type': 'video',
       })
-    
-    # Add best audio option
-    if audio_formats:
-      af = audio_formats[0]
+
+    # Change B: Add ALL audio options (up to 3, deduplicated by codec family)
+    for i, af in enumerate(audio_formats):
+      real_ext = _real_ext(af)
       formats.append({
         'format_id': af.get('format_id'),
-        'quality': 'Audio Only',
+        'quality': _audio_quality_label(i),
+        'quality_index': i,           # 0=best, 1=medium, 2=low
         'height': 0,
-        'ext': 'mp3',
+        'ext': real_ext,              # actual extension, NOT 'mp3'
+        'native_ext': real_ext,       # preserved separately for frontend
         'resolution': 'audio',
         'filesize': af.get('filesize') or af.get('filesize_approx'),
         'vcodec': 'none',
         'acodec': af.get('acodec', 'none'),
+        'codec_display': _codec_display_name(af.get('acodec')),
         'abr': af.get('abr'),
+        'tbr': af.get('tbr'),
         'type': 'audio',
       })
-    
+
+    # Change B: Build all_formats — every distinct stream for Advanced View
+    # Sort all video streams: height desc, then tbr desc
+    all_video_formats_raw.sort(
+      key=lambda x: (x.get('height') or 0, x.get('tbr') or 0), reverse=True
+    )
+    all_formats = []
+    for f in all_video_formats_raw:
+      h = f.get('height') or 0
+      label = height_labels.get(h) or f'{h}p'
+      fps = f.get('fps')
+      fps_label = f'{label}{fps}' if fps and fps > 30 else label
+      all_formats.append({
+        'format_id': f.get('format_id'),
+        'quality': fps_label,
+        'height': h,
+        'ext': f.get('ext', 'mp4'),
+        'resolution': f'{f.get("width", "?")}x{h}',
+        'filesize': f.get('filesize') or f.get('filesize_approx'),
+        'vcodec': f.get('vcodec', 'none'),
+        'acodec': f.get('acodec', 'none'),
+        'fps': f.get('fps'),
+        'tbr': f.get('tbr'),
+        'vbr': f.get('vbr'),
+        'codec_family': _codec_family(f.get('vcodec', '')),
+        'type': 'video',
+      })
+    # Add all audio formats to all_formats too
+    for af in audio_formats:
+      real_ext = _real_ext(af)
+      all_formats.append({
+        'format_id': af.get('format_id'),
+        'quality': _audio_quality_label(audio_formats.index(af)),
+        'quality_index': audio_formats.index(af),
+        'height': 0,
+        'ext': real_ext,
+        'native_ext': real_ext,
+        'resolution': 'audio',
+        'filesize': af.get('filesize') or af.get('filesize_approx'),
+        'vcodec': 'none',
+        'acodec': af.get('acodec', 'none'),
+        'codec_display': _codec_display_name(af.get('acodec')),
+        'abr': af.get('abr'),
+        'tbr': af.get('tbr'),
+        'asr': af.get('asr'),
+        'type': 'audio',
+      })
+
     # Extract channel info securely and strip @ handle prefix
     raw_channel = info.get('channel') or info.get('uploader') or info.get('uploader_id') or 'Unknown Channel'
     channel_name = raw_channel.lstrip('@') if raw_channel else 'Unknown Channel'
-    
+
     video = {
       'id': info.get('id'),
       'title': info.get('title'),
@@ -367,6 +471,7 @@ def get_video_details(url: str):
       'view_count': info.get('view_count'),
       'upload_date': info.get('upload_date'),
       'formats': formats,
+      'all_formats': all_formats,
       'max_quality': height_labels.get(sorted_heights[0], f'{sorted_heights[0]}p') if sorted_heights else 'Unknown',
     }
     return {"video": video}
@@ -608,7 +713,10 @@ def download_video(
   url: str = Form(...),
   quality: Optional[str] = Form(None),
   format: Optional[str] = Form(None),
-  format_id: Optional[str] = Form(None),  # ← exact YouTube stream ID (preferred)
+  format_id: Optional[str] = Form(None),       # exact YouTube stream ID (preferred)
+  audio_format_id: Optional[str] = Form(None), # Change C: specific audio stream ID
+  container: Optional[str] = Form(None),        # Change C: mp4/mkv/webm/mov
+  convert_to_mp3: bool = Form(False),           # Change C: explicit MP3 transcode toggle
   trim_start: Optional[float] = Form(None),
   trim_end: Optional[float] = Form(None),
   rename: Optional[str] = Form(None),
@@ -632,14 +740,14 @@ def download_video(
       "started_at": datetime.now().isoformat()
     }
 
-    
     # Start background download task
     background_tasks.add_task(
-      download_worker, 
+      download_worker,
       task_id, url, quality, format,
-      trim_start, trim_end, rename, format_id, is_desktop, download_path, type
+      trim_start, trim_end, rename, format_id, is_desktop, download_path, type,
+      audio_format_id, container, convert_to_mp3
     )
-    
+
     return {"task_id": task_id, "message": "Download started successfully."}
   except Exception as e:
     return JSONResponse({"error": str(e)}, status_code=500)
@@ -658,11 +766,14 @@ def schedule_deletion(filepath: str, delay: int = 600):
   threading.Thread(target=delete_task, daemon=True).start()
 
 # Download worker function
-def download_worker(task_id: str, url: str, quality: str = None, 
-          format: str = None, trim_start: float = None, 
+def download_worker(task_id: str, url: str, quality: str = None,
+          format: str = None, trim_start: float = None,
           trim_end: float = None, rename: str = None,
           format_id: str = None, is_desktop: bool = False,
-          download_path: str = None, type: str = None):
+          download_path: str = None, type: str = None,
+          audio_format_id: str = None,   # Change D: specific audio stream
+          container: str = None,          # Change D: output container
+          convert_to_mp3: bool = False):  # Change D: MP3 transcode toggle
   try:
     if is_desktop:
       if download_path and os.path.exists(download_path):
@@ -748,63 +859,138 @@ def download_worker(task_id: str, url: str, quality: str = None,
     # Determine format spec
     cookie_opts = get_cookie_opts()
     
-    if format_id and format != 'mp3':
-      # FORMAT_ID BASED DOWNLOAD (highest quality, reliable)
-      # Detect if this format is video-only (needs audio merge)
-      all_formats = info.get('formats', [])
+    if format_id and not convert_to_mp3 and type != 'audio':
+      # FORMAT_ID BASED VIDEO DOWNLOAD — specific audio + dynamic container
+      all_raw_fmts = info.get('formats', [])
       selected_fmt = next(
-        (f for f in all_formats if f.get('format_id') == format_id), None
+        (f for f in all_raw_fmts if f.get('format_id') == format_id), None
       )
       needs_audio = (
         selected_fmt is not None and
         selected_fmt.get('vcodec', 'none') != 'none' and
         selected_fmt.get('acodec', 'none') == 'none'
       )
-      
+
+      # ── Container resolution ──────────────────────────────────────────────
+      # If user explicitly picked a container (mp4/mkv/webm/mov), honour it.
+      # Otherwise (auto/native): derive the container from the selected video
+      # stream's own native ext so yt-dlp doesn't silently fall back to MKV.
+      safe_container = container if container in ('mp4', 'mkv', 'webm', 'mov') else None
+      native_video_ext = (selected_fmt.get('ext') or '').lower() if selected_fmt else ''
+      if not safe_container and needs_audio and native_video_ext in ('webm', 'mp4', 'mov'):
+        safe_container = native_video_ext
+
+      # ── Audio spec — must be codec-compatible with the output container ───
+      # WebM container only accepts Opus audio; mixing M4A/AAC causes yt-dlp
+      # to silently fall back to MKV.  MP4/MKV are fine with M4A (AAC).
       if needs_audio:
-        fmt_spec = f"{format_id}+bestaudio"
+        if audio_format_id:
+          # User explicitly chose an audio stream — trust their choice
+          audio_spec = audio_format_id
+        elif safe_container == 'webm':
+          # WebM container → must use Opus (WebM-native audio)
+          audio_spec = "bestaudio[ext=webm][acodec=opus]/bestaudio[acodec=opus]/bestaudio"
+        else:
+          # MP4 / MKV / default → prefer m4a (AAC)
+          audio_spec = "bestaudio[ext=m4a]/bestaudio"
+        fmt_spec = f"{format_id}+{audio_spec}"
       else:
         fmt_spec = format_id
-      
+
       output_template = f"{TARGET_DIR}/{base_filename}.%(ext)s"
       ydl_opts = {
         **get_yt_opts(),
         'outtmpl': output_template,
         'format': fmt_spec,
-        'merge_output_format': 'mp4',
         'progress_hooks': [lambda d: progress_hook(d, task_id)],
         'retries': 10,
         'fragment_retries': 10,
         **cookie_opts,
       }
-    
-    elif format == "mp3":
+      if safe_container:
+        ydl_opts['merge_output_format'] = safe_container
+
+    elif type == 'audio' or convert_to_mp3 or format in ('mp3', 'opus', 'm4a', 'audio'):
+      # Change F: AUDIO DOWNLOAD — native format OR MP3 transcode
       output_template = f"{TARGET_DIR}/{base_filename}.%(ext)s"
-      ydl_opts = {
-        **get_yt_opts(),
-        'outtmpl': output_template,
-        'format': 'bestaudio/best',
-        'writethumbnail': True,
-        'postprocessors': [
-          {
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-          },
-          {
-            'key': 'EmbedThumbnail',  # Embed video thumbnail as MP3 album art
-          },
-          {
-            'key': 'FFmpegMetadata',  # Embed title/artist metadata too
-            'add_metadata': True,
-          },
-        ],
-        'progress_hooks': [lambda d: progress_hook(d, task_id)],
-        'retries': 10,
-        'fragment_retries': 10,
-        'ignoreerrors': True,
-        **cookie_opts,
-      }
+      # Determine which audio stream to use
+      # The frontend passes the chosen stream in `audio_format_id` for audio downloads
+      effective_audio_id = audio_format_id or format_id
+      audio_fmt = effective_audio_id if effective_audio_id else 'bestaudio/best'
+
+      if convert_to_mp3 or format == 'mp3':
+        # MP3 transcode path (original behavior preserved)
+        ydl_opts = {
+          **get_yt_opts(),
+          'outtmpl': output_template,
+          'format': audio_fmt,
+          'writethumbnail': True,
+          'postprocessors': [
+            {'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'},
+            {'key': 'EmbedThumbnail'},
+            {'key': 'FFmpegMetadata', 'add_metadata': True},
+          ],
+          'progress_hooks': [lambda d: progress_hook(d, task_id)],
+          'retries': 10,
+          'fragment_retries': 10,
+          'ignoreerrors': True,
+          **cookie_opts,
+        }
+      else:
+        # Native format — no FFmpeg transcode
+        # Detect codec to decide thumbnail embedding strategy
+        all_raw_fmts = info.get('formats', [])
+        selected_audio_fmt = next(
+          (f for f in all_raw_fmts if f.get('format_id') == effective_audio_id), None
+        ) if effective_audio_id else None
+        acodec_str = (selected_audio_fmt.get('acodec', '') if selected_audio_fmt else '').lower()
+
+        # Also detect from the `format` parameter when no format_id is available
+        # (frontend passes format='m4a'/'webm'/'opus' but format_id=null for audio)
+        is_m4a_codec = (
+          any(x in acodec_str for x in ('mp4a', 'aac')) or
+          (not effective_audio_id and format == 'm4a')
+        )
+
+        # Build format-specific yt-dlp spec when no explicit stream ID is given
+        if not effective_audio_id:
+          if format == 'm4a':
+            audio_fmt = 'bestaudio[ext=m4a]/bestaudio[acodec~=mp4a]/bestaudio'
+          elif format in ('webm', 'opus'):
+            audio_fmt = 'bestaudio[ext=webm][acodec=opus]/bestaudio[acodec=opus]/bestaudio'
+          # else: keep 'bestaudio/best' set above
+
+        if is_m4a_codec:
+          # m4a/aac: EmbedThumbnail works natively
+          ydl_opts = {
+            **get_yt_opts(),
+            'outtmpl': output_template,
+            'format': audio_fmt,
+            'writethumbnail': True,
+            'postprocessors': [
+              {'key': 'FFmpegMetadata', 'add_metadata': True},
+              {'key': 'EmbedThumbnail'},
+            ],
+            'progress_hooks': [lambda d: progress_hook(d, task_id)],
+            'retries': 10,
+            'fragment_retries': 10,
+            **cookie_opts,
+          }
+        else:
+          # opus/webm: EmbedThumbnail not natively supported
+          # Will generate music card image after download (see post-processing below)
+          ydl_opts = {
+            **get_yt_opts(),
+            'outtmpl': output_template,
+            'format': audio_fmt,
+            'postprocessors': [
+              {'key': 'FFmpegMetadata', 'add_metadata': True},
+            ],
+            'progress_hooks': [lambda d: progress_hook(d, task_id)],
+            'retries': 10,
+            'fragment_retries': 10,
+            **cookie_opts,
+          }
     else:
       # Video download — strip 'p' from quality (e.g. "1080p" → "1080")
       if quality:
@@ -834,54 +1020,76 @@ def download_worker(task_id: str, url: str, quality: str = None,
       else:
         format_spec = "bestvideo+bestaudio/best"
       
+      safe_container = container if container in ('mp4', 'mkv', 'webm', 'mov') else None
       output_template = f"{TARGET_DIR}/{base_filename}.%(ext)s"
       ydl_opts = {
         **get_yt_opts(),
         'outtmpl': output_template,
         'format': format_spec,
-        'merge_output_format': 'mp4',
         'progress_hooks': [lambda d: progress_hook(d, task_id)],
-        # Apply valid cookies.txt if available
         **cookie_opts,
         'retries': 10,
         'fragment_retries': 10,
       }
+      if safe_container:
+        ydl_opts['merge_output_format'] = safe_container
     
+    # ── For TRIMMED downloads: patch outtmpl to use task_id prefix so the file
+    # is always unique — no collision with previous downloads of the same video.
+    is_trimmed_request = (trim_start is not None or trim_end is not None)
+    trim_unique_prefix = f"_ytd_{task_id[:12]}"
+    if is_trimmed_request and 'outtmpl' in ydl_opts:
+      orig_outtmpl = ydl_opts['outtmpl']
+      # Insert unique prefix before the extension placeholder
+      ydl_opts['outtmpl'] = orig_outtmpl.replace('.%(ext)s', f'{trim_unique_prefix}.%(ext)s')
+
     # Get list of files before download to detect new files
     existing_files = set(os.listdir(TARGET_DIR)) if os.path.exists(TARGET_DIR) else set()
-    
+
     # Download the file
     with YoutubeDL(ydl_opts) as ydl:
       ydl.download([url])
-    
+
     # Find the downloaded file
-    # Method 1: Match by base_filename (case-insensitive startswith)
-    downloaded_files = [
-      f for f in os.listdir(TARGET_DIR)
-      if f.lower().startswith(base_filename.lower()[:50]) # Use first 50 chars for matching
-    ]
-    
-    # Method 2: Fallback - find new files added to tempfiles folder
-    if not downloaded_files:
+    # ── TRIMMED: look for the task_id-prefixed file (100% deterministic) ──
+    if is_trimmed_request:
+      trim_files = [f for f in os.listdir(TARGET_DIR) if trim_unique_prefix in f]
+      downloaded_files = trim_files if trim_files else []
+    else:
+      # ── PRIMARY: find files NEW since the pre-download snapshot ──
       current_files = set(os.listdir(TARGET_DIR))
       new_files = current_files - existing_files
       if new_files:
-        downloaded_files = list(new_files)
-    
-    # Method 3: Fallback - find most recently modified file
-    if not downloaded_files:
-      all_files = os.listdir(TARGET_DIR)
-      if all_files:
-        all_files_with_time = [
-          (f, os.path.getmtime(os.path.join(TARGET_DIR, f)))
-          for f in all_files
+        matching = [f for f in new_files if f.lower().startswith(base_filename.lower()[:50])]
+        downloaded_files = matching if matching else list(new_files)
+      else:
+        # ── FALLBACK A: title-prefix match among files modified in the last 90 s ──
+        recent_by_name = [
+          f for f in os.listdir(TARGET_DIR)
+          if f.lower().startswith(base_filename.lower()[:50])
+          and (time.time() - os.path.getmtime(os.path.join(TARGET_DIR, f))) < 90
         ]
-        all_files_with_time.sort(key=lambda x: x[1], reverse=True)
-        # Check if the most recent file was modified in the last 60 seconds
-        import time
-        if time.time() - all_files_with_time[0][1] < 60:
-          downloaded_files = [all_files_with_time[0][0]]
-    
+        if recent_by_name:
+          recent_by_name.sort(
+            key=lambda f: os.path.getmtime(os.path.join(TARGET_DIR, f)), reverse=True
+          )
+          downloaded_files = [recent_by_name[0]]
+        else:
+          # ── FALLBACK B: most recently modified file in the last 60 s ──
+          all_files = os.listdir(TARGET_DIR)
+          if all_files:
+            all_files_with_time = [
+              (f, os.path.getmtime(os.path.join(TARGET_DIR, f)))
+              for f in all_files
+            ]
+            all_files_with_time.sort(key=lambda x: x[1], reverse=True)
+            if time.time() - all_files_with_time[0][1] < 60:
+              downloaded_files = [all_files_with_time[0][0]]
+            else:
+              downloaded_files = []
+          else:
+            downloaded_files = []
+
     if downloaded_files:
       filename = downloaded_files[0]
       filepath = os.path.join(TARGET_DIR, filename)
@@ -909,27 +1117,48 @@ def download_worker(task_id: str, url: str, quality: str = None,
           temp_trimmed
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
         if result.returncode != 0:
-          print(f"[trim] FFmpeg error: {result.stderr[-500:]}")
-          # Fallback: try without stream copy (re-encode, slower but safer)
+          print(f"[trim] FFmpeg stream-copy failed: {result.stderr[-300:]}")
+          # Fallback: re-encode — codecs must match the output container
+          # WebM only accepts VP8/VP9/AV1 video + Vorbis/Opus audio
+          # MP4/MKV accept libx264 + AAC
+          if file_ext.lower() == '.webm':
+            fb_codecs = ['-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-c:a', 'libopus', '-b:a', '128k']
+          elif file_ext.lower() == '.opus':
+            fb_codecs = ['-vn', '-c:a', 'libopus', '-b:a', '128k']
+          elif file_ext.lower() == '.m4a':
+            fb_codecs = ['-vn', '-c:a', 'aac', '-b:a', '192k']
+          else:
+            # MP4, MKV, MOV — safe with H264 + AAC
+            fb_codecs = ['-c:v', 'libx264', '-preset', 'fast', '-c:a', 'aac']
           cmd_fallback = [
             get_ffmpeg_path(), '-y',
-            '-ss', str(ts),
-            '-i', filepath,
+            '-ss', str(ts), '-i', filepath,
             '-t', str(clip_duration),
-            '-c:v', 'libx264', '-preset', 'fast', '-c:a', 'aac',
+            *fb_codecs,
             temp_trimmed
           ]
-          subprocess.run(cmd_fallback, check=True)
+          result_fb = subprocess.run(cmd_fallback, capture_output=True, text=True, encoding='utf-8', errors='replace')
+          if result_fb.returncode != 0:
+            print(f"[trim] FFmpeg fallback also failed: {result_fb.stderr[-300:]}")
         
-        # Replace original with trimmed version (keep original filename clean)
+        # Replace the task_id-prefixed file with the trimmed output,
+        # then rename to clean base_filename so history shows a clean name.
         if os.path.exists(filepath):
           os.remove(filepath)
         if os.path.exists(temp_trimmed):
-          os.rename(temp_trimmed, filepath)
-        # filename and filepath stay the same — original clean name
-        
+          # Clean filename = base_filename + ext (no task_id prefix)
+          clean_filename = f"{base_filename}{file_ext}"
+          clean_filepath = os.path.join(TARGET_DIR, clean_filename)
+          # Overwrite any old file with the same clean name
+          if os.path.exists(clean_filepath):
+            os.remove(clean_filepath)
+          os.rename(temp_trimmed, clean_filepath)
+          filename = clean_filename
+          filepath = clean_filepath
+        # filename and filepath now point to the clean, trimmed file
+
       # Schedule auto-deletion after 10 minutes only for web
       if not is_desktop:
         schedule_deletion(filepath, 600)

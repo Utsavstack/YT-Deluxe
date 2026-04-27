@@ -10,8 +10,10 @@ import DownloadProgress from './components/DownloadProgress';
 import YTDeluxeAPI from '../../utils/api';
 import Button from '../../components/ui/Button';
 import Header from '../../components/ui/Header';
+import Icon from '../../components/AppIcon';
 
-const VideoDetailsDownload = () => {const { t } = useTranslation();
+const VideoDetailsDownload = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { addDownload, cancelDownload, resumeDownload, downloads, dismissDownload } = useDownloadContext();
@@ -52,10 +54,10 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
           // Determine the best available quality from real formats
           const videoFormats = (response.video.formats || []).filter((f) => f.type === 'video');
           const bestQuality = response.video.max_quality || (
-          videoFormats.length ? videoFormats[0].quality : '1080p');
+            videoFormats.length ? videoFormats[0].quality : '1080p');
 
           const fallbackUrl = initialVideo.url || `https://www.youtube.com/watch?v=${initialVideo.originalId || initialVideo.id?.split('_')?.[0] || response.video.id}`;
-          
+
           videoInfo = {
             id: response.video.id,
             title: response.video.title,
@@ -66,19 +68,19 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
             likes: Math.floor(Math.random() * 50000) + 1000,
             comments: Math.floor(Math.random() * 5000) + 100,
             uploadDate: (response.video.upload_date && response.video.upload_date.length >= 8) ?
-            `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z` :
-            (response.video.upload_date || new Date().toISOString()),
+              `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z` :
+              (response.video.upload_date || new Date().toISOString()),
             channel: {
-              name: (typeof response.video.channel === 'object' ? response.video.channel?.name : response.video.channel) || 
-                    response.video.uploader || 
-                    initialVideo?.channel?.name || 
-                    initialVideo?.uploader || 
-                    'Unknown Channel',
+              name: (typeof response.video.channel === 'object' ? response.video.channel?.name : response.video.channel) ||
+                response.video.uploader ||
+                initialVideo?.channel?.name ||
+                initialVideo?.uploader ||
+                'Unknown Channel',
               subscribers: response.video.channel_follower_count || '1M+',
               avatar: response.video.channel_avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
             },
-            tags: ['tutorial', 'guide', 'learning'],
             formats: response.video.formats || [],
+            all_formats: response.video.all_formats || response.video.formats || [],
             max_quality: bestQuality,
             url: fallbackUrl,
             videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(fallbackUrl)}&quality=720p`
@@ -106,8 +108,8 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
             avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
           },
           tags: [
-          "react", "javascript", "web-development", "programming", "tutorial",
-          "frontend", "hooks", "components", "jsx", "modern-web", "coding", "learn-to-code"],
+            "react", "javascript", "web-development", "programming", "tutorial",
+            "frontend", "hooks", "components", "jsx", "modern-web", "coding", "learn-to-code"],
 
           formats: []
         };
@@ -204,167 +206,225 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
   if (isLoadingVideo) {
     return (
       <div className="min-h-screen bg-background">
-    <Header />
-    <main className="pt-20 pb-8">
-     <div className="max-w-7xl mx-auto px-4 lg:px-6">
-      <div className="animate-pulse">
-       <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-       <div className="h-96 bg-gray-200 rounded mb-6"></div>
-       <div className="space-y-4">
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-       </div>
-      </div>
-     </div>
-    </main>
-   </div>);
+        <Header />
+        <main className="pt-20 pb-8">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+              <div className="h-96 bg-gray-200 rounded mb-6"></div>
+              <div className="space-y-4">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>);
 
   }
 
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-    <Header />
-    <main className="pt-20 pb-8">
-     <div className="max-w-7xl mx-auto px-4 lg:px-6">
-      <div className="text-center">
-       <h2 className="text-2xl font-bold text-red-600 mb-4">{t("videoDetailsDownload.errorLoadingVideo")}</h2>
-       <p className="text-muted-foreground mb-6">{error}</p>
-       <Button
+        <Header />
+        <main className="pt-20 pb-8">
+          <div className="max-w-7xl mx-auto px-4 lg:px-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-red-600 mb-4">{t("videoDetailsDownload.errorLoadingVideo")}</h2>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <Button
                 variant="default"
-                onClick={() => navigate(-1)}> {t("videoDetailsDownload.backToSearch")} 
+                onClick={() => navigate(-1)}> {t("videoDetailsDownload.backToSearch")}
 
 
               </Button>
-      </div>
-     </div>
-    </main>
-   </div>);
+            </div>
+          </div>
+        </main>
+      </div>);
 
   }
 
   return (
     <div className="min-h-screen bg-background">
-   <Header />
-   <main className="pt-20 pb-8">
-    <div className="max-w-7xl mx-auto px-4 lg:px-6">
-     {/* Back Navigation */}
-     <div className="pt-4 mb-4">
-      <Button
-              variant="outline"
+      <Header />
+      <main className="pt-20 pb-8">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
+          {/* Back Navigation */}
+          <div className="pt-4 mb-4">
+            <button
               onClick={() => navigate(-1)}
-              iconName="ArrowLeft"
-              iconPosition="left"
-              className="px-6 rounded-xl border-2 hover:bg-accent/50 transition-all spring-smooth"> {t("videoDetailsDownload.backToSearch")} 
+              className="group flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-primary text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] shadow-md shadow-primary/20"
+            >
+              <div className="flex items-center justify-center p-1 rounded-full bg-white/20 shadow-inner">
+                <Icon name="ArrowLeft" className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5" />
+              </div>
+              <span className="font-semibold text-sm tracking-wide">
+                {t("videoDetailsDownload.backToSearch")}
+              </span>
+            </button>
+          </div>
 
-
-            </Button>
-     </div>
-
-     <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-      {/* Main Content */}
-      <div className="xl:col-span-2 space-y-8">
-       {/* Video Player */}
-       <VideoPlayer
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="xl:col-span-2 space-y-8">
+              {/* Video Player */}
+              <VideoPlayer
                 videoData={videoData}
                 onQualityChange={handleQualityChange} />
-              
 
-       {/* Video Metadata */}
-       <VideoMetadata videoData={videoData} />
 
-       {/* Download Configuration */}
-       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-         <h2 id="download-options" className="text-2xl font-bold text-foreground">{t("videoDetailsDownload.downloadOptions")}</h2>
-        </div>
+              {/* Video Metadata */}
+              <VideoMetadata videoData={videoData} />
 
-        <DownloadTabs
+              {/* Download Configuration */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 id="download-options" className="text-2xl font-bold text-foreground">{t("videoDetailsDownload.downloadOptions")}</h2>
+                </div>
+
+                <DownloadTabs
                   videoData={videoData}
                   onDownload={handleDownload}
                   onSelect={handleSelectConfig}
                   selectedConfig={selectedConfig} />
-                
 
-        <VideoTrimmer
+
+                <VideoTrimmer
                   videoData={videoData}
                   onTrimChange={handleTrimChange}
                   onDownload={handleDownload}
                   onSelectConfig={handleSelectConfig}
                   selectedConfig={selectedConfig}
                   downloads={downloads} />
-                
-       </div>
-      </div>
 
-      {/* Sidebar */}
-      <div className="space-y-6">
-       {/* Quick Actions */}
-       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">{t("videoDetailsDownload.quickActions")}</h3>
-        <div className="space-y-3">
-          <Button
-                    variant="default"
-                    size="lg"
-                    fullWidth
-                    className="rounded-xl shadow-glass-sm hover:scale-[1.02] transition-all spring-smooth"
-                    iconName="Download"
-                    iconPosition="left"
-                    loading={isDownloading}
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <div className="glass-card p-6 border-t-4 border-t-primary relative overflow-hidden">
+                {/* Optional subtle glow */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 blur-3xl rounded-full pointer-events-none"></div>
+
+                <div className="flex items-center gap-0 mb-6 relative z-10">
+                  <div className="p-2 bg-primary/10 rounded-xl text-primary flex items-center justify-center">
+                    <Icon name="Zap" className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground tracking-tight">{t("videoDetailsDownload.quickActions")}</h3>
+                </div>
+
+                <div className="space-y-3 relative z-10">
+                  {/* VIDEO BUTTON (Primary) */}
+                  <button
                     onClick={() => handleDownload({
                       url: videoData?.url,
                       type: 'video',
                       quality: videoData?.max_quality || '1080p',
                       format: 'mp4',
                       filename: videoData?.title
-                    })}> {t("videoDetailsDownload.quickDownload1")}
+                    })}
+                    disabled={isDownloading}
+                    className="group relative w-full flex items-center justify-between p-4 rounded-xl overflow-hidden shadow-md shadow-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] border border-primary/20 bg-primary text-white"
+                  >
+                    {/* Shimmer Sweep Effect - Slowed down & smoothed */}
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 opacity-0 group-hover:opacity-100 bg-[length:200%_100%] animate-shimmer transition-opacity duration-500 pointer-events-none"
+                      style={{ animationDuration: '2s', animationTimingFunction: 'ease-in-out' }}
+                    ></div>
 
-                    {videoData?.max_quality || '1080p'})
-          </Button>
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-inner flex items-center justify-center text-white">
+                        {isDownloading ? (
+                          <Icon name="Loader2" className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Icon name="Download" className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start text-left">
+                        <span className="font-bold text-sm leading-tight text-white">
+                          {typeof t("videoDetailsDownload.quickDownload1") === 'string'
+                            ? t("videoDetailsDownload.quickDownload1").replace(/\s*\(\s*$/, '')
+                            : t("videoDetailsDownload.quickDownload1")}
+                        </span>
+                        <span className="text-[11px] font-medium text-white/80 mt-0.5 tracking-wide">
+                          MP4 • {videoData?.max_quality || '1080p'}
+                        </span>
+                      </div>
+                    </div>
 
-          <Button
-                    variant="outline"
-                    size="lg"
-                    fullWidth
-                    className="rounded-xl border-2 hover:bg-accent/50 transition-all spring-smooth"
-                    iconName="Music"
-                    iconPosition="left"
+                    <div className="relative z-10 bg-black/20 px-2 py-1 rounded text-[10px] font-bold tracking-wider backdrop-blur-md border border-white/10 shadow-sm text-white">
+                      VIDEO
+                    </div>
+                  </button>
+
+                  {/* AUDIO BUTTON (Secondary) */}
+                  <button
                     onClick={() => handleDownload({
                       url: videoData?.url,
                       type: 'audio',
-                      quality: '320kbps',
+                      quality: 'High Quality',
                       format: 'mp3',
                       filename: videoData?.title,
-                      size: '8.2 MB'
-                    })}> {t("videoDetailsDownload.audioOnlyMp")} 
+                      convert_to_mp3: true
+                    })}
+                    className="group w-full flex items-center justify-between p-4 rounded-xl glass-card border border-white/10 hover:border-pink-500/50 hover:bg-pink-500/5 hover:shadow-[0_0_15px_rgba(236,72,153,0.15)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden"
+                  >
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="p-2 bg-accent/50 dark:bg-white/5 rounded-lg text-muted-foreground group-hover:text-pink-500 group-hover:bg-pink-500/10 transition-colors duration-300 flex items-center justify-center">
+                        <Icon name="Music" className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col items-start text-left">
+                        <span className="font-bold text-sm text-foreground leading-tight group-hover:text-pink-500 transition-colors duration-300">
+                          {t("videoDetailsDownload.audioOnlyMp")}
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground mt-0.5 tracking-wide">
+                          MP3 • High Quality
+                        </span>
+                      </div>
+                    </div>
 
+                    <div className="bg-pink-500/10 border border-pink-500/20 text-pink-500 px-2 py-1 rounded text-[10px] font-bold tracking-wider relative z-10">
+                      AUDIO
+                    </div>
+                  </button>
 
-                  </Button>
-
-          <Button
-                    variant="outline"
-                    size="lg"
-                    fullWidth
-                    className="rounded-xl border-2 hover:bg-accent/50 transition-all spring-smooth"
-                    iconName="Image"
-                    iconPosition="left"
+                  {/* THUMBNAIL BUTTON (Secondary) */}
+                  <button
                     onClick={() => handleDownload({
                       url: videoData?.url,
                       type: 'thumbnail',
                       quality: 'Max Resolution',
                       format: 'jpg',
-                      filename: videoData?.title + ' Thumbnail',
-                      size: 'Max Resolution'
-                    })}> {t("videoDetailsDownload.downloadThumbnail")} 
+                      filename: videoData?.title + ' Thumbnail'
+                    })}
+                    className="group w-full flex items-center justify-between p-4 rounded-xl glass-card border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/5 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden"
+                  >
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="p-2 bg-accent/50 dark:bg-white/5 rounded-lg text-muted-foreground group-hover:text-purple-500 group-hover:bg-purple-500/10 transition-colors duration-300 flex items-center justify-center">
+                        <Icon name="Image" className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col items-start text-left">
+                        <span className="font-bold text-sm text-foreground leading-tight group-hover:text-purple-500 transition-colors duration-300">
+                          {t("videoDetailsDownload.downloadThumbnail")}
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground mt-0.5 tracking-wide">
+                          JPG • Max Res
+                        </span>
+                      </div>
+                    </div>
 
+                    <div className="bg-purple-500/10 border border-purple-500/20 text-purple-500 px-2 py-1 rounded text-[10px] font-bold tracking-wider relative z-10">
+                      THUMB
+                    </div>
+                  </button>
+                </div>
+              </div>
 
-                  </Button>
-        </div>
-       </div>
-
-       {/* Download Progress */}
-       <DownloadProgress
+              {/* Download Progress */}
+              <DownloadProgress
                 downloads={downloads.filter(d => !d.dismissed && videoData?.url && d.url === videoData.url)}
                 onCancel={handleCancelDownload}
                 onRetry={handleRetryDownload}
@@ -376,13 +436,12 @@ const VideoDetailsDownload = () => {const { t } = useTranslation();
                 onComplete={(download) => {
                   console.log('Download completed:', download);
                 }} />
-              
 
-      </div>
-     </div>
-    </div>
-   </main>
-  </div>);
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>);
 
 };
 
