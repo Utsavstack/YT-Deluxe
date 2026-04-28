@@ -87,11 +87,11 @@ const TermsAndConditions = () => {
           </section>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <motion.section variants={itemVariants} className="space-y-3 flex flex-col">
+            <motion.section variants={itemVariants} className="space-y-3 flex flex-col justify-start">
               <h2 className="text-lg font-black text-foreground border-b-2 border-primary/10 pb-2 flex items-center">
                 <span className="text-primary mr-2">#</span> {t('termsCond.acceptance')}
               </h2>
-              <div className="flex-1 flex items-start p-4 glass rounded-xl border border-border/50 group hover:border-primary/30 hover:shadow-glass-sm transition-all duration-300">
+              <div className="flex items-start p-4 glass rounded-xl border border-border/50 group hover:border-primary/30 hover:shadow-glass-sm transition-all duration-300">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary mr-3 group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
                   <Icon name="CheckCircle" size={16} />
                 </div>
@@ -99,6 +99,17 @@ const TermsAndConditions = () => {
                   <h4 className="text-sm font-bold text-foreground mb-1 mt-0 leading-none group-hover:text-primary transition-colors">{t('termsCond.mutualAgreement')}</h4>
                   <p className="text-xs text-muted-foreground m-0 leading-relaxed font-medium">
                     {t('termsCond.mutualAgreementDesc')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start p-4 glass rounded-xl border border-border/50 group hover:border-primary/30 hover:shadow-glass-sm transition-all duration-300">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary mr-3 group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
+                  <Icon name="RefreshCw" size={16} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-foreground mb-1 mt-0 leading-none group-hover:text-primary transition-colors">{t('termsCond.updatesToTerms')}</h4>
+                  <p className="text-xs text-muted-foreground m-0 leading-relaxed font-medium">
+                    {t('termsCond.updatesToTermsDesc')}
                   </p>
                 </div>
               </div>
@@ -160,8 +171,8 @@ const TermsAndConditions = () => {
                 Utsavstack / YT-Deluxe
               </a>
             </motion.div>
-            <p className="text-[12px] text-muted-foreground font-black mt-6 opacity-1">
-              {t('termsCond.protocol')}
+            <p className="text-[12px] text-muted-foreground font-semibold mt-6 opacity-1">
+              {t('termsCond.lastUpdated')}
             </p>
           </footer>
         </div>
