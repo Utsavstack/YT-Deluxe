@@ -135,6 +135,16 @@ Most YouTube downloaders on the internet are:
 
 ---
 
+
+**Video Player**
+<p align="center">
+  <img src="docs/assets/video-dark.webp" width="48%" alt="Video Player - Dark Mode">
+  &nbsp;
+  <img src="docs/assets/video-light.webp" width="48%" alt="Video Player - Light Mode">
+</p>
+
+---
+
 **Video Details & Description**
 <p align="center">
   <img src="docs/assets/description-dark.webp" width="48%" alt="Video Description - Dark Mode">
@@ -171,12 +181,7 @@ Most YouTube downloaders on the internet are:
 
 ---
 
-**Video Player**
-<p align="center">
-  <img src="docs/assets/video-dark.webp" width="48%" alt="Video Player - Dark Mode">
-  &nbsp;
-  <img src="docs/assets/video-light.webp" width="48%" alt="Video Player - Light Mode">
-</p>
+
 
 ---
 
@@ -185,6 +190,15 @@ Most YouTube downloaders on the internet are:
   <img src="docs/assets/history-dark.webp" width="48%" alt="History - Dark Mode">
   &nbsp;
   <img src="docs/assets/history-light.webp" width="48%" alt="History - Light Mode">
+</p>
+
+---
+
+**Profile / About**
+<p align="center">
+  <img src="docs/assets/prof-dark.webp" width="48%" alt="Profile - Dark Mode">
+  &nbsp;
+  <img src="docs/assets/prof-light.webp" width="48%" alt="Profile - Light Mode">
 </p>
 
 ---
@@ -203,15 +217,6 @@ Most YouTube downloaders on the internet are:
   <img src="docs/assets/lang-dark.webp" width="48%" alt="Language Settings - Dark Mode">
   &nbsp;
   <img src="docs/assets/lang-light.webp" width="48%" alt="Language Settings - Light Mode">
-</p>
-
----
-
-**Profile / About**
-<p align="center">
-  <img src="docs/assets/prof-dark.webp" width="48%" alt="Profile - Dark Mode">
-  &nbsp;
-  <img src="docs/assets/prof-light.webp" width="48%" alt="Profile - Light Mode">
 </p>
 
 ---
