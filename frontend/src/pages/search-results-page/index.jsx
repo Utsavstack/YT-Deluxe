@@ -71,7 +71,7 @@ const SearchResultsPage = () => {
           ...video,
           id: `${video.id}_url_0`,
           originalId: video.id,
-          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png'),
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.webp'),
           url: `https://www.youtube.com/watch?v=${video.id}`
         };
         setSearchResults([transformedResult]);
@@ -82,7 +82,7 @@ const SearchResultsPage = () => {
           ...video,
           originalId: video.id,
           id: `${video.id}_search_0_${j}`,
-          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png')
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.webp')
         }));
 
         setSearchResults(transformedResults);
@@ -116,7 +116,7 @@ const SearchResultsPage = () => {
           ...video,
           originalId: video.id,
           id: `${video.id}_search_page_${offset}_${j}`,
-          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png')
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.webp')
         }));
 
         setSearchResults((prev) => [...prev, ...moreResults]);
