@@ -206,12 +206,12 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
         if (mixedResults.length > 0) {
           const normalizedResults = mixedResults.map((v) => ({
             ...v,
-            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.png')
+            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.webp')
           }));
           setTrendingVideos(normalizedResults);
           setLastUpdated(new Date().toISOString());
         } else {
-          setTrendingVideos(shuffleArray(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.png' }))));
+          setTrendingVideos(shuffleArray(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.webp' }))));
         }
       } else {
         // specific category
@@ -225,18 +225,18 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
               ...v,
               originalId: v.id,
               id: `${v.id}_cat_0_${j}`,
-              thumbnail: v?.thumbnail || (v?.id ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` : '/assets/images/no_image.png')
+              thumbnail: v?.thumbnail || (v?.id ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` : '/assets/images/no_image.webp')
             };
           });
           setTrendingVideos(normalizedResults);
           setLastUpdated(new Date().toISOString());
         } else {
-          setTrendingVideos(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.png' })));
+          setTrendingVideos(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.webp' })));
         }
       }
     } catch (error) {
       console.warn('API not available, using mock data:', error);
-      setTrendingVideos(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.png' })));
+      setTrendingVideos(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.webp' })));
     } finally {
       setIsTrendingLoading(false);
     }
@@ -291,7 +291,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
         const normalizedResults = newResults.map((v) => {
           return {
             ...v,
-            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.png')
+            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.webp')
           };
         });
         setTrendingVideos((prev) => [...prev, ...normalizedResults]);
@@ -373,7 +373,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
           ...video,
           originalId: video.id,
           id: `${video.id}_search_page_${offset}_${j}`,
-          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.png')
+          thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.webp')
         }));
 
         setSearchResults((prev) => [...prev, ...moreResults]);

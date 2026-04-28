@@ -198,7 +198,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
               onMouseLeave={() => setIsHoveringLogo(false)}
             >
               <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-white/60 to-white/20 dark:from-white/25 dark:to-white/5 border border-white/60 dark:border-white/30 backdrop-blur-xl shadow-[0_8px_24px_rgba(0,0,0,0.25)] dark:shadow-[0_8px_16px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.2)] shrink-0 relative z-10 group-hover:rotate-6 transition-transform overflow-hidden">
-                <img src="/assets/images/logo-light.png" alt="YT-Deluxe" className="w-14 h-14 object-contain" />
+                <img src="/assets/images/logo-light.webp" alt="YT-Deluxe" className="w-14 h-14 object-contain" />
               </div>
               <div className="block relative z-10">
                 <h1 className="text-xl allan-bold text-foreground leading-none mb-0.5 tracking-tight">YT-Deluxe</h1>

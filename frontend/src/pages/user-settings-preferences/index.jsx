@@ -25,7 +25,7 @@ const UserSettingsPreferences = () => {
   // Mock user data
   const [user, setUser] = useState({
     name: 'Cristiano',
-    avatar: '/assets/images/developer.jpg',
+    avatar: '/assets/images/utsav.webp',
   });
 
   // Mock settings states
@@ -324,14 +324,14 @@ const UserSettingsPreferences = () => {
                 >
                   <motion.div
                     whileHover={{ rotate: 10, scale: 1.05 }}
-                    transition={{ duration: 0.5 }}
-                    className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-white/60 to-white/20 dark:from-white/25 dark:to-white/5 border border-white/60 dark:border-white/30 backdrop-blur-xl shadow-glass-sm relative z-10 p-2 overflow-hidden"
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center justify-center w-12 h-14 relative z-10 drop-shadow-md"
                   >
-                    <img src="/assets/images/logo-light.png" alt="YT-Deluxe" className="w-full h-full object-contain" />
+                    <img src="/assets/images/logo.webp" alt="YT-Deluxe" className="w-full h-full object-contain" />
                   </motion.div>
                   <div className="text-left">
                     <h3 className="text-xl allan-bold text-foreground leading-none tracking-tight">YT-Deluxe</h3>
-                    <p className="text-xs text-muted-foreground font-medium mt-1">{t('footer.premiumMedia')}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t('footer.premiumMedia')}</p>
                   </div>
                 </div>
 
