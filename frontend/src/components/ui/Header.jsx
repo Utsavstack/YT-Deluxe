@@ -17,6 +17,20 @@ const Header = ({ isScrolled: isScrolledProp }) => {
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef(null);
   
+  const [sortNewestFirst, setSortNewestFirst] = useState(true);
+  const sortByTime = (a, b) => {
+    const timeA = new Date(a.startedAt || 0).getTime();
+    const timeB = new Date(b.startedAt || 0).getTime();
+    return sortNewestFirst ? timeB - timeA : timeA - timeB;
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${bytes} B`;
+  };
+
   // Tooltip States
   const [showStartupHint, setShowStartupHint] = useState(false);
   const [isHoveringLogo, setIsHoveringLogo] = useState(false);
@@ -324,6 +338,24 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                           )}
                         </div>
                         <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              window.dispatchEvent(new Event('showGlobalFloater'));
+                              setBellOpen(false);
+                            }}
+                            className="text-[10px] font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-all border border-primary/20 flex items-center gap-1"
+                            title="Show floating progress panel"
+                          >
+                            <Icon name="ExternalLink" size={10} />
+                            Floater
+                          </button>
+                          <button
+                            onClick={() => setSortNewestFirst(prev => !prev)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                            title={sortNewestFirst ? 'Newest first' : 'Oldest first'}
+                          >
+                            <Icon name={sortNewestFirst ? 'ArrowDownWideNarrow' : 'ArrowUpNarrowWide'} size={14} />
+                          </button>
                           {visibleDownloads.length > 0 && (
                             <button
                               onClick={() => { clearHistory(); }}
@@ -347,7 +379,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                           </div>
                         ) : (
                           ['downloading', 'pending', 'processing', 'completed', 'error', 'paused', 'cancelled'].map(status => {
-                            const group = visibleDownloads.filter(d => d.status === status);
+                            const group = visibleDownloads.filter(d => d.status === status).sort(sortByTime);
                             if (group.length === 0) return null;
                             const sectionLabel = {
                               downloading: 'Running', pending: 'Running', processing: 'Processing',
@@ -392,22 +424,23 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
                                       <p className="text-xs font-medium text-foreground truncate">{dl.title || dl.filename}</p>
-                                      <div className="flex items-center gap-2 flex-wrap">
+                                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
                                         {(dl.status === 'downloading' || dl.status === 'pending') && (
                                           <span className="text-[10px] text-primary font-mono">{dl.progress || 0}%</span>
                                         )}
+                                        {dl.type && (
+                                          <span className="text-[9px] font-bold text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded">{dl.type}</span>
+                                        )}
+                                        {dl.quality && (
+                                          <span className="text-[9px] font-bold text-success uppercase bg-success/10 px-1.5 py-0.5 rounded">{dl.quality}</span>
+                                        )}
                                         {dl.completedAt && (
-                                          <span className="text-[10px] text-muted-foreground">
+                                          <span className="text-[9px] font-bold text-muted-foreground bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                            <Icon name="Clock" size={8} />
                                             {new Date(dl.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                           </span>
                                         )}
-                                        {dl.error && <span className="text-[10px] text-error truncate">{dl.error}</span>}
-                                        {dl.trimSettings && (dl.trimSettings.startTime > 0 || (dl.trimSettings.endTime > 0 && dl.trimSettings.endTime < (dl.duration - 1))) && (
-                                          <span className="text-[9px] text-violet-500 bg-violet-500/10 border border-violet-500/20 px-1.5 py-px rounded-md font-bold flex items-center gap-0.5">
-                                            <Icon name="Scissors" size={8} />
-                                            {Math.floor((dl.trimSettings.startTime || 0) / 60)}:{String(Math.round((dl.trimSettings.startTime || 0) % 60)).padStart(2,'0')} – {Math.floor((dl.trimSettings.endTime || 0) / 60)}:{String(Math.round((dl.trimSettings.endTime || 0) % 60)).padStart(2,'0')}
-                                          </span>
-                                        )}
+                                        {dl.error && <span className="text-[9px] text-error truncate max-w-[120px]">{dl.error}</span>}
                                       </div>
                                       {/* Mini progress bar */}
                                       {(dl.status === 'downloading' || dl.status === 'pending') && (

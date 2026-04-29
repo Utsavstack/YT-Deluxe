@@ -61,7 +61,7 @@ const DownloadHistoryManagement = () => {
     try {
       const response = await YTDeluxeAPI.getDownloadHistory();
 
-      if (isDesktop && response.history) {
+      if (response.history && response.history.length > 0) {
         // Transform backend data to match UI expectations
         const transformed = response.history.map((item, idx) => ({
           id: item.id || `hist_${idx}`,
@@ -80,6 +80,8 @@ const DownloadHistoryManagement = () => {
           type: item.type || 'all',
           trim_start: item.trim_start ?? null,
           trim_end: item.trim_end ?? null,
+          format_id: item.format_id || null,
+          audio_format_id: item.audio_format_id || null,
         }));
         setDownloadHistory(transformed);
 
@@ -97,7 +99,7 @@ const DownloadHistoryManagement = () => {
           }
         } catch {}
       } else {
-        // Web Mode: Use local storage
+        // Web Mode fallback: Use local storage when no backend history
         const localHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
         const transformed = localHistory.map((item) => ({
           ...item,

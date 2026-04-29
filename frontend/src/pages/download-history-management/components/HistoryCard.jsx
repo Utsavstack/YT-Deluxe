@@ -59,6 +59,19 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
     return 'text-muted-foreground';
   };
 
+  const fmt = (item?.format || '').toLowerCase();
+  const qlty = (item?.quality || '').toLowerCase();
+  let mediaType = 'Video';
+  let mediaTypeCls = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+  if (item?.type === 'saved') {
+    mediaType = 'Saved'; mediaTypeCls = 'bg-primary/10 text-primary border-primary/20';
+  } else if (fmt === 'mp3' || qlty.includes('audio') || qlty.includes('kbps')) {
+    mediaType = 'Music'; mediaTypeCls = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+  } else if (fmt === 'jpg' || fmt === 'png' || qlty.includes('thumbnail') || qlty.includes('resolution')) {
+    mediaType = 'Thumbnail'; mediaTypeCls = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+  }
+  const isThumbnail = mediaType === 'Thumbnail';
+
   return (
     <motion.div
       layout
@@ -185,11 +198,21 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                       </div>
                     )}
 
+                    {/* ID Badge */}
+                    {(item?.format_id || item?.audio_format_id) && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 shadow-sm text-purple-400">
+                        <Icon name="Layers" size={10} />
+                        <span>id:{item.format_id || item.audio_format_id}</span>
+                      </div>
+                    )}
+
                     {/* Size Badge */}
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm text-muted-foreground">
-                      <Icon name="HardDrive" size={10} className="opacity-50" />
-                      <span>{formatFileSize(item?.fileSize || 0)}</span>
-                    </div>
+                    {!isThumbnail && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 shadow-sm text-muted-foreground">
+                        <Icon name="HardDrive" size={10} className="opacity-50" />
+                        <span>{formatFileSize(item?.fileSize || 0)}</span>
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -209,30 +232,15 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                 )}
               </div>
 
-              <div className="flex items-center gap-2.5">
-                {(() => {
-                  const fmt = (item?.format || '').toLowerCase();
-                  const qlty = (item?.quality || '').toLowerCase();
-                  let type = 'Video';
-                  let cls = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-                  if (item.type === 'saved') {
-                    type = 'Saved'; cls = 'bg-primary/10 text-primary border-primary/20';
-                  } else if (fmt === 'mp3' || qlty.includes('audio') || qlty.includes('kbps')) {
-                    type = 'Music'; cls = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-                  } else if (fmt === 'jpg' || fmt === 'png' || qlty.includes('thumbnail') || qlty.includes('resolution')) {
-                    type = 'Thumbnail'; cls = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-                  }
-                  return (
-                    <span className={`text-[8px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-full border ${cls}`}>
-                      {type}
-                    </span>
-                  );
-                })()}
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <span className={`text-[8px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-full border ${mediaTypeCls}`}>
+                  {mediaType}
+                </span>
                 <div className="flex items-center gap-1.5 text-[9px] font-black text-muted-foreground/40 uppercase tracking-wider">
                   <Icon name="Calendar" size={11} className="opacity-30" />
-                  <span>{formatDate(item?.downloadDate)}</span>
+                  <span className="whitespace-nowrap">{formatDate(item?.downloadDate)}</span>
                   <span className="opacity-30"><Icon name="Clock" size={11} /></span>
-                  <span>
+                  <span className="whitespace-nowrap">
                     {(() => {
                       try {
                         const d = new Date(item?.downloadDate);

@@ -128,7 +128,7 @@ export const DownloadProvider = ({ children }) => {
           };
         }));
 
-        if (progress.status === 'completed' || progress.status === 'error') {
+        if (progress.status === 'completed' || progress.status === 'error' || progress.status === 'cancelled' || progress.status === 'paused') {
           clearInterval(progressIntervals.current[downloadId]);
           delete progressIntervals.current[downloadId];
 
@@ -394,17 +394,17 @@ export const DownloadProvider = ({ children }) => {
     }
   }, [updateDownload]);
 
-  /** cancelDownload: if within 800ms window, suppresses API call */
+  /** cancelDownload: if within 800ms window, suppresses API call; else tells backend to cancel + delete files */
   const cancelDownload = useCallback((id) => {
     // Clear cancel-window timer if still active (no API call made yet)
     if (cancelWindowTimers.current[id]) {
       clearTimeout(cancelWindowTimers.current[id]);
       delete cancelWindowTimers.current[id];
-      updateDownload(id, { status: 'cancelled', progress: 0, isCancelledInWindow: true });
+      updateDownload(id, { status: 'cancelled', progress: 0, isCancelledInWindow: true, completedAt: new Date().toISOString() });
       return;
     }
 
-    // Past cancel window — cancel via backend
+    // Past cancel window — tell backend to cancel (stops yt-dlp + deletes partial files)
     setDownloads(prev => {
       const dl = prev.find(d => d.id === id);
       if (dl?.taskId) {
@@ -413,44 +413,90 @@ export const DownloadProvider = ({ children }) => {
       return prev;
     });
 
-    // Clear progress interval
+    // Clear progress polling
     if (progressIntervals.current[id]) {
       clearInterval(progressIntervals.current[id]);
       delete progressIntervals.current[id];
     }
 
-    updateDownload(id, { status: 'cancelled', error: null });
+    updateDownload(id, { status: 'cancelled', error: null, completedAt: new Date().toISOString() });
   }, [updateDownload]);
 
-  /** pauseDownload: cancel + re-queue with original config */
+  /** pauseDownload: tells backend to pause (keeps .part files for true resume) */
   const pauseDownload = useCallback((id) => {
-    cancelDownload(id);
-    updateDownload(id, { status: 'paused' });
-  }, [cancelDownload, updateDownload]);
+    // If still in 800ms window, just cancel the timer
+    if (cancelWindowTimers.current[id]) {
+      clearTimeout(cancelWindowTimers.current[id]);
+      delete cancelWindowTimers.current[id];
+      updateDownload(id, { status: 'paused', progress: 0, isCancelledInWindow: true, completedAt: new Date().toISOString() });
+      return;
+    }
 
-  /** resumeDownload: re-trigger a paused/cancelled download */
-  const resumeDownload = useCallback((id) => {
+    // Tell backend to pause (stops yt-dlp but keeps .part files)
     setDownloads(prev => {
       const dl = prev.find(d => d.id === id);
-      if (dl && (dl.status === 'paused' || dl.status === 'error' || dl.status === 'cancelled')) {
-        setTimeout(() => {
-          addDownload({
-            url: dl.url,
-            type: dl.type,
-            quality: dl.quality,
-            format: dl.format,
-            filename: dl.title || dl.filename,
-            size: dl.size,
-            trimSettings: dl.trimSettings,
-            thumbnail: dl.thumbnail,
-            channel: dl.channel
-          }, { title: dl.title, duration: dl.duration });
-        }, 0);
-        return prev.map(d => d.id === id ? { ...d, dismissed: true } : d);
+      if (dl?.taskId) {
+        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/pause/${dl.taskId}`, { method: 'POST' }).catch(() => {});
       }
       return prev;
     });
-  }, [addDownload]);
+
+    // Clear progress polling
+    if (progressIntervals.current[id]) {
+      clearInterval(progressIntervals.current[id]);
+      delete progressIntervals.current[id];
+    }
+
+    updateDownload(id, { status: 'paused', error: null, completedAt: new Date().toISOString() });
+  }, [updateDownload]);
+
+  /** resumeDownload: for paused → true resume via backend (yt-dlp picks up from .part file);
+   *  for cancelled/error → fresh download */
+  const resumeDownload = useCallback((id) => {
+    setDownloads(prev => {
+      const dl = prev.find(d => d.id === id);
+      if (!dl || !['paused', 'error', 'cancelled'].includes(dl.status)) return prev;
+
+      // TRUE RESUME: paused download with a backend taskId → call /api/resume
+      // yt-dlp will detect the existing .part file and resume from where it left off
+      if (dl.taskId && dl.status === 'paused') {
+        setTimeout(async () => {
+          try {
+            const res = await fetch(
+              `${import.meta.env.VITE_API_BASE_URL || ''}/api/resume/${dl.taskId}`,
+              { method: 'POST' }
+            );
+            const data = await res.json();
+            if (data.status === 'resuming') {
+              startProgressPolling(dl.taskId, dl.id);
+            } else {
+              updateDownload(id, { status: 'error', error: data.error || 'Resume failed' });
+            }
+          } catch {
+            updateDownload(id, { status: 'error', error: 'Failed to resume download' });
+          }
+        }, 0);
+
+        // Immediately update UI to show downloading state (keep existing progress)
+        return prev.map(d => d.id === id ? {
+          ...d, status: 'downloading', error: null, completedAt: null,
+          speed: 0, speedFormatted: '', etaFormatted: '',
+        } : d);
+      }
+
+      // FRESH DOWNLOAD: cancelled or error → dismiss old entry, create new download
+      setTimeout(() => {
+        addDownload({
+          url: dl.url, type: dl.type, quality: dl.quality, format: dl.format,
+          format_id: dl.format_id, audio_format_id: dl.audio_format_id,
+          container: dl.container, filename: dl.title || dl.filename,
+          size: dl.size, trimSettings: dl.trimSettings,
+          thumbnail: dl.thumbnail, channel: dl.channel
+        }, { title: dl.title, duration: dl.duration });
+      }, 0);
+      return prev.map(d => d.id === id ? { ...d, dismissed: true } : d);
+    });
+  }, [addDownload, startProgressPolling, updateDownload]);
 
   /** dismissDownload: removes from visible panel but keeps in history */
   const dismissDownload = useCallback((id) => {

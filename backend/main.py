@@ -228,6 +228,16 @@ download_tasks = _load_tasks()
 download_history = []
 feedback_list = []
 
+# ── Cancellation infrastructure ───────────────────────────────────────────────
+# Thread-safe set of task_ids that should be aborted.
+# The progress_hook checks this on every callback and raises to abort yt-dlp.
+cancelled_tasks: set = set()
+cancelled_tasks_lock = threading.Lock()
+
+class DownloadCancelled(Exception):
+    """Raised inside progress_hook to abort yt-dlp when user cancels."""
+    pass
+
 # Endpoint: Search YouTube (by keyword)
 @app.get("/api/search")
 def search_videos(q: str):
@@ -795,6 +805,15 @@ def download_worker(task_id: str, url: str, quality: str = None,
       os.makedirs(TARGET_DIR, exist_ok=True)
 
     download_tasks[task_id]["status"] = "downloading"
+    # Store the full download config so /api/resume can restart the worker
+    download_tasks[task_id]["_download_config"] = {
+      "url": url, "quality": quality, "format": format,
+      "trim_start": trim_start, "trim_end": trim_end, "rename": rename,
+      "format_id": format_id, "is_desktop": is_desktop,
+      "download_path": download_path, "type": type,
+      "audio_format_id": audio_format_id, "container": container,
+      "convert_to_mp3": convert_to_mp3
+    }
     _save_tasks()
     
     # Get video info first (needed for title and format metadata)
@@ -848,7 +867,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
           "thumbnail": download_tasks[task_id].get("thumbnail") or info.get('thumbnail', ''),
           "channel": download_tasks[task_id].get("channel") or info.get('uploader') or info.get('channel', ''),
           "duration": info.get('duration', 0),
-          "batch_id": download_tasks[task_id].get("batch_id")
+          "batch_id": download_tasks[task_id].get("batch_id"),
+          "format_id": download_tasks[task_id].get("format_id"),
+          "audio_format_id": download_tasks[task_id].get("audio_format_id")
         }
         download_history.append(history_entry)
         save_history()
@@ -1043,12 +1064,52 @@ def download_worker(task_id: str, url: str, quality: str = None,
       # Insert unique prefix before the extension placeholder
       ydl_opts['outtmpl'] = orig_outtmpl.replace('.%(ext)s', f'{trim_unique_prefix}.%(ext)s')
 
+    # ── Check cancellation before starting the heavy download ──────────────
+    with cancelled_tasks_lock:
+      if task_id in cancelled_tasks:
+        print(f"[cancel] Task {task_id} was cancelled before download started")
+        download_tasks[task_id].update({"status": "cancelled", "error": None})
+        _save_tasks()
+        cancelled_tasks.discard(task_id)
+        return
+
     # Get list of files before download to detect new files
     existing_files = set(os.listdir(TARGET_DIR)) if os.path.exists(TARGET_DIR) else set()
 
-    # Download the file
-    with YoutubeDL(ydl_opts) as ydl:
-      ydl.download([url])
+    # Download the file (progress_hook will raise DownloadCancelled if user cancels)
+    try:
+      with YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+    except DownloadCancelled:
+      task_status = download_tasks.get(task_id, {}).get("status", "cancelled")
+      is_pause = task_status == "paused"
+      print(f"[{'pause' if is_pause else 'cancel'}] yt-dlp aborted for task {task_id}")
+
+      if not is_pause:
+        # Cancel — clean up partial files
+        print(f"[cancel] Cleaning up partial files...")
+        try:
+          current_files = set(os.listdir(TARGET_DIR))
+          partial_files = current_files - existing_files
+          for pf in partial_files:
+            pf_path = os.path.join(TARGET_DIR, pf)
+            try:
+              os.remove(pf_path)
+              print(f"[cancel] Removed partial file: {pf}")
+            except Exception:
+              pass
+        except Exception:
+          pass
+        download_tasks[task_id].update({"status": "cancelled", "error": None})
+      else:
+        # Pause — keep .part files for resume
+        print(f"[pause] Keeping partial files for resume")
+        download_tasks[task_id].update({"error": None})
+
+      _save_tasks()
+      with cancelled_tasks_lock:
+        cancelled_tasks.discard(task_id)
+      return
 
     # Find the downloaded file
     # ── TRIMMED: look for the task_id-prefixed file (100% deterministic) ──
@@ -1202,7 +1263,9 @@ def download_worker(task_id: str, url: str, quality: str = None,
         "batch_id": batch_id,
         "trim_start": trim_start,
         "trim_end": trim_end,
-        "type": type
+        "type": type,
+        "format_id": format_id,
+        "audio_format_id": audio_format_id
       }
       download_history.append(history_entry)
       save_history()
@@ -1220,6 +1283,22 @@ def download_worker(task_id: str, url: str, quality: str = None,
         batch_task["failed_urls"] += 1
       
   except Exception as e:
+    # Check if this was actually a cancellation/pause that yt-dlp wrapped in DownloadError
+    with cancelled_tasks_lock:
+      was_aborted = task_id in cancelled_tasks
+      cancelled_tasks.discard(task_id)
+    
+    if was_aborted or isinstance(e, DownloadCancelled):
+      task_status = download_tasks.get(task_id, {}).get("status", "cancelled")
+      is_pause = task_status == "paused"
+      print(f"[{'pause' if is_pause else 'cancel'}] Task {task_id} aborted (caught in outer handler)")
+      if not is_pause:
+        download_tasks[task_id].update({"status": "cancelled", "error": None})
+      else:
+        download_tasks[task_id].update({"error": None})
+      _save_tasks()
+      return
+
     download_tasks[task_id].update({
       "status": "error",
       "error": str(e)
@@ -1234,6 +1313,12 @@ def download_worker(task_id: str, url: str, quality: str = None,
 
 # Progress hook for ytdlp ---
 def progress_hook(d, task_id):
+  # ── Check cancellation on EVERY progress callback ──────────────────────
+  with cancelled_tasks_lock:
+    if task_id in cancelled_tasks:
+      print(f"[cancel] progress_hook: aborting task {task_id}")
+      raise DownloadCancelled(f"Download {task_id} cancelled by user")
+
   if task_id in download_tasks:
     if d['status'] == 'downloading':
       # Calculate progress percentage
@@ -1293,19 +1378,67 @@ def cancel_download(task_id: str):
   if not task:
     return JSONResponse({"error": "Task not found"}, status_code=404)
   
-  # Mark as cancelled in task store
+  # 1) Add to the cancellation set so the progress_hook raises on next callback
+  with cancelled_tasks_lock:
+    cancelled_tasks.add(task_id)
+  print(f"[cancel] Task {task_id} flagged for cancellation")
+
+  # 2) Mark as cancelled in the task store (progress endpoint returns this)
   download_tasks[task_id]["status"] = "cancelled"
   _save_tasks()
 
-  # Try to kill the associated subprocess if we stored it
-  proc = download_tasks[task_id].get("_process")
-  if proc:
-    try:
-      proc.terminate()
-    except Exception:
-      pass
-
   return {"status": "cancelled", "task_id": task_id}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint: Pause an active download (keeps .part files for resume)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.post("/api/pause/{task_id}")
+def pause_download(task_id: str):
+  task = download_tasks.get(task_id)
+  if not task:
+    return JSONResponse({"error": "Task not found"}, status_code=404)
+  
+  # Mark as paused BEFORE adding to abort set (so download_worker knows to keep files)
+  download_tasks[task_id]["status"] = "paused"
+  _save_tasks()
+
+  # Add to abort set so progress_hook raises on next callback
+  with cancelled_tasks_lock:
+    cancelled_tasks.add(task_id)
+  print(f"[pause] Task {task_id} flagged for pause (keeping .part files)")
+
+  return {"status": "paused", "task_id": task_id}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint: Resume a paused download (yt-dlp auto-resumes from .part file)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.post("/api/resume/{task_id}")
+def resume_download(task_id: str, background_tasks: BackgroundTasks):
+  task = download_tasks.get(task_id)
+  if not task:
+    return JSONResponse({"error": "Task not found"}, status_code=404)
+  
+  config = task.get("_download_config")
+  if not config:
+    return JSONResponse({"error": "No saved download config to resume from"}, status_code=400)
+  
+  # Clear from abort set
+  with cancelled_tasks_lock:
+    cancelled_tasks.discard(task_id)
+  
+  # Reset task state (keep existing progress for UI)
+  download_tasks[task_id]["status"] = "downloading"
+  download_tasks[task_id]["error"] = None
+  _save_tasks()
+  print(f"[resume] Task {task_id} resuming — yt-dlp will auto-detect .part files")
+
+  # Restart the download worker with the same config
+  background_tasks.add_task(
+    download_worker,
+    task_id, **config
+  )
+
+  return {"status": "resuming", "task_id": task_id}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Endpoint: Desktop OS-level notification (Windows toast)
