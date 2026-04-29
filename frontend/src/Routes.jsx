@@ -7,7 +7,7 @@ import PageSkeleton from "components/PageSkeleton";
 import GlobalPIPPlayer from "components/ui/GlobalPIPPlayer";
 import GlobalProgressFloater from "components/ui/GlobalProgressFloater";
 
-const BatchDownloadManager = lazy(() => import('./pages/batch-download-manager'));
+
 const HomeSearchDashboard = lazy(() => import('./pages/home-search-dashboard'));
 const DownloadHistoryManagement = lazy(() => import('./pages/download-history-management'));
 const UserSettingsPreferences = lazy(() => import('./pages/user-settings-preferences'));
@@ -27,7 +27,7 @@ const Routes = () => {
                     <RouterRoutes>
                         {/* Define your route here */}
                         <Route path="/" element={<HomeSearchDashboard />} />
-                        <Route path="/batch-download-manager" element={<BatchDownloadManager />} />
+
                         <Route path="/home-search-dashboard" element={<HomeSearchDashboard />} />
                         <Route path="/download-history-management" element={<DownloadHistoryManagement />} />
                         <Route path="/user-settings-preferences" element={<UserSettingsPreferences />} />

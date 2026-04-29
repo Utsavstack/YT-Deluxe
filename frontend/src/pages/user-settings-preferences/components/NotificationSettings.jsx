@@ -89,13 +89,6 @@ const NotificationSettings = ({ settings, onSettingsChange }) => {
        />
 
        <Checkbox
-        label="Batch download progress"
-        description="Notify about batch download milestones"
-        checked={notificationSettings?.batchProgress}
-        onChange={(e) => handleSettingChange('batchProgress', e?.target?.checked)}
-       />
-
-       <Checkbox
         label="Storage space warnings"
         description="Notify when storage space is low"
         checked={notificationSettings?.storageWarnings}
@@ -251,12 +244,6 @@ const NotificationSettings = ({ settings, onSettingsChange }) => {
          label="Weekly activity report"
          checked={notificationSettings?.weeklyReport}
          onChange={(e) => handleSettingChange('weeklyReport', e?.target?.checked)}
-        />
-
-        <Checkbox
-         label="Large batch completion"
-         checked={notificationSettings?.batchCompletion}
-         onChange={(e) => handleSettingChange('batchCompletion', e?.target?.checked)}
         />
 
         <Checkbox

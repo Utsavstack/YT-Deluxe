@@ -128,7 +128,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
 
   const navigationItems = [
     { label: 'Home', path: '/home-search-dashboard', icon: 'Home', tooltip: 'Search and download videos' },
-    { label: 'Batch', path: '/batch-download-manager', icon: 'Download', tooltip: 'Manage bulk downloads' },
+
     { label: 'History', path: '/download-history-management', icon: 'History', tooltip: 'View download history' },
     { label: 'Settings', path: '/user-settings-preferences', icon: 'Settings', tooltip: 'Configure preferences' },
   ];

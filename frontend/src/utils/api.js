@@ -122,41 +122,6 @@ class YTDeluxeAPI {
     }
   }
 
-  // Batch download multiple videos
-  static async batchDownload(urls, options = {}) {
-    try {
-      const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
-      const formData = new FormData();
-      formData.append('is_desktop', isDesktop);
-
-      // Add URLs
-      urls.forEach(url => {
-        formData.append('urls', url);
-      });
-
-      // Add options
-      if (options.quality) {
-        formData.append('quality', options.quality);
-      }
-      if (options.format) {
-        formData.append('format', options.format);
-      }
-      const downloadPath = localStorage.getItem('ytdeluxe_download_path');
-      if (downloadPath) {
-        formData.append('download_path', downloadPath);
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/batch-download`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      return await handleResponse(response);
-    } catch (error) {
-      console.error('Batch download API error:', error);
-      throw error;
-    }
-  }
 
   // Get download history
   static async getDownloadHistory() {

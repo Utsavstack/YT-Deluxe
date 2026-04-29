@@ -8,12 +8,7 @@ const FloatingActionButton = () => {
  const navigate = useNavigate();
 
  const quickActions = [
-  {
-   id: 'batch',
-   label: 'Batch Download',
-   icon: 'Download',
-   action: () => navigate('/batch-download-manager')
-  },
+
   {
    id: 'history',
    label: 'Download History',
