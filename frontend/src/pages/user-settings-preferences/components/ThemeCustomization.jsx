@@ -153,7 +153,7 @@ const ThemeCustomization = ({ currentTheme, onThemeChange, currentAccentColor, o
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={resetAccentColor}
-            className="flex items-center space-x-2 px-4 py-2 text-xs font-bold uppercase tracking-wider bg-accent/50 text-accent-foreground border border-border/50 rounded-xl hover:bg-accent transition-all duration-200 shadow-sm"
+            className="flex items-center space-x-2 px-4 py-2 text-xs font-bold tracking-wider bg-accent/50 text-accent-foreground border border-border/50 rounded-xl hover:bg-accent transition-all duration-200 shadow-sm"
           >
             <Icon name="RotateCcw" size={14} />
             <span>{t('theme.resetDefault')}</span>
@@ -184,7 +184,7 @@ const ThemeCustomization = ({ currentTheme, onThemeChange, currentAccentColor, o
         {/* Recently Used Colors */}
         {recentAccentColors.length > 0 && (
           <div className="mt-8 pt-6 border-t border-border">
-            <label className="block text-sm font-bold text-foreground uppercase tracking-widest opacity-60 mb-4">
+            <label className="block text-sm font-semibold text-foreground mb-4 opacity-80">
               {t('theme.recentlyUsed')}
             </label>
             <div className="flex flex-wrap gap-4">
@@ -212,7 +212,7 @@ const ThemeCustomization = ({ currentTheme, onThemeChange, currentAccentColor, o
 
         {/* Custom Color Input */}
         <div className="mt-6 pt-6 border-t border-border">
-          <label className="block text-sm font-bold text-foreground uppercase tracking-widest opacity-60 mb-3">
+          <label className="block text-sm font-semibold text-foreground mb-3 opacity-80">
             {t('theme.customColor')}
           </label>
           <div className="flex items-center space-x-4">

@@ -24,8 +24,9 @@ const UserSettingsPreferences = () => {
 
   // Mock user data
   const [user, setUser] = useState({
-    name: 'Cristiano',
-    avatar: '/assets/images/utsav.webp',
+    name: 'User',
+    avatar: '',
+    caption: "Hey I'm using YT Deluxe",
   });
 
   // Mock settings states

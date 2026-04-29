@@ -8,6 +8,7 @@ import Input from '../../../components/ui/Input';
 import YTDeluxeAPI from '../../../utils/api';
 import { formatDate } from '../../../utils/dateFormat';
 import { YTDeluxeStorage, STORAGE_KEYS, isDesktop } from '../../../utils/storage';
+import Cropper from 'react-easy-crop';
 
 const AccountManagement = ({ user, onUserUpdate }) => {
   const { t } = useTranslation();
@@ -15,15 +16,24 @@ const AccountManagement = ({ user, onUserUpdate }) => {
   const [userProfile, setUserProfile] = useState({
     name: 'User',
     avatar: '',
+    caption: "Hey I'm using YT Deluxe",
   });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '' });
+  const [error, setError] = useState('');
+  const [editForm, setEditForm] = useState({ name: '', caption: '' });
   const [downloadHistory, setDownloadHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState('downloadDate');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+  // Cropper states
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isCropping, setIsCropping] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -32,9 +42,19 @@ const AccountManagement = ({ user, onUserUpdate }) => {
     const loadProfile = async () => {
       const stored = await YTDeluxeStorage.getItem(STORAGE_KEYS.USER_PROFILE);
       if (stored) {
+        // Clear default developer image if it got cached
+        if (stored.avatar === '/assets/images/utsav.webp' || stored.name === 'Cristiano') {
+          stored.avatar = '';
+          if (stored.name === 'Cristiano') stored.name = 'User';
+          await YTDeluxeStorage.setItem(STORAGE_KEYS.USER_PROFILE, stored);
+        }
+        if (!stored.caption) {
+          stored.caption = "Hey I'm using YT Deluxe";
+          await YTDeluxeStorage.setItem(STORAGE_KEYS.USER_PROFILE, stored);
+        }
         setUserProfile(stored);
       } else if (user) {
-        const initial = { name: user.name || 'User', avatar: user.avatar || '' };
+        const initial = { name: user.name || 'User', avatar: user.avatar || '', caption: user.caption || "Hey I'm using YT Deluxe" };
         setUserProfile(initial);
         await YTDeluxeStorage.setItem(STORAGE_KEYS.USER_PROFILE, initial);
       }
@@ -119,12 +139,18 @@ const AccountManagement = ({ user, onUserUpdate }) => {
 
   const handleEditToggle = async () => {
     if (isEditing) {
-      const updated = { ...userProfile, name: editForm.name };
+      if (!editForm.name.trim()) {
+        setError(t('profile.nameRequired', 'Name cannot be empty'));
+        return;
+      }
+      setError('');
+      const updated = { ...userProfile, name: editForm.name, caption: editForm.caption };
       setUserProfile(updated);
       await YTDeluxeStorage.setItem(STORAGE_KEYS.USER_PROFILE, updated);
       if (onUserUpdate) onUserUpdate(updated);
     } else {
-      setEditForm({ name: userProfile.name });
+      setEditForm({ name: userProfile.name, caption: userProfile.caption || "Hey I'm using YT Deluxe" });
+      setError('');
     }
     setIsEditing(!isEditing);
   };
@@ -135,14 +161,37 @@ const AccountManagement = ({ user, onUserUpdate }) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const updated = { ...userProfile, avatar: reader.result };
-        setUserProfile(updated);
-        await YTDeluxeStorage.setItem(STORAGE_KEYS.USER_PROFILE, updated);
-        if (onUserUpdate) onUserUpdate(updated);
+      reader.onloadend = () => {
+        setImageToCrop(reader.result);
+        setIsCropping(true);
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
+  };
+
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  const handleCropSave = async () => {
+    try {
+      const croppedImageBase64 = await getCroppedImg(imageToCrop, croppedAreaPixels);
+      const updated = { ...userProfile, avatar: croppedImageBase64 };
+      setUserProfile(updated);
+      await YTDeluxeStorage.setItem(STORAGE_KEYS.USER_PROFILE, updated);
+      if (onUserUpdate) onUserUpdate(updated);
+      
+      setIsCropping(false);
+      setImageToCrop(null);
+    } catch (e) {
+      console.error("Failed to crop image", e);
+    }
+  };
+
+  const handleCropCancel = () => {
+    setIsCropping(false);
+    setImageToCrop(null);
   };
 
   const handleResetData = async () => {
@@ -199,7 +248,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
             </div>
             <div>
               <h3 className="text-xl font-black text-foreground tracking-tight">{t('profile.identity')}</h3>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">{t('profile.identityDesc')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('profile.identityDesc')}</p>
             </div>
           </div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -225,7 +274,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
             <motion.div
               whileHover={isEditing ? { scale: 1.05 } : {}}
-              className={`w-32 h-32 rounded-[2rem] overflow-hidden bg-muted border-4 transition-all duration-300 shadow-xl ${isEditing ? 'border-primary/50 group-hover/avatar:border-primary' : 'border-background dark:border-white/5'}`}
+              className={`w-32 h-32 rounded-full overflow-hidden bg-muted border-4 transition-all duration-300 shadow-xl ${isEditing ? 'border-primary/50 group-hover/avatar:border-primary' : 'border-background dark:border-white/5'}`}
             >
               {userProfile.avatar ? (
                 <img
@@ -235,12 +284,12 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                   onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile.name)}&background=0D8ABC&color=fff&size=128`; }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-muted/80">
-                  <Icon name="User" size={48} className="text-muted-foreground/30" />
+                <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                  <span className="text-5xl font-black uppercase">{userProfile.name ? userProfile.name.charAt(0) : 'U'}</span>
                 </div>
               )}
               {isEditing && (
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
+                <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
                   <Icon name="Camera" size={28} className="text-white drop-shadow-lg" />
                 </div>
               )}
@@ -252,10 +301,17 @@ const AccountManagement = ({ user, onUserUpdate }) => {
             {isEditing ? (
               <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="max-w-md space-y-4">
                 <Input
-                  label={t('profile.displayName')}
+                  label={t('profile.displayName') || 'Display Name'}
                   value={editForm.name}
-                  onChange={(e) => setEditForm({ name: e.target.value })}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   placeholder="Your name"
+                  error={error}
+                />
+                <Input
+                  label="Caption"
+                  value={editForm.caption}
+                  onChange={(e) => setEditForm({ ...editForm, caption: e.target.value })}
+                  placeholder="Hey I'm using YT Deluxe"
                 />
                 <Button
                   variant="outline"
@@ -270,16 +326,11 @@ const AccountManagement = ({ user, onUserUpdate }) => {
               </motion.div>
             ) : (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <span className="text-[10px] font-black text-primary uppercase tracking-[0.25em] mb-2 block">Account Holder</span>
-                <h4 className="text-4xl font-black text-foreground tracking-tight">{userProfile.name}</h4>
-                <div className="flex items-center justify-center sm:justify-start space-x-3 mt-4 text-[10px] font-bold">
-                   <div className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase tracking-widest flex items-center gap-1.5">
-                     <Icon name="ShieldCheck" size={12} />
-                     Verified User
-                   </div>
-                   <span className="text-muted-foreground/40">•</span>
-                   <span className="text-muted-foreground tracking-widest">ID: #{Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
-                </div>
+                <span className="text-[12px] font-black text-primary mb-2 block">Account holder</span>
+                <h4 className="text-4xl font-bold text-foreground tracking-tight">{userProfile.name}</h4>
+                <p className="text-sm font-medium text-muted-foreground mt-2 flex items-center gap-2">
+                  {userProfile.caption || "Hey I'm using YT Deluxe"}
+                </p>
               </motion.div>
             )}
           </div>
@@ -297,15 +348,15 @@ const AccountManagement = ({ user, onUserUpdate }) => {
             <Icon name="BarChart2" size={20} />
           </div>
           <div>
-            <h3 className="text-xl font-black text-foreground tracking-tight">{t('profile.stats')}</h3>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">{t('profile.statsDesc')}</p>
+            <h3 className="text-xl font-black text-foreground">{t('profile.stats')}</h3>
+            <p className="text-xs text-muted-foreground mt-1">{t('profile.statsDesc')}</p>
           </div>
         </div>
 
         {isLoading ? (
           <div className="text-center py-16 flex flex-col items-center">
             <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-            <p className="text-xs font-black text-muted-foreground animate-pulse uppercase tracking-widest">{t('profile.loading')}</p>
+            <p className="text-xs font-black text-muted-foreground animate-pulse tracking-wide">{t('profile.loading')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
@@ -324,7 +375,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                   <Icon name={stat.icon} size={24} />
                 </div>
                 <p className="text-3xl font-black text-foreground tracking-tighter leading-none mb-2">{stat.value}</p>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-80">{stat.label}</p>
+                <p className="text-[10px] font-black text-muted-foreground tracking-wide opacity-80">{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -340,7 +391,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
             </div>
             <div>
               <h3 className="text-xl font-black text-foreground tracking-tight">{t('profile.recentDownloads')}</h3>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">Your latest {Math.min(10, downloadHistory.length)} entries</p>
+              <p className="text-xs text-muted-foreground font-medium mt-1">Your latest {Math.min(10, downloadHistory.length)} entries</p>
             </div>
           </div>
 
@@ -395,7 +446,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
               <Icon name="Inbox" size={32} className="text-muted-foreground/50" />
             </div>
             <p className="text-lg font-black text-foreground mb-1">{t('profile.noDownloads')}</p>
-            <p className="text-xs text-muted-foreground max-w-[250px] mx-auto uppercase tracking-widest">{t('profile.noDownloadsDesc')}</p>
+            <p className="text-xs text-muted-foreground max-w-[250px] mx-auto tracking-wide">{t('profile.noDownloadsDesc')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -509,7 +560,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
 
         {/* Action Bar */}
         <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between">
-          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+          <p className="text-[12px] font-black text-muted-foreground">
             Total Records: <span className="text-foreground">{downloadHistory.length}</span>
           </p>
           <Button
@@ -525,9 +576,116 @@ const AccountManagement = ({ user, onUserUpdate }) => {
           </Button>
         </div>
       </motion.div>
+
+      {/* Cropper Modal */}
+      <AnimatePresence>
+        {isCropping && imageToCrop && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-card w-full max-w-md rounded-3xl shadow-glass-2xl overflow-hidden border border-border/50 flex flex-col"
+            >
+              <div className="p-4 border-b border-border/40 flex items-center justify-between">
+                <h3 className="font-bold text-foreground">Crop Profile Photo</h3>
+                <button onClick={handleCropCancel} className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors">
+                  <Icon name="X" size={16} />
+                </button>
+              </div>
+              <div className="relative w-full h-80 bg-black/10">
+                <Cropper
+                  image={imageToCrop}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                />
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center space-x-4">
+                  <Icon name="ZoomOut" size={16} className="text-muted-foreground" />
+                  <input
+                    type="range"
+                    value={zoom}
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    aria-labelledby="Zoom"
+                    onChange={(e) => setZoom(e.target.value)}
+                    className="flex-1 accent-primary cursor-pointer h-2 bg-muted rounded-lg appearance-none"
+                  />
+                  <Icon name="ZoomIn" size={16} className="text-muted-foreground" />
+                </div>
+                <div className="flex space-x-3 pt-2">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCropCancel}>
+                    Cancel
+                  </Button>
+                  <Button variant="default" className="flex-1 rounded-xl" onClick={handleCropSave}>
+                    Save Photo
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
+
+// Cropper Helper Functions
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.addEventListener('load', () => resolve(image));
+    image.addEventListener('error', (error) => reject(error));
+    image.src = url;
+  });
+
+async function getCroppedImg(imageSrc, pixelCrop) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Canvas is empty'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = () => {
+        resolve(reader.result);
+      };
+    }, 'image/jpeg');
+  });
+}
 
 function formatBytes(bytes) {
   if (bytes === 0) return '0 B';

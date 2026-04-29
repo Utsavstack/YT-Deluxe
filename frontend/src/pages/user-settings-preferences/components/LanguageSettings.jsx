@@ -108,15 +108,8 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
                 <h4 className="text-xl font-black text-foreground tracking-tight">
                   {getCurrentLanguage()?.nativeName}
                 </h4>
-                <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.1em]">Active</span>
-                </div>
               </div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+              <p className="text-xs font-bold text-muted-foreground mt-0.5">
                 {getCurrentLanguage()?.label} Edition
               </p>
             </div>
@@ -129,6 +122,61 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
             {languages?.map((language, index) => {
               const isActive = language.value === currentLanguage || (language.hasHinglish && isHindiFamily(currentLanguage));
 
+              if (language.hasHinglish) {
+                const isPureActive = currentLanguage === 'hi';
+                const isHinglishActive = currentLanguage === 'hg';
+
+                return (
+                  <motion.div
+                    key={language?.value}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`flex flex-col rounded-2xl border transition-all duration-300 relative ${isActive
+                      ? 'bg-primary/10 border-primary shadow-glass-md z-10'
+                      : 'glass border-border/50 hover:border-primary/30 hover:bg-primary/5'
+                      }`}
+                  >
+                    <div className="flex h-full min-h-[120px]">
+                      {/* Pure Hindi Side */}
+                      <button
+                        onClick={() => handleLanguageChange('hi')}
+                        className={`flex-1 p-4 flex flex-col items-center justify-center transition-all hover:bg-primary/5 group/pure relative`}
+                      >
+                        <div className={`w-12 h-8 rounded-lg overflow-hidden border border-border/30 mb-2 shadow-sm transition-all duration-300 ${isPureActive ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-lg' : 'group-hover/pure:scale-105 opacity-60'}`}>
+                          <img src={`https://flagcdn.com/w80/${language.flag}.png`} alt="Hindi" className="w-full h-full object-cover" />
+                        </div>
+                        <h4 className={`text-[11px] font-black tracking-tight transition-colors ${isPureActive ? 'text-primary' : 'text-muted-foreground group-hover/pure:text-foreground'}`}>Pure हिन्दी</h4>
+                        {isPureActive && (
+                          <div className="absolute top-2 right-2 bg-primary p-0.5 rounded-full text-primary-foreground">
+                            <Icon name="Check" size={10} />
+                          </div>
+                        )}
+                      </button>
+
+                      <div className="w-[1.4px] bg-slate-400 dark:bg-white/40 self-stretch" />
+
+                      {/* Hinglish Side */}
+                      <button
+                        onClick={() => handleLanguageChange('hg')}
+                        className={`flex-1 p-4 flex flex-col items-center justify-center transition-all hover:bg-primary/5 group/hg relative`}
+                      >
+                        <div className={`w-12 h-8 rounded-lg overflow-hidden border border-border/30 mb-2 shadow-sm transition-all duration-300 ${isHinglishActive ? 'ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-lg' : 'group-hover/hg:scale-105 opacity-60'}`}>
+                          <img src={`https://flagcdn.com/w80/${language.flag}.png`} alt="Hinglish" className="w-full h-full object-cover grayscale-[0.4]" />
+                        </div>
+                        <h4 className={`text-[11px] font-black tracking-tight transition-colors ${isHinglishActive ? 'text-primary' : 'text-muted-foreground group-hover/hg:text-foreground'}`}>Hinglish</h4>
+                        {isHinglishActive && (
+                          <div className="absolute top-2 right-2 bg-primary p-0.5 rounded-full text-primary-foreground">
+                            <Icon name="Check" size={10} />
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              }
+
               return (
                 <motion.div
                   key={language?.value}
@@ -137,13 +185,13 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: index * 0.05 }}
                   onClick={() => !isActive && handleLanguageChange(language.value)}
-                  className={`flex flex-col p-5 rounded-2xl border transition-all duration-300 relative cursor-pointer ${isActive
+                  className={`flex flex-col p-5 rounded-2xl border transition-all duration-300 relative cursor-pointer min-h-[120px] justify-center ${isActive
                     ? 'bg-primary/10 text-foreground border-primary shadow-glass-md z-10'
                     : 'glass border-border/50 hover:border-primary/30 hover:bg-primary/5'
                     }`}
                 >
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-14 h-9 rounded-xl overflow-hidden border border-border/30 flex-shrink-0 shadow-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-14 h-9 rounded-xl overflow-hidden border border-border/30 flex-shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-105">
                       <img
                         src={`https://flagcdn.com/w80/${language.flag}.png`}
                         alt={language.label}
@@ -158,39 +206,12 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
                         {language.label}
                       </p>
                     </div>
-                    {isActive && !language.hasHinglish && (
+                    {isActive && (
                       <div className="bg-primary p-1 rounded-full text-primary-foreground flex items-center justify-center w-6 h-6 ml-auto shadow-lg">
                         <Icon name="Check" size={14} />
                       </div>
                     )}
                   </div>
-
-                  {/* Hindi/Hinglish Toggle */}
-                  {language.hasHinglish && isActive && (
-                    <div className="mt-2 pt-4 border-t border-primary/20 flex items-center justify-between">
-                      <span className="text-[9px] font-black text-muted-foreground uppercase opacity-70 tracking-tighter">Variant:</span>
-                      <div className="flex bg-muted/40 p-1 rounded-xl border border-border/30 shadow-inner">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLanguageChange('hi');
-                          }}
-                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${currentLanguage === 'hi' ? 'bg-primary text-primary-foreground shadow-lg' : 'hover:bg-muted text-muted-foreground'}`}
-                        >
-                          Pure
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLanguageChange('hg');
-                          }}
-                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${currentLanguage === 'hg' ? 'bg-primary text-primary-foreground shadow-lg' : 'hover:bg-muted text-muted-foreground'}`}
-                        >
-                          Hinglish
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </motion.div>
               );
             })}
