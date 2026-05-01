@@ -12,10 +12,10 @@ const handleResponse = async (response) => {
 
 // API Service Class
 class YTDeluxeAPI {
-  // Search videos by keyword
-  static async searchVideos(query) {
+  // Search videos by keyword with cache-based pagination
+  static async searchVideos(query, page = 1) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}&page=${page}`);
       const data = await handleResponse(response);
       if (data.results) {
         data.results = data.results.map(video => ({
@@ -25,9 +25,31 @@ class YTDeluxeAPI {
             { ...video.channel, name: video.channel.name?.replace(/^@/, '') || 'Unknown Channel' }
         }));
       }
-      return data;
+      return data; // { results, page, total_pages, total_results, page_size }
     } catch (error) {
       console.error('Search API error:', error);
+      throw error;
+    }
+  }
+
+  // Get real trending videos — cursor-based, cache-backed
+  static async getTrending(categoryId = '0', region = 'IN', cursor = 0, limit = 18) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/trending?category_id=${categoryId}&region=${region}&cursor=${cursor}&limit=${limit}`
+      );
+      const data = await handleResponse(response);
+      if (data.results) {
+        data.results = data.results.map(video => ({
+          ...video,
+          channel: typeof video.channel === 'string' || !video.channel
+            ? { name: (video.channel || video.uploader || 'Unknown Channel').replace(/^@/, '') }
+            : { ...video.channel, name: video.channel.name?.replace(/^@/, '') || 'Unknown Channel' },
+        }));
+      }
+      return data; // { results, cursor, next_cursor, total, category_id, region }
+    } catch (error) {
+      console.error('Trending API error:', error);
       throw error;
     }
   }
@@ -270,13 +292,13 @@ class YTDeluxeAPI {
   }
 
   // Smart search: keyword or direct video URL
-  static async smartSearchOrVideo(query) {
+  static async smartSearchOrVideo(query, page = 1) {
     if (this.isYouTubeUrl(query)) {
       // If it's a YouTube URL, get video details
       return this.getVideoDetails(query).then(res => ({ video: res.video }));
     } else {
       // Otherwise, do a keyword search
-      return this.searchVideos(query);
+      return this.searchVideos(query, page);
     }
   }
 }

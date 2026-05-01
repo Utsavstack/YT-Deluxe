@@ -204,19 +204,74 @@ const VideoDetailsDownload = () => {
   };
 
   if (isLoadingVideo) {
+    const shimmerSweep = <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/50 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s' }} />;
+
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <main className="pt-20 pb-8">
           <div className="max-w-7xl mx-auto px-4 lg:px-6">
-            <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-              <div className="h-96 bg-gray-200 rounded mb-6"></div>
-              <div className="space-y-4">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            
+            {/* Back Navigation Skeleton */}
+            <div className="pt-4 mb-4">
+              <div className="w-36 h-10 bg-muted rounded-full relative overflow-hidden">
+                 {shimmerSweep}
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+              {/* Main Content Skeleton */}
+              <div className="xl:col-span-2 space-y-8">
+                {/* Video Player Skeleton */}
+                <div className="w-full aspect-video bg-muted rounded-2xl relative overflow-hidden shadow-sm">
+                   {shimmerSweep}
+                </div>
+
+                {/* Metadata Skeleton */}
+                <div className="space-y-5">
+                  <div className="h-8 bg-muted rounded-lg w-3/4 relative overflow-hidden">
+                     {shimmerSweep}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-muted rounded-full shrink-0 relative overflow-hidden">
+                       {shimmerSweep}
+                    </div>
+                    <div className="flex flex-col gap-2.5">
+                      <div className="h-4 bg-muted rounded w-32 relative overflow-hidden">
+                         {shimmerSweep}
+                      </div>
+                      <div className="h-3 bg-muted rounded w-24 relative overflow-hidden">
+                         {shimmerSweep}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Description Box Skeleton */}
+                  <div className="h-24 bg-muted rounded-xl w-full relative overflow-hidden mt-4">
+                     {shimmerSweep}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar Skeleton - Quick Actions */}
+              <div className="space-y-6">
+                <div className="glass-card p-6 border-t-4 border-t-muted relative overflow-hidden rounded-[20px] bg-card/40">
+                  {shimmerSweep}
+                  
+                  {/* Quick Actions Header */}
+                  <div className="flex items-center gap-3 mb-6 relative z-0">
+                     <div className="w-10 h-10 bg-muted rounded-xl shrink-0" />
+                     <div className="h-6 bg-muted rounded-lg w-32" />
+                  </div>
+
+                  {/* Action Buttons Skeleton */}
+                  <div className="space-y-3 relative z-0">
+                    <div className="w-full h-[72px] bg-muted rounded-xl" />
+                    <div className="w-full h-[72px] bg-muted rounded-xl" />
+                    <div className="w-full h-[72px] bg-muted rounded-xl" />
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </main>

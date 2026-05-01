@@ -296,11 +296,504 @@ A history entry is written to `~/.yt-deluxe/history.json` containing: title, cha
 
 ---
 
-### 5.2 Hybrid Video Player Architecture
+
+### 5.2 Infinite Scroll & Content Discovery Architecture
+
+*Complete technical architecture of the cursor-based infinite trending feed, auto-extending search cache, and VirtuosoGrid-powered DOM virtualization.*
+
+---
+
+#### 5.2.1 System Overview
+
+YT Deluxe uses a **three-layer content delivery architecture** for both Trending and Search feeds:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         BROWSER (React)                          │
+│   ┌──────────────────────┐    ┌───────────────────────────────┐ │
+│   │   TrendingSection    │    │       SearchResults           │ │
+│   │  VirtuosoGrid (DOM   │    │  VirtuosoGrid (DOM            │ │
+│   │   Virtualization)    │    │   Virtualization)             │ │
+│   │  endReached() →      │    │  endReached() →               │ │
+│   │  onLoadMore()        │    │  onLoadMore()                 │ │
+│   └──────────┬───────────┘    └──────────────┬────────────────┘ │
+└──────────────┼──────────────────────────────-┼──────────────────┘
+               │ GET /api/trending             │ GET /api/search
+               │ ?cursor=N&limit=18            │ ?q=phonk&page=N
+┌──────────────▼──────────────────────────────-▼──────────────────┐
+│                    FastAPI Backend (main.py)                      │
+│  ┌───────────────────────────┐  ┌───────────────────────────┐   │
+│  │   _trending_cache         │  │   _search_cache           │   │
+│  │   cursor-based slicing    │  │   page-based slicing      │   │
+│  │   auto-extend on low      │  │   auto-extend on low      │   │
+│  │   remaining (< limit)     │  │   remaining (≤ 2 pages)   │   │
+│  └─────────────┬─────────────┘  └─────────────┬─────────────┘   │
+└────────────────┼────────────────────────────── ┼─────────────────┘
+                 │ ytsearchN: keyword             │ ytsearchN: query
+┌────────────────▼────────────────────────────── ▼─────────────────┐
+│                        yt-dlp → YouTube                           │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 5.2.2 Backend: `/api/trending` — Cursor-Based Infinite Cache
+
+##### 5.2.2.1 Constants & Cache Structure
+
+```python
+TRENDING_CACHE_TTL  = 30 * 60   # 30-minute TTL per category
+TRENDING_FETCH_SIZE = 120        # Videos fetched per initial load
+TRENDING_PAGE_SIZE  = 18         # Videos served per frontend request (3-col grid × 6 rows)
+
+_trending_cache: dict = {
+    "{category_id}_{region}": {
+        "results": [ ...120 video objects... ],
+        "expires_at": float   # unix timestamp
+    }
+}
+```
+
+##### 5.2.2.2 Complete Request Flow
+
+```mermaid
+flowchart TD
+    A["GET /api/trending\n?category_id=0&region=IN&cursor=0&limit=18"] --> B{"Cache HIT?\n(not expired)"}
+    
+    B -- "Yes" --> C["Load all_videos from cache"]
+    B -- "No / cursor=0" --> D["Attempt real feed fetch\nyt-dlp: youtube.com/feed/trending"]
+    
+    D --> E{"≥ 5 results?"}
+    E -- "No" --> F["Keyword Fallback\nytsearch120: 'trending viral today {seed}'"]
+    E -- "Yes" --> G["Store 120 videos in _trending_cache"]
+    F --> G
+
+    C --> H{"remaining ≤ limit?\n(cache running low)"}
+    G --> H
+
+    H -- "Yes: trigger extension" --> I["Extension Fetch\nytsearch120: '{base_keyword} {rotated_seed}'\nSeed rotated by: total//120 + time//600"]
+    H -- "No" --> J["Slice page_videos\nall_videos[cursor : cursor+limit]"]
+    
+    I --> K["Deduplicate by video ID\nagainst existing cache"]
+    K --> L["Append unique_new to cache\nExtend _trending_cache results"]
+    L --> J
+
+    J --> M{"len(page_videos) ≥ 3\nAND % 3 != 0?"}
+    M -- "Yes" --> N["Trim to nearest multiple of 3\n(prevents partial grid rows)"]
+    M -- "No" --> O["Serve as-is"]
+    N --> O
+
+    O --> P["Return:\n{ results, cursor, next_cursor,\n  total, category_id, region }"]
+```
+
+##### 5.2.2.3 Auto-Extension Logic
+
+The cache extends **before** the user hits the end, not after. The extension fires when `remaining ≤ limit`:
+
+```python
+remaining = total - cursor          # videos left in cache
+if remaining <= limit:              # about to run out
+    seed = seeds[seed_index % len(seeds)]   # rotate: latest, viral, new, top...
+    keyword = f"{base_keyword} {seed}"
+    # fetch → deduplicate → append to _trending_cache
+```
+
+Seed rotation uses `(total // TRENDING_FETCH_SIZE) + int(time.time() // 600)` — so every 10-minute window and every new batch uses a different seed, ensuring diverse content.
+
+##### 5.2.2.4 Grid-Aligned Responses
+
+Backend always trims results to a **multiple of 3** (matching the 3-column CSS grid):
+
+```python
+GRID_COLS = 3
+if len(page_videos) >= GRID_COLS and len(page_videos) % GRID_COLS != 0:
+    trim_count = len(page_videos) % GRID_COLS
+    page_videos = page_videos[:-trim_count]
+```
+
+This prevents partial rows (e.g., returning 17 videos that fill 5 full rows + 2 orphaned cards).
+
+##### 5.2.2.5 Keyword Fallback Map
+
+```python
+cat_keyword_map = {
+    "0":  "trending viral today India",
+    "10": "trending music songs India",
+    "20": "trending gaming India",
+    "25": "trending news today",
+    "17": "trending sports highlights",
+    "1":  "trending movies trailers",
+}
+```
+
+---
+
+#### 5.2.3 Backend: `/api/search` — Auto-Extending Page Cache
+
+##### 5.2.3.1 Constants & Cache Structure
+
+```python
+SEARCH_PAGE_SIZE   = 18     # 3-col grid × 6 rows per page
+SEARCH_CACHE_FETCH = 180    # Initial yt-dlp fetch (ytsearch180:)
+SEARCH_CACHE_TTL   = 30 * 60
+
+_search_cache: dict = {
+    "{q}": {
+        "results": [ ...180 video objects... ],
+        "expires_at": float,
+        "extension_count": int   # how many auto-extends have fired
+    }
+}
+```
+
+##### 5.2.3.2 Auto-Extension Trigger
+
+Unlike Trending (cursor-based), Search uses **page-number** pagination. Extension fires when ≤ 2 pages remain:
+
+```python
+EXTEND_THRESHOLD = SEARCH_PAGE_SIZE * 2   # 36 results = 2 pages
+
+start_pos = (page - 1) * SEARCH_PAGE_SIZE
+remaining  = total - start_pos
+
+if remaining <= EXTEND_THRESHOLD:
+    ext_count = cached.get('extension_count', 0)
+    seed = seeds[ext_count % len(seeds)]
+    extended_query = f"{q} {seed}"   # e.g. "phonk latest"
+    # fetch → deduplicate by id → append → extension_count++
+```
+
+##### 5.2.3.3 Search Cache Flow
+
+```mermaid
+flowchart TD
+    A["GET /api/search?q=phonk&page=3"] --> B{"Cache HIT for 'phonk'?\nAnd len(results) ≥ min_acceptable?"}
+    
+    B -- "No" --> C["yt-dlp: ytsearch180:phonk\nFetch fresh batch of 180"]
+    C --> D["Store in _search_cache\n{results:180, extension_count:0}"]
+    
+    B -- "Yes" --> E["Load cached results"]
+    D --> E
+
+    E --> F{"remaining ≤ EXTEND_THRESHOLD\n(36 results / 2 pages)?"}
+    
+    F -- "Yes" --> G["Auto-Extend:\next_count = cache['extension_count']\nseed = seeds[ext_count % N]\nquery = 'phonk {seed}'"]
+    G --> H["Fetch ytsearch180: '{query}'"]
+    H --> I["Deduplicate by video ID"]
+    I --> J["Append unique to cache\nextension_count++"]
+    J --> K["Slice page"]
+
+    F -- "No" --> K
+
+    K --> L["Return page_videos + pagination meta\n{results, page, total_pages, total_results}"]
+```
+
+---
+
+#### 5.2.4 Frontend: VirtuosoGrid DOM Virtualization
+
+Both `TrendingSection` and `SearchResults` use `react-virtuoso`'s `VirtuosoGrid` component. The key insight: instead of rendering 100+ `VideoCard` DOM nodes at once, only the **visible viewport + overscan buffer** is kept in the DOM.
+
+##### 5.2.4.1 VirtuosoGrid Configuration (both components)
+
+```jsx
+<VirtuosoGrid
+  useWindowScroll          // Uses window scroll, NOT internal scrollbar
+  style={{ overflow: 'hidden' }}  // Prevents double scrollbar bug
+  data={videos}            // Accumulated array — never reset on load-more
+  endReached={onLoadMore}  // Fires when user nears bottom
+  overscan={400}           // 400px of pre-rendered DOM buffer above/below viewport
+  components={{
+    List: forwardRef(...)  // Renders as 3-col CSS grid
+    Item: ...              // Each grid cell wrapper
+    Footer: ...            // Skeleton + spinner during loading states
+  }}
+  itemContent={(index, video) => <VideoCard video={video} ... />}
+/>
+```
+
+##### 5.2.4.2 DOM Virtualization Behavior
+
+```mermaid
+flowchart LR
+    subgraph DOM["Active DOM Nodes"]
+        V1["Card 1 ✓"]
+        V2["Card 2 ✓"]
+        V3["Card 3 ✓"]
+    end
+    
+    subgraph Offscreen["Unmounted (off-viewport)"]
+        X1["Card 4-100 ✗"]
+    end
+
+    subgraph Buffer["Overscan Buffer (400px)"]
+        B1["Card N+1 ✓"]
+        B2["Card N+2 ✓"]
+        B3["Card N+3 ✓"]
+    end
+
+    User["User Scrolls ↓"] --> DOM
+    DOM --> Buffer
+    Buffer --> Offscreen
+```
+
+As the user scrolls:
+- Cards entering viewport are **mounted** into DOM
+- Cards leaving viewport (+ overscan zone) are **unmounted**
+- Only ~12–18 cards exist in the DOM at any time regardless of total list size
+
+##### 5.2.4.3 Stable DOM Node — Preventing Scroll Jumps
+
+A critical bug was discovered: swapping between a skeleton `<div>` and `<VirtuosoGrid>` caused the browser to reset scroll position to `0` on data arrival. The fix: **always render `VirtuosoGrid`**. Skeletons live inside its `Footer` slot, so the DOM node is never unmounted.
+
+```jsx
+// ❌ BEFORE (caused scroll jump on first load):
+if (isLoading) return <div className="grid...">{skeletons}</div>;
+return <VirtuosoGrid data={videos} .../>;
+
+// ✅ AFTER (stable DOM, no scroll jump):
+<VirtuosoGrid
+  data={videos}   // empty array [] during initial load
+  components={{
+    Footer: () => (
+      showInitialSkeleton && <SkeletonGrid />   // skeletons in-place
+    )
+  }}
+/>
+```
+
+---
+
+#### 5.2.5 Frontend: TrendingSection — State Machine
+
+State is managed in `home-search-dashboard/index.jsx` and passed down as props:
+
+```
+State variables:
+  trendingVideos    []       ← accumulated (never reset on load-more)
+  trendingCursor    0        ← next cursor to request from backend
+  hasMoreTrending   true     ← always true (truly infinite)
+  isTrendingLoading false    ← initial load spinner
+  isTrendingLoadingMore false ← pagination skeleton
+
+Flow on load-more:
+  handleLoadMoreTrending()
+    → if isTrendingLoadingMore: return (guard)
+    → if trendingCursor === -1: reset to 0 (error recovery)
+    → loadTrendingVideos(activeCategory, isLoadMore=true)
+        → GET /api/trending?cursor=N&limit=18
+        → setTrendingVideos(prev => [...prev, ...newBatch])
+        → setTrendingCursor(next_cursor)
+```
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant VirtuosoGrid
+    participant IndexJSX as index.jsx
+    participant Backend
+
+    User->>VirtuosoGrid: Scrolls near bottom
+    VirtuosoGrid->>IndexJSX: endReached() → onLoadMore()
+    IndexJSX->>IndexJSX: isTrendingLoadingMore = true
+    IndexJSX->>Backend: GET /api/trending?cursor=72&limit=18
+    Note over Backend: Cache check → slice/extend → return 18 videos
+    Backend-->>IndexJSX: { results:[18 videos], next_cursor: 90 }
+    IndexJSX->>IndexJSX: trendingVideos = [...prev, ...18 new]
+    IndexJSX->>IndexJSX: trendingCursor = 90
+    IndexJSX->>IndexJSX: isTrendingLoadingMore = false
+    IndexJSX->>VirtuosoGrid: data prop updated → new cards render
+```
+
+---
+
+#### 5.2.6 Frontend: SearchResults — Loading Stage Machine
+
+`SearchResults.jsx` uses a **2-stage loading state machine** unique from TrendingSection:
+
+```
+searchStage states:
+  'idle'      → Normal (results visible)
+  'searching' → Stage 1: WifiLoader (0–1500ms)
+  'skeleton'  → Stage 2: Shimmer skeleton grid (1500ms → data arrives)
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> searching: isLoading=true AND results=[]
+    searching --> skeleton: 1500ms timer fires
+    searching --> idle: data arrives early
+    skeleton --> idle: data arrives (isLoading=false)
+    idle --> searching: new search query
+```
+
+```jsx
+// Rendered by stage:
+if (searchStage === 'searching') return <WifiLoader />;    // full-screen spinner
+if (searchStage === 'skeleton')  return <SkeletonGrid />;  // 9 shimmer cards
+// default: return <VirtuosoGrid data={results} ... />;
+```
+
+---
+
+#### 5.2.7 Premium Skeleton Design System
+
+All skeleton loaders across the app (TrendingSection, SearchResults, VideoDetailsDownload) follow a unified design token set:
+
+| Token | Value | Purpose |
+|---|---|---|
+| `bg-muted` | CSS var (light: `#e5e7eb`, dark: `#1f2937`) | **Solid** skeleton block — visible in both themes |
+| `animate-shimmer` | Tailwind keyframe: `bgPosition 0%→200%` | Sweep animation |
+| `via-white/50` | Light mode shimmer | High-contrast sweep |
+| `dark:via-white/5` | Dark mode shimmer | Subtle sweep |
+| `rounded-[24px]` | Card border radius | Matches `glass-card` |
+| `overflow-hidden` + `relative` | Layout | Required for absolute shimmer overlay |
+| `animationDuration: '2s'` | Inline style | Slow, premium feel |
+
+##### 5.2.7.1 SkeletonCard Component (Shared Pattern)
+
+```jsx
+const SkeletonCard = () => (
+  <div className="glass-card shadow-glass-md rounded-[24px] overflow-hidden relative bg-card/40">
+    {/* Shimmer sweep — positioned absolute, travels left-to-right */}
+    <div className="absolute inset-0 z-10 bg-gradient-to-r
+      from-transparent via-white/50 dark:via-white/5 to-transparent
+      bg-[length:200%_100%] animate-shimmer pointer-events-none"
+      style={{ animationDuration: '2s' }} />
+    
+    {/* Thumbnail placeholder */}
+    <div className="w-full h-48 bg-muted" />
+    
+    {/* Metadata placeholders */}
+    <div className="p-4 space-y-3">
+      <div className="h-4 bg-muted rounded-lg w-3/4" />   {/* title */}
+      <div className="h-3 bg-muted rounded-lg w-1/2" />   {/* subtitle */}
+      <div className="flex items-center gap-2 mt-2">
+        <div className="w-8 h-8 bg-muted rounded-full" /> {/* avatar */}
+        <div className="h-3 bg-muted rounded-lg w-1/3" /> {/* channel */}
+      </div>
+      <div className="flex justify-between mt-1">
+        <div className="h-3 bg-muted rounded-lg w-1/4" /> {/* views */}
+        <div className="h-3 bg-muted rounded-lg w-1/4" /> {/* duration */}
+      </div>
+    </div>
+  </div>
+);
+```
+
+> **Key difference from old design:** Previously used `bg-muted/30` and `bg-muted/40` (semi-transparent), making skeletons invisible on light backgrounds. Changed to solid `bg-muted` — visible in both themes.
+
+---
+
+#### 5.2.8 Search Bar Persistence (`initialValue` Prop)
+
+When a user navigates from Home → Search Results page, the SearchBar component is re-mounted. Previously, the bar was always empty despite the URL containing `?q=phonk`.
+
+**Fix:** `SearchBar` now accepts an `initialValue` prop and syncs its internal state:
+
+```jsx
+// SearchBar.jsx
+const SearchBar = ({ ..., initialValue = '' }) => {
+  const [searchQuery, setSearchQuery] = useState(initialValue);
+
+  useEffect(() => {
+    setSearchQuery(initialValue);   // sync on prop change (URL navigation)
+  }, [initialValue]);
+  ...
+};
+
+// search-results-page/index.jsx
+<SearchBar
+  onSearch={handleSearch}
+  initialValue={query}    // query = searchParams.get('q')
+  isSticky={isSearchSticky}
+/>
+```
+
+---
+
+#### 5.2.9 Complete Data Flow — Search Infinite Scroll
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant SearchResultsPage as search-results-page/index.jsx
+    participant SearchResults as SearchResults.jsx (VirtuosoGrid)
+    participant API as YTDeluxeAPI
+    participant Backend
+
+    User->>SearchResultsPage: Navigates to /search-results?q=phonk
+    SearchResultsPage->>SearchResultsPage: Reset state, currentQueryRef='phonk'
+    SearchResultsPage->>Backend: GET /api/search?q=phonk&page=1
+    Note over Backend: Cache MISS → ytsearch180:phonk → cache 180 results
+    Backend-->>SearchResultsPage: {results:18, page:1, total_pages:10}
+    SearchResultsPage->>SearchResults: results=18 cards, isLoading=false
+
+    Note over SearchResults: Stage: idle → VirtuosoGrid renders 18 cards
+
+    User->>SearchResults: Scrolls to bottom
+    SearchResults->>SearchResultsPage: endReached() → handleLoadMore()
+    SearchResultsPage->>Backend: GET /api/search?q=phonk&page=2
+    Note over Backend: Cache HIT → slice page 2 (items 18-35)
+    Backend-->>SearchResultsPage: {results:18, page:2, total_pages:10}
+    SearchResultsPage->>SearchResults: results=[36 total], isLoadingMore=false
+
+    Note over SearchResults: VirtuosoGrid appends 18 new cards (no scroll jump)
+
+    User->>SearchResults: Scrolls to page 8
+    Note over SearchResults: endReached() fires again
+    SearchResultsPage->>Backend: GET /api/search?q=phonk&page=8
+    Note over Backend: remaining=36 ≤ EXTEND_THRESHOLD(36) → Extension triggered!\nFetch ytsearch180:'phonk latest' → deduplicate → cache now 300+
+    Backend-->>SearchResultsPage: {results:18, page:8, total_pages:17}
+    SearchResultsPage->>SearchResults: results=[144 total], hasMore=true
+```
+
+---
+
+#### 5.2.10 Complete Data Flow — Trending Infinite Scroll
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Dashboard as home-search-dashboard/index.jsx
+    participant TrendingSection as TrendingSection.jsx (VirtuosoGrid)
+    participant API as YTDeluxeAPI
+    participant Backend
+
+    User->>Dashboard: Opens Home page
+    Dashboard->>Backend: GET /api/trending?cursor=0&limit=18&category_id=0
+    Note over Backend: Cache MISS → fetch trending feed → keyword fallback → cache 120
+    Backend-->>Dashboard: {results:[18 videos], next_cursor:18, total:120}
+    Dashboard->>TrendingSection: videos=[18], cursor=18
+
+    Note over TrendingSection: VirtuosoGrid renders 18 cards\nDOM: only ~6 cards mounted at once
+
+    User->>TrendingSection: Scrolls down (6 pages × 18 = 108 videos)
+    TrendingSection->>Dashboard: endReached() → handleLoadMoreTrending()
+    Dashboard->>Backend: GET /api/trending?cursor=108&limit=18
+    Note over Backend: remaining = 120-108 = 12 ≤ limit(18)\nTrigger Extension: 'trending viral today India viral'\n→ 4 unique after dedup → cache=124
+    Backend-->>Dashboard: {results:[12 videos trimmed to 12], next_cursor:120}
+
+    Note over TrendingSection: Footer shows: 3 SkeletonCards + spinner pill\nUser always sees activity indicator
+
+    Dashboard->>TrendingSection: videos=[120 total], cursor=120
+    User->>TrendingSection: Scrolls further
+    TrendingSection->>Dashboard: endReached()
+    Dashboard->>Backend: GET /api/trending?cursor=120&limit=18
+    Note over Backend: New extension fires with rotated seed\n'trending viral today India new'
+    Backend-->>Dashboard: {results:[18 videos], next_cursor:138}
+```
+
+
+---
+
+
+### 5.3 Hybrid Video Player Architecture
 
 *How YT-Deluxe plays video across three different contexts with zero unnecessary backend load and a seamless fallback when YouTube restricts embedding.*
 
-#### 5.2.1 The Two-Layer Strategy
+#### 5.3.1 The Two-Layer Strategy
 
 All three video surfaces in YT-Deluxe follow the same decision tree:
 
@@ -334,7 +827,7 @@ flowchart TD
 
 ---
 
-#### 5.2.2 Component-Level Breakdown
+#### 5.3.2 Component-Level Breakdown
 
 Each of the three player surfaces has a slightly different role and fallback behavior:
 
@@ -378,7 +871,7 @@ flowchart LR
 
 ---
 
-#### 5.2.3 IFrame API Control Flow (Primary Mode)
+#### 5.3.3 IFrame API Control Flow (Primary Mode)
 
 When the YouTube iframe is active, all player controls go through the **YouTube IFrame PostMessage API** no direct DOM manipulation:
 
@@ -404,7 +897,7 @@ sequenceDiagram
 
 ---
 
-#### 5.2.4 Fallback Badge & UX
+#### 5.3.4 Fallback Badge & UX
 
 When the backend stream fallback activates, a subtle pill badge appears on the player to inform the user:
 
@@ -417,7 +910,7 @@ The badge is non-intrusive a small `bg-black/60 backdrop-blur` pill in the top-l
 
 ---
 
-#### 5.2.5 Quality by Context
+#### 5.3.5 Quality by Context
 
 | Surface | Iframe Resolution | Fallback Resolution | Rationale |
 |---|---|---|---|
@@ -427,7 +920,7 @@ The badge is non-intrusive a small `bg-black/60 backdrop-blur` pill in the top-l
 
 ---
 
-#### 5.2.6 State Reset on Navigation
+#### 5.3.6 State Reset on Navigation
 
 - **VideoCard**: When the user moves their cursor away (`onMouseLeave`), both `playVideo`, `videoReady`, and `nativeFallback` reset to `false`. Next hover starts fresh.
 - **PIP Player**: When `closePip()` is called, `AnimatePresence` unmounts the iframe cleanly.
@@ -435,13 +928,13 @@ The badge is non-intrusive a small `bg-black/60 backdrop-blur` pill in the top-l
 
 ---
 
-### 5.3 Format Fetch, Preset Display & Download System
+### 5.4 Format Fetch, Preset Display & Download System
 
 This section documents exactly how formats become visible in the UI after a video is loaded, how each download surface works, and how a user's selection travels from click to a file on disk.
 
 ---
 
-#### 5.3.1 Phase 1 Video Fetch & Format Collection (`GET /api/video`)
+#### 5.4.1 Phase 1 Video Fetch & Format Collection (`GET /api/video`)
 
 When a user navigates to the Video Details page, `index.jsx` immediately calls `YTDeluxeAPI.getVideoDetails(url)`. The backend endpoint `GET /api/video` runs `yt-dlp` with `skip_download: True` to extract the full stream list without downloading anything.
 
@@ -488,7 +981,7 @@ Build `all_formats` list (Every stream all video heights × codecs + audio)
 
 ---
 
-#### 5.3.2 Phase 2 Data Flow into the Page (`index.jsx`)
+#### 5.4.2 Phase 2 Data Flow into the Page (`index.jsx`)
 
 After the API responds, `index.jsx` maps the response into `videoData` state:
 
@@ -506,7 +999,7 @@ setVideoData(videoInfo);
 
 ---
 
-#### 5.3.3 Quick Actions (Sidebar `index.jsx`)
+#### 5.4.3 Quick Actions (Sidebar `index.jsx`)
 
 The **Quick Actions** panel lives in the sidebar of `index.jsx`. It renders three hardcoded one-click buttons that bypass `DownloadTabs` entirely and call `handleDownload()` directly.
 
@@ -535,7 +1028,7 @@ flowchart LR
 
 ---
 
-#### 5.3.4 Quick Download Section (`DownloadTabs.jsx` Preset Cards)
+#### 5.4.4 Quick Download Section (`DownloadTabs.jsx` Preset Cards)
 
 The **Quick Download** section renders 3 preset cards built from `getPresetButtons()`:
 
@@ -579,7 +1072,7 @@ onDownload({
 
 ---
 
-#### 5.3.5 Advanced Options Section (`DownloadTabs.jsx`)
+#### 5.4.5 Advanced Options Section (`DownloadTabs.jsx`)
 
 The **Advanced Options** section (`id="advanced-options"`) is always visible below Quick Download. It contains:
 
@@ -614,7 +1107,7 @@ When selected, all download functions check `isMp3Selected = (selectedQuality ==
 
 ---
 
-#### 5.3.6 Show All Advanced Formats Grid
+#### 5.4.6 Show All Advanced Formats Grid
 
 The **"Show All Advanced Formats"** toggle uses a `CustomDropdown` component. Clicking the toggle button (`showAllFormats` state) expands a scrollable list sourced from `videoData.all_formats` (every raw yt-dlp stream, not just the recommended ones).
 
@@ -647,7 +1140,7 @@ flowchart TD
 
 ---
 
-#### 5.3.7 Container Format Dropdown (Video Tab Only)
+#### 5.4.7 Container Format Dropdown (Video Tab Only)
 
 The **Container Format** dropdown (video tab only) controls `selectedContainer` state (default: `'auto'`).
 
@@ -663,7 +1156,7 @@ The **Container Format** dropdown (video tab only) controls `selectedContainer` 
 
 ---
 
-#### 5.3.8 Download Data Flow Full End-to-End
+#### 5.4.8 Download Data Flow Full End-to-End
 
 ```mermaid
 flowchart TD
@@ -709,7 +1202,7 @@ flowchart TD
 
 ---
 
-#### 5.3.9 Backend Download Worker Three Paths
+#### 5.4.9 Backend Download Worker Three Paths
 
 **Path 1: format_id Video (Exact Stream)**
 
@@ -735,7 +1228,7 @@ flowchart TD
 
 ---
 
-#### 5.3.10 Session-Safe File Detection
+#### 5.4.10 Session-Safe File Detection
 
 After `yt-dlp.download()` completes, the backend must locate the downloaded file:
 
@@ -762,11 +1255,11 @@ os.rename(trimmed_file, clean_base_filename)  # Clean name for user
 
 ---
 
-### 5.4 Precision Trimming Architecture
+### 5.5 Precision Trimming Architecture
 
 *How the end-to-end trimming pipeline works from UI range selection to the final trimmed file on disk.*
 
-#### 5.4.1 Trimming Flow Overview
+#### 5.5.1 Trimming Flow Overview
 
 ```mermaid
 flowchart TD
@@ -787,7 +1280,7 @@ flowchart TD
 
 > **In plain words:** On the desktop app, your trimmed file is saved permanently to your YT Deluxe folder on your hard drive and you can open it in Explorer with one click. On the web version, the server processes and trims the file, streams it to your browser's Downloads folder, then automatically deletes the server copy after 10 minutes to save disk space.
 
-#### 5.4.2 FFmpeg Trim Pipeline (Backend)
+#### 5.5.2 FFmpeg Trim Pipeline (Backend)
 
 The trimming engine in `main.py` uses a **two-pass strategy** for maximum compatibility:
 
@@ -822,7 +1315,7 @@ os.rename(temp_trimmed, filepath) # rename temp → original name
 
 > **Result:** User always gets the clean original title (e.g., `MONTAGEM ALQUIMIA (SLOWED).mp4`), never `trimmed_36a5caca_...`.
 
-#### 5.4.3 Trimming Desktop vs Web Storage
+#### 5.5.3 Trimming Desktop vs Web Storage
 
 ```mermaid
 flowchart LR
@@ -850,7 +1343,7 @@ flowchart LR
 | **History storage** | `~/.yt-deluxe/download_history.json` (JSON file) | `localStorage` (browser) |
 | **File access** | "Open in Explorer" button via `/api/desktop/open-file` | Standard browser download |
 
-#### 5.4.4 Preview Before Download
+#### 5.5.4 Preview Before Download
 
 Users can preview the trimmed range before committing to a download:
 
@@ -869,7 +1362,7 @@ flowchart TD
 
 **Smart Resume:** Pausing and resuming continues from the paused position it only jumps to `startTime` if the playhead is outside the trim range.
 
-#### 5.4.5 Audio Trimming & Embedded Thumbnails
+#### 5.5.5 Audio Trimming & Embedded Thumbnails
 
 When downloading audio (MP3), the backend automatically:
 
@@ -880,11 +1373,11 @@ When downloading audio (MP3), the backend automatically:
 
 ---
 
-### 5.5 Trimmer Component Architecture
+### 5.6 Trimmer Component Architecture
 
 *How the frontend VideoTrimmer component manages state, syncs with DownloadTabs, and communicates with the backend.*
 
-#### 5.5.1 Component Hierarchy & Props
+#### 5.6.1 Component Hierarchy & Props
 
 ```mermaid
 graph TD
@@ -918,7 +1411,7 @@ graph TD
 
 > **In plain words:** The trimmer's mini-player has exactly three faces it can show at once: a loading spinner while the stream warms up, a circular download progress ring while your clip is being processed, and the normal play/pause controls when it's ready to play. Only one of these three states can be visible at a time they never overlap.
 
-#### 5.5.2 Three-Way Toggle Sync
+#### 5.6.2 Three-Way Toggle Sync
 
 Three separate UI elements all reflect the same download type (Video/Audio/Thumbnail):
 
@@ -930,7 +1423,7 @@ Three separate UI elements all reflect the same download type (Video/Audio/Thumb
 
 **Single Source of Truth:** `selectedConfig` in `index.jsx` is the only state that matters. All three toggles derive from it and write back to it.
 
-#### 5.5.3 Player Visual States
+#### 5.6.3 Player Visual States
 
 The preview player has 3 mutually exclusive visual states:
 
@@ -954,7 +1447,7 @@ stateDiagram-v2
 | **Trimming / Processing** | `activeDownload` found in `downloads[]` | Circular SVG progress ring + percentage + bottom glow bar |
 | **Ready / Playing** | None of above | Hover-aware Play/Pause button with glassmorphism overlay |
 
-#### 5.5.4 Estimated File Size Calculation
+#### 5.6.4 Estimated File Size Calculation
 
 The trimmer estimates output file size based on quality bitrate:
 
@@ -971,7 +1464,7 @@ The trimmer estimates output file size based on quality bitrate:
 
 ---
 
-#### 5.5.5 Lazy Stream Loading `previewEnabled` Gate
+#### 5.6.5 Lazy Stream Loading `previewEnabled` Gate
 
 *How the VideoTrimmer avoids unnecessary backend API calls until the user actually engages with the trim controls.*
 
@@ -1031,7 +1524,7 @@ Once `previewEnabled` becomes `true`, the placeholder fades out and the actual s
 
 ---
 
-### 5.6 Hosted Web Application Architecture
+### 5.7 Hosted Web Application Architecture
 
 *How the platform operates when hosted on cloud servers.*
 
@@ -1067,7 +1560,7 @@ flowchart LR
 
 ---
 
-### 5.7 Native Windows Desktop Architecture
+### 5.8 Native Windows Desktop Architecture
 
 *How the platform operates when installed locally as an .exe via the Launcher.*
 
@@ -1545,4 +2038,4 @@ For issues and questions:
 
 **Made With❤️UP7**
 
-*Last Updated: April 2026*
+*Last Updated: May 2026*

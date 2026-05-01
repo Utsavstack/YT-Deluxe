@@ -8,7 +8,6 @@ import TrendingHeader from './components/TrendingHeader';
 import TrendingSection from './components/TrendingSection';
 import SearchResults from './components/SearchResults';
 import QuickPreviewModal from './components/QuickPreviewModal';
-import FloatingActionButton from './components/FloatingActionButton';
 
 import YTDeluxeAPI from '../../utils/api';
 import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
@@ -20,8 +19,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [trendingVideos, setTrendingVideos] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isTrendingLoadingMore, setIsTrendingLoadingMore] = useState(false);
-  const [trendingKeywordIndex, setTrendingKeywordIndex] = useState(0);
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState('0'); // YT category ID, '0' = All
   const [recentSearches, setRecentSearches] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
@@ -29,6 +27,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [hasMoreResults, setHasMoreResults] = useState(false);
   const [hasMoreTrending, setHasMoreTrending] = useState(true);
+  const [trendingCursor, setTrendingCursor] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
   const [error, setError] = useState(null);
   const { addDownload } = useDownloadContext();
@@ -37,280 +36,95 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const [isTrendingCollapsed, setIsTrendingCollapsed] = useState(false);
   const navigate = useNavigate();
 
-  // Scroll listener for sticky search bar & trending header
+  // YT official category IDs + display names
+  const categoryChips = [
+    { id: '0',  label: 'All' },
+    { id: '10', label: 'Music' },
+    { id: '20', label: 'Gaming' },
+    { id: '25', label: 'News' },
+    { id: '17', label: 'Sports' },
+    { id: '1',  label: 'Film' },
+  ];
+  const categoryLabels = categoryChips.map(c => c.label);
+
+  // Scroll listener for sticky search bar, trending header, and back to top
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  
   useEffect(() => {
     const onScroll = () => {
       setIsSearchSticky(window.scrollY > 84);
       setIsTrendingSticky(window.scrollY > 164);
+      setShowBackToTop(window.scrollY > 400);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Auto-collapse category bar when it becomes sticky to save screen space, auto-expand when returning to top
-  useEffect(() => {
-    setIsTrendingCollapsed(isTrendingSticky);
-  }, [isTrendingSticky]);
-
-  // Mock trending videos data (fallback when API is not available)
-  const mockTrendingVideos = [
-  {
-    id: 'trend1',
-    title: 'React 18 Complete Tutorial - Build Modern Web Apps',
-    thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=225&fit=crop',
-    duration: 3600,
-    views: 1250000,
-    uploadDate: '2024-01-15T10:00:00Z',
-    quality: 'HD',
-    channel: {
-      name: 'TechMaster Pro',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-      verified: true
-    },
-    likes: 45000,
-    dislikes: 1200,
-    tags: ['react', 'javascript', 'tutorial'],
-    description: `Learn React 18 from scratch with this comprehensive tutorial. We'll cover all the new features including concurrent rendering, automatic batching, and Suspense improvements.`
-  },
-  {
-    id: 'trend2',
-    title: 'JavaScript ES2024 New Features You Must Know',
-    thumbnail: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=400&h=225&fit=crop',
-    duration: 1800,
-    views: 890000,
-    uploadDate: '2024-01-20T14:30:00Z',
-    quality: '4K',
-    channel: {
-      name: 'CodeWithSarah',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face',
-      verified: true
-    },
-    likes: 32000,
-    dislikes: 800,
-    tags: ['javascript', 'es2024', 'features'],
-    description: `Explore the latest JavaScript ES2024 features that will revolutionize how you write modern JavaScript code.`
-  },
-  {
-    id: 'trend3',
-    title: 'CSS Grid vs Flexbox - When to Use Which?',
-    thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=225&fit=crop',
-    duration: 1200,
-    views: 650000,
-    uploadDate: '2024-01-25T09:15:00Z',
-    quality: 'HD',
-    channel: {
-      name: 'DesignGuru',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face',
-      verified: false
-    },
-    likes: 28000,
-    dislikes: 500,
-    tags: ['css', 'grid', 'flexbox'],
-    description: `Master CSS layout with this comprehensive comparison between CSS Grid and Flexbox. Learn when to use each approach.`
-  }];
+  // Category bar is open by default. User can manually collapse it via the filter icon.
 
 
-  // Rotating trending keywords for variety across multiple categories
-  const trendingKeywords = [
-  'trending music India',
-  'trending news',
-  'trending in education',
-  'comedy video trending',
-  'entertainment viral today',
-  'tech news trending',
-  'finance India today',
-  'viral India today',
-  'top trending songs',
-  'latest viral shorts',
-  'gaming trending India',
-  'sports highlights trending',
-  'recipe cooking trending'];
-
-
-  // Prepare categories for the chips (All + keywords)
-  const categoryChips = ["All", "Music", "News", "Education", "Comedy", "Entertainment", "Tech", "Finance", "Viral", "Songs", "Shorts", "Gaming", "Sports", "Cooking"];
-
-  // Mapping display category to actual search keyword
-  const categoryToKeywordMap = {
-    "All": "trending", // Special case, handled by rotating
-    "Music": "trending music India",
-    "News": "trending news",
-    "Education": "trending in education",
-    "Comedy": "comedy video trending",
-    "Entertainment": "entertainment viral today",
-    "Tech": "tech news trending",
-    "Finance": "finance India today",
-    "Viral": "viral India today",
-    "Songs": "top trending songs",
-    "Shorts": "latest viral shorts",
-    "Gaming": "gaming trending India",
-    "Sports": "sports highlights trending",
-    "Cooking": "recipe cooking trending"
-  };
-
-  // Rotate keyword based on current 5-minute window so each session feels fresh
-  const getRotatingKeyword = (offset = 0) => {
-    const slotIndex = (Math.floor(Date.now() / (5 * 60 * 1000)) + offset) % trendingKeywords.length;
-    return trendingKeywords[slotIndex];
-  };
   // Load initial data
   useEffect(() => {
-    // Load recent searches from localStorage
     const savedSearches = JSON.parse(localStorage.getItem('ytdeluxe_recent_searches') || '[]');
     setRecentSearches(savedSearches);
+    loadTrendingVideos('0');
+    const refreshInterval = setInterval(() => loadTrendingVideos(activeCategory), 10 * 60 * 1000);
+    return () => clearInterval(refreshInterval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Load trending videos immediately
-    loadTrendingVideos();
-
-    // Auto-refresh trending every 5 minutes
-    const refreshInterval = setInterval(() => {
-      loadTrendingVideos();
-    }, 5 * 60 * 1000);
-
-    return () => clearInterval(refreshInterval); // Cleanup on unmount
-  }, [activeCategory]);
-
-  const shuffleArray = (array) => {
-    const newArr = [...array];
-    for (let i = newArr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-    }
-    return newArr;
-  };
-
-  const loadTrendingVideos = async (category = activeCategory) => {
+  const loadTrendingVideos = async (categoryId = activeCategory, isLoadMore = false) => {
     try {
-      setIsTrendingLoading(true);
-      setTrendingKeywordIndex(0);
-      setHasMoreTrending(true);
-
-      if (category === "All") {
-        // Fetch 3 random categories and mix them up
-        const randomKeywords = [...trendingKeywords].sort(() => 0.5 - Math.random()).slice(0, 3);
-        console.log('[Trending] Using mixed keywords for All:', randomKeywords);
-
-        const responses = await Promise.all(
-          randomKeywords.map((kw) => YTDeluxeAPI.searchVideos(kw).catch(() => ({ results: [] })))
-        );
-
-        let mixedResults = [];
-        responses.forEach((res, i) => {
-          if (res.results) {
-            mixedResults = [...mixedResults, ...res.results.map((v, j) => ({ ...v, originalId: v.id, id: `${v.id}_all_0_${i}_${j}` }))];
-          }
-        });
-
-        mixedResults = shuffleArray(mixedResults);
-
-        if (mixedResults.length > 0) {
-          const normalizedResults = mixedResults.map((v) => ({
-            ...v,
-            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.webp')
-          }));
-          setTrendingVideos(normalizedResults);
-          setLastUpdated(new Date().toISOString());
-        } else {
-          setTrendingVideos(shuffleArray(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.webp' }))));
-        }
+      if (isLoadMore) {
+        setIsTrendingLoadingMore(true);
       } else {
-        // specific category
-        const keyword = categoryToKeywordMap[category] || category;
-        console.log('[Trending] Using keyword:', keyword, 'for category:', category);
-        const response = await YTDeluxeAPI.searchVideos(keyword);
-
-        if (response.results && response.results.length > 0) {
-          const normalizedResults = response.results.map((v, j) => {
-            return {
-              ...v,
-              originalId: v.id,
-              id: `${v.id}_cat_0_${j}`,
-              thumbnail: v?.thumbnail || (v?.id ? `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` : '/assets/images/no_image.webp')
-            };
+        setIsTrendingLoading(true);
+      }
+      
+      const currentCursor = isLoadMore ? trendingCursor : 0;
+      const response = await YTDeluxeAPI.getTrending(categoryId, 'IN', currentCursor, 18);
+      
+      if (response.results && response.results.length > 0) {
+        if (isLoadMore) {
+          setTrendingVideos(prev => {
+            // Filter out potential duplicates based on ID
+            const existingIds = new Set(prev.map(v => v.id));
+            const newUniqueVideos = response.results.filter(v => !existingIds.has(v.id));
+            return [...prev, ...newUniqueVideos];
           });
-          setTrendingVideos(normalizedResults);
-          setLastUpdated(new Date().toISOString());
         } else {
-          setTrendingVideos(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.webp' })));
+          setTrendingVideos(response.results);
         }
-      }
-    } catch (error) {
-      console.warn('API not available, using mock data:', error);
-      setTrendingVideos(mockTrendingVideos.map((v) => ({ ...v, thumbnail: v?.thumbnail || '/assets/images/no_image.webp' })));
-    } finally {
-      setIsTrendingLoading(false);
-    }
-  };
-
-  const handleCategorySelect = (category) => {
-    if (category === activeCategory) return;
-    setActiveCategory(category);
-    setTrendingVideos([]); // Clear current videos immediately for UX
-    loadTrendingVideos(category);
-  };
-
-  const handleLoadMoreTrending = async () => {
-    if (isTrendingLoadingMore || !hasMoreTrending) return;
-
-    setIsTrendingLoadingMore(true);
-    try {
-      let nextIndex = trendingKeywordIndex + 1;
-      let newResults = [];
-
-      if (activeCategory === "All") {
-        // Fetch another 3 random categories
-        const randomKeywords = [...trendingKeywords].sort(() => 0.5 - Math.random()).slice(0, 3);
-        console.log('[Trending] Loading more mixed keywords for All:', randomKeywords);
-
-        const responses = await Promise.all(
-          randomKeywords.map((kw) => YTDeluxeAPI.searchVideos(kw).catch(() => ({ results: [] })))
-        );
-
-        responses.forEach((res, i) => {
-          if (res.results) {
-            newResults = [...newResults, ...res.results.map((v, j) => ({ ...v, originalId: v.id, id: `${v.id}_all_${nextIndex}_${i}_${j}` }))];
-          }
-        });
-
-        newResults = shuffleArray(newResults);
-      } else {
-        // Specific category infinite scroll - append modifiers to hit different pages
-        const modifiers = ["latest", "viral", "top", "new", "2024", "best videos"];
-        const modifier = modifiers[nextIndex % modifiers.length];
-        const baseKeyword = categoryToKeywordMap[activeCategory] || activeCategory;
-        const keyword = `${baseKeyword} ${modifier}`;
-
-        console.log('[Trending] Loading more with specific keyword:', keyword);
-        const response = await YTDeluxeAPI.searchVideos(keyword);
-        if (response.results) {
-          newResults = response.results.map((v, j) => ({ ...v, originalId: v.id, id: `${v.id}_cat_${nextIndex}_${j}` }));
-        }
-      }
-
-      if (newResults.length > 0) {
-        const normalizedResults = newResults.map((v) => {
-          return {
-            ...v,
-            thumbnail: v?.thumbnail || (v?.originalId ? `https://i.ytimg.com/vi/${v.originalId}/hqdefault.jpg` : '/assets/images/no_image.webp')
-          };
-        });
-        setTrendingVideos((prev) => [...prev, ...normalizedResults]);
-        setTrendingKeywordIndex(nextIndex);
+        setTrendingCursor(response.next_cursor);
+        setHasMoreTrending(response.next_cursor !== -1);
         setLastUpdated(new Date().toISOString());
-
-        // Stop if we've cycled enough batches
-        if (nextIndex >= 10) {
-          setHasMoreTrending(false);
-        }
       } else {
+        if (!isLoadMore) setTrendingVideos([]);
         setHasMoreTrending(false);
       }
     } catch (error) {
-      console.error('Failed to load more trending videos:', error);
-      setHasMoreTrending(false);
+      console.warn('[Trending] Failed to load:', error);
+      if (!isLoadMore) setTrendingVideos([]);
     } finally {
+      setIsTrendingLoading(false);
       setIsTrendingLoadingMore(false);
     }
+  };
+
+  const handleCategorySelect = (categoryId) => {
+    if (categoryId === activeCategory) return;
+    setActiveCategory(categoryId);
+    setTrendingVideos([]);
+    setTrendingCursor(0);
+    setHasMoreTrending(true);
+    loadTrendingVideos(categoryId, false);
+  };
+
+  const handleLoadMoreTrending = () => {
+    if (isTrendingLoadingMore) return;
+    
+    // If we temporarily hit -1 (e.g., fetch failed), reset to 0 to try getting a fresh batch
+    const nextCursor = trendingCursor === -1 ? 0 : trendingCursor;
+    loadTrendingVideos(activeCategory, true);
   };
 
   const handleSearch = async (query) => {
@@ -464,62 +278,36 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                       </div>
                     )}
 
-                    {/* Floating Category Toggle (Placed below Theme/Hamburger / right side) */}
-                    <AnimatePresence>
-                      <motion.div
-                        className="fixed top-[92px] z-[115] pointer-events-none flex justify-center w-full px-6 left-0 right-0"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 20 }}
-                      >
-                        <div className="flex items-center justify-end max-w-7xl w-full relative">
-                          <motion.button
-                            initial={{ scale: 0.8 }}
-                            animate={{ scale: 1 }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsTrendingCollapsed(!isTrendingCollapsed)}
-                            className={`pointer-events-auto flex items-center justify-center p-2.5 rounded-full backdrop-blur-xl border shadow-glass-sm transition-all duration-300 group
-                              ${isTrendingCollapsed 
-                                ? 'bg-primary/20 hover:bg-primary/30 border-primary/40 text-primary shadow-primary/20' 
-                                : 'bg-card/80 hover:bg-muted/90 border-border/60 text-foreground/80 hover:text-foreground'
-                              }`}
-                            title={isTrendingCollapsed ? t("homeSearchDashboard.showCategories", "Show Categories") : t("homeSearchDashboard.hideCategories", "Hide Categories")}
-                          >
-                            <Icon name={isTrendingCollapsed ? "Filter" : "FilterX"} size={18} className="group-hover:scale-110 transition-transform" />
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    </AnimatePresence>
-
                     {/* Smooth Placeholder for Sticky State */}
-                    {isTrendingSticky && !isTrendingCollapsed && (
-                      <div className="w-full h-[90px]" />
+                    {isTrendingSticky && (
+                      <div className="w-full h-[50px]" />
                     )}
                     
-                    {!isTrendingCollapsed && (
-                      <div
-                        className={`
-                          ${isTrendingSticky
-                            ? 'fixed top-[94px] left-0 right-0 z-[104] flex justify-center px-4 lg:px-6 pointer-events-none mb-6'
-                            : 'relative overflow-hidden mb-6'
-                          }
-                        `}
-                      >
-                        {/* Added pr-[52px] when sticky to avoid overlapping the fixed toggle on the right */}
-                        <div className={`w-full pointer-events-auto transition-all ${isTrendingSticky ? 'max-w-7xl flex justify-center pr-[52px]' : ''}`}>
+                    <div
+                      className={`
+                        ${isTrendingSticky
+                          ? 'fixed top-[84px] left-0 right-0 z-[104] flex justify-center px-4 lg:px-6 pointer-events-none mb-6'
+                          : 'relative overflow-hidden mt-6 mb-8'
+                        }
+                      `}
+                    >
+                      <div className={`w-full pointer-events-auto transition-all ${isTrendingSticky ? 'max-w-7xl flex justify-center' : ''}`}>
                           <TrendingHeader
                             onRefresh={() => loadTrendingVideos(activeCategory)}
                             lastUpdated={lastUpdated}
                             isLoading={isTrendingLoading}
-                            categories={categoryChips}
-                            activeCategory={activeCategory}
-                            onCategorySelect={handleCategorySelect}
+                            categories={categoryLabels}
+                            activeCategory={categoryChips.find(c => c.id === activeCategory)?.label || 'All'}
+                            onCategorySelect={(label) => {
+                              const chip = categoryChips.find(c => c.label === label);
+                              if (chip) handleCategorySelect(chip.id);
+                            }}
                             isSticky={isTrendingSticky}
+                            isCollapsed={isTrendingCollapsed}
+                            onToggleCollapse={() => setIsTrendingCollapsed(!isTrendingCollapsed)}
                           />
                         </div>
                       </div>
-                    )}
 
                     {/* Video Cards Grid — this is the only scrolling content */}
                     <div className="space-y-12">
@@ -546,9 +334,25 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
         }}
         onDownload={handleQuickDownload} />
       
-
-            {/* Floating Action Button */}
-            <FloatingActionButton />
+            {/* Back to Top Button (Using FAB Styling) */}
+            <AnimatePresence>
+              {showBackToTop && (
+                <div className="fixed bottom-[110px] md:bottom-12 right-6 z-[110] flex flex-col items-end">
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="w-14 h-14 shrink-0 rounded-full flex items-center justify-center border transition-all duration-300 relative z-50 bg-gradient-to-tr from-primary to-accent border-white/20 text-white shadow-[0_8px_30px_rgba(var(--color-primary-rgb),0.5)] backdrop-blur-md cursor-pointer"
+                    title={t("homeSearchDashboard.backToTop", "Back to Top")}
+                  >
+                    <Icon name="ArrowUp" size={26} strokeWidth={2.5} />
+                  </motion.button>
+                </div>
+              )}
+            </AnimatePresence>
         </div>);
 
 };

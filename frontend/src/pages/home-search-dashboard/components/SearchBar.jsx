@@ -8,9 +8,9 @@ const isYouTubeUrl = (url) => {
   return url.includes('youtube.com') || url.includes('youtu.be');
 };
 
-const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearch, isSticky = false }) => {
+const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearch, isSticky = false, initialValue = '' }) => {
   const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialValue);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -19,6 +19,11 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
   const searchRef = useRef(null);
   const suggestionsRef = useRef(null);
   const recognitionRef = useRef(null);
+
+  // Sync searchQuery with initialValue if it changes externally
+  useEffect(() => {
+    setSearchQuery(initialValue);
+  }, [initialValue]);
 
   // Mock auto-suggestions
   const mockSuggestions = [

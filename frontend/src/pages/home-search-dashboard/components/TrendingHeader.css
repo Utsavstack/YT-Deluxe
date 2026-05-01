@@ -18,43 +18,13 @@
   margin-top: 0.5rem;
 }
 
-/* Liquid Glass Pill Effect when sticky */
+/* Liquid Glass Pill Effect when sticky - REMOVED */
+/* We want the capsules to float independently, so the wrapper should just be a flex container */
 .trending-header-sticky {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.1) 0%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  
-  /* Pill Shape */
-  border-radius: 1000px;
-  
-  /* Premium Border - utilizing a semi-transparent white border for glass effect */
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  
-  /* Liquid Glue/Glass Glow */
-  box-shadow: 
-    0 8px 32px 0 rgba(31, 38, 135, 0.07),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 4px 15px -5px var(--color-primary);
-    
-  padding: 6px 16px; /* Restored comfortable vertical padding */
-  margin-top: 4px;
+  padding: 4px 0;
 }
 
 .dark .trending-header-sticky {
-  background: linear-gradient(
-    135deg,
-    rgba(20, 20, 20, 0.4) 0%,
-    rgba(10, 10, 10, 0.2) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.37),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 4px 20px -5px rgba(var(--color-primary-rgb, 59, 130, 246), 0.3);
 }
 
 /* Internal spacing adjustments for pill layout */

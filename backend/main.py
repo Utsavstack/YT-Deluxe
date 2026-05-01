@@ -228,6 +228,14 @@ download_tasks = _load_tasks()
 download_history = []
 feedback_list = []
 
+# ── In-memory search cache (query → {results, expires_at}) ────────────────
+import threading as _threading
+_search_cache: dict = {}
+_search_cache_lock = _threading.Lock()
+SEARCH_CACHE_TTL = 30 * 60  # 30 minutes
+SEARCH_PAGE_SIZE = 18
+SEARCH_CACHE_FETCH = 180  # fetch 180, serve 18 per page (10 pages max)
+
 # ── Cancellation infrastructure ───────────────────────────────────────────────
 # Thread-safe set of task_ids that should be aborted.
 # The progress_hook checks this on every callback and raises to abort yt-dlp.
@@ -238,38 +246,328 @@ class DownloadCancelled(Exception):
     """Raised inside progress_hook to abort yt-dlp when user cancels."""
     pass
 
-# Endpoint: Search YouTube (by keyword)
+# ── Helper: normalize a single yt-dlp entry to our video dict ──────────────
+def _normalize_entry(entry: dict) -> dict:
+  raw_uploader = entry.get('uploader') or entry.get('channel') or entry.get('uploader_id') or 'Unknown Channel'
+  uploader_name = raw_uploader.lstrip('@') if raw_uploader else 'Unknown Channel'
+  vid_id = entry.get('id', '')
+  return {
+    'id': vid_id,
+    'title': entry.get('title'),
+    'url': f"https://www.youtube.com/watch?v={vid_id}",
+    'thumbnail': entry.get('thumbnail') or (f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg" if vid_id else None),
+    'duration': entry.get('duration'),
+    'uploader': uploader_name,
+    'views': entry.get('view_count'),
+  }
+
+# Endpoint: Search YouTube (by keyword) — cache-based pagination with auto-extend
 @app.get("/api/search")
-def search_videos(q: str):
+def search_videos(q: str, page: int = 1):
   try:
-    ydl_opts = {
-      **get_yt_search_opts(),
-      'extract_flat': True,
-      'skip_download': True,
-      'ignoreerrors': True,
-      **get_cookie_opts()
+    page = max(1, page)
+    cache_key = q.strip().lower()
+    now = time.time()
+
+    # --- Check cache ---
+    with _search_cache_lock:
+      cached = _search_cache.get(cache_key)
+      # Invalidate if expired or too few results (stale from old config)
+      min_acceptable = SEARCH_CACHE_FETCH // 3
+      if cached and cached['expires_at'] > now and len(cached['results']) >= min_acceptable:
+        all_results = cached['results']
+        print(f"[Search] Cache HIT for '{q}' ({len(all_results)} results cached)")
+      else:
+        if cached:
+          print(f"[Search] Cache STALE for '{q}' — only {len(cached['results'])} results, re-fetching...")
+          del _search_cache[cache_key]
+        all_results = None
+
+    # --- Fetch from yt-dlp if cache miss (initial load) ---
+    if all_results is None:
+      print(f"[Search] Cache MISS for '{q}' — fetching up to {SEARCH_CACHE_FETCH} results...")
+      ydl_opts = {
+        **get_yt_search_opts(),
+        'extract_flat': True,
+        'skip_download': True,
+        'ignoreerrors': True,
+        **get_cookie_opts()
+      }
+      with YoutubeDL(ydl_opts) as ydl:
+        search_result = ydl.extract_info(f"ytsearch{SEARCH_CACHE_FETCH}:{q}", download=False)
+      all_results = [
+        _normalize_entry(e)
+        for e in (search_result.get('entries') or [])
+        if e and e.get('id')
+      ]
+      with _search_cache_lock:
+        _search_cache[cache_key] = {
+          'results': all_results,
+          'expires_at': now + SEARCH_CACHE_TTL,
+          'extension_count': 0,     # tracks how many auto-extends have fired
+        }
+      print(f"[Search] Cached {len(all_results)} results for '{q}'")
+
+    # ── Auto-extend: fire BEFORE user hits the end (≤ 2 pages remaining) ──────
+    # Mirrors the exact same pattern used by /api/trending.
+    total = len(all_results)
+    start_pos = (page - 1) * SEARCH_PAGE_SIZE
+    remaining = total - start_pos          # results still left after current page
+
+    EXTEND_THRESHOLD = SEARCH_PAGE_SIZE * 2   # trigger when ≤ 2 pages remain
+
+    if remaining <= EXTEND_THRESHOLD:
+      with _search_cache_lock:
+        ext_count = _search_cache.get(cache_key, {}).get('extension_count', 0)
+
+      print(f"[Search] Cache running low for '{q}': {remaining} left — extension #{ext_count + 1}")
+      try:
+        # Rotate seed words so every extension fetches a different batch
+        seeds = [
+          "latest", "new", "top", "popular", "best", "viral", "trending",
+          "hot", "hits", "fresh", "must watch", "2024", "2025", "2026",
+          "today", "this week", "right now", "epic", "amazing",
+        ]
+        seed = seeds[ext_count % len(seeds)]
+        extended_query = f"{q} {seed}"
+        print(f"[Search] Extension query: '{extended_query}'")
+
+        ydl_opts_ext = {
+          **get_yt_search_opts(),
+          'extract_flat': True,
+          'skip_download': True,
+          'ignoreerrors': True,
+          **get_cookie_opts()
+        }
+        with YoutubeDL(ydl_opts_ext) as ydl:
+          ext_result = ydl.extract_info(f"ytsearch{SEARCH_CACHE_FETCH}:{extended_query}", download=False)
+
+        new_videos = [
+          _normalize_entry(e)
+          for e in (ext_result.get('entries') or [])
+          if e and e.get('id')
+        ]
+
+        # Deduplicate against everything already cached
+        existing_ids = {v['id'] for v in all_results}
+        unique_new = [v for v in new_videos if v['id'] not in existing_ids]
+        print(f"[Search] Extension: {len(new_videos)} fetched, {len(unique_new)} unique after dedup")
+
+        if unique_new:
+          all_results = all_results + unique_new
+          with _search_cache_lock:
+            _search_cache[cache_key] = {
+              'results': all_results,
+              'expires_at': now + SEARCH_CACHE_TTL,
+              'extension_count': ext_count + 1,
+            }
+          total = len(all_results)
+          print(f"[Search] Cache extended to {total} results for '{q}'")
+
+      except Exception as ext_err:
+        print(f"[Search] Extension fetch failed: {ext_err}")
+
+    # --- Paginate from (possibly extended) all_results ---
+    total_pages = max(1, (total + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE)
+    page = min(page, total_pages)
+    start = (page - 1) * SEARCH_PAGE_SIZE
+    end = start + SEARCH_PAGE_SIZE
+    page_results = all_results[start:end]
+
+    return {
+      "results": page_results,
+      "page": page,
+      "total_pages": total_pages,
+      "total_results": total,
+      "page_size": SEARCH_PAGE_SIZE,
     }
-    with YoutubeDL(ydl_opts) as ydl:
-      # ytsearch12 returns top 12 results (perfect for 3-column grid)
-      search_result = ydl.extract_info(f"ytsearch12:{q}", download=False)
-    videos = []
-    for entry in search_result.get('entries', []):
-      # Extract uploader/channel name safely and strip @ handle prefix
-      raw_uploader = entry.get('uploader') or entry.get('channel') or entry.get('uploader_id') or 'Unknown Channel'
-      uploader_name = raw_uploader.lstrip('@') if raw_uploader else 'Unknown Channel'
-      
-      videos.append({
-        'id': entry.get('id'),
-        'title': entry.get('title'),
-        'url': f"https://www.youtube.com/watch?v={entry.get('id')}",
-        'thumbnail': entry.get('thumbnail'),
-        'duration': entry.get('duration'),
-        'uploader': uploader_name,
-        'views': entry.get('view_count'),
-      })
-    return {"results": videos}
   except Exception as e:
+    print(f"[Search] Error: {e}")
     return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ── In-memory trending cache (category_id → {results, expires_at}) ────────
+import threading as _trending_threading
+_trending_cache: dict = {}
+_trending_cache_lock = _trending_threading.Lock()
+TRENDING_CACHE_TTL = 30 * 60   # 30 minutes
+TRENDING_FETCH_SIZE = 120       # Fetch 120 videos, serve 18 per cursor page
+TRENDING_PAGE_SIZE = 18
+
+# Endpoint: Trending videos — cursor-based, cache-backed infinite scroll
+@app.get("/api/trending")
+def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, limit: int = TRENDING_PAGE_SIZE):
+  """
+  Returns `limit` trending videos starting from `cursor` index.
+  On cursor=0 (first load or category change), fetches a fresh batch and caches it.
+  Returns next_cursor=-1 when no more items are available.
+  """
+  cache_key = f"{category_id}_{region}"
+  now = time.time()
+
+  # --- Check cache ---
+  with _trending_cache_lock:
+    cached = _trending_cache.get(cache_key)
+    if cached and cached['expires_at'] > now:
+      all_videos = cached['results']
+      print(f"[Trending] Cache HIT for '{cache_key}' ({len(all_videos)} cached)")
+    else:
+      all_videos = None
+
+  # --- Fetch from yt-dlp if cache miss or cursor=0 (force fresh on category switch) ---
+  if all_videos is None or cursor == 0:
+    # Build the trending feed URL
+    if category_id and category_id != "0":
+      trending_url = f"https://www.youtube.com/feed/trending?bp=4gI{category_id}"
+    else:
+      trending_url = "https://www.youtube.com/feed/trending"
+
+    def _fetch_feed():
+      ydl_opts = {
+        **get_yt_search_opts(),
+        'extract_flat': True,
+        'skip_download': True,
+        'ignoreerrors': True,
+        'extractor_args': {'youtube': {'player_client': ['web', 'default']}},
+        **get_cookie_opts()
+      }
+      with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(trending_url, download=False)
+      entries = info.get('entries') or []
+      return [_normalize_entry(e) for e in entries if e and e.get('id')]
+
+    def _fetch_keyword_fallback():
+      import math
+      cat_keyword_map = {
+        "0":  "trending viral today India",
+        "10": "trending music songs India",
+        "20": "trending gaming India",
+        "25": "trending news today",
+        "17": "trending sports highlights",
+        "1":  "trending movies trailers",
+      }
+      base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
+      hour_slot = math.floor(time.time() / 3600)
+      seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits", "fresh", "must watch",
+               "2024", "2025","2026","today", "this week", "right now", "live"]
+      seed = seeds[hour_slot % len(seeds)]
+      keyword = f"{base_keyword} {seed}"
+      print(f"[Trending] Keyword fallback: '{keyword}'")
+      ydl_opts = {
+        **get_yt_search_opts(),
+        'extract_flat': True,
+        'skip_download': True,
+        'ignoreerrors': True,
+        **get_cookie_opts()
+      }
+      with YoutubeDL(ydl_opts) as ydl:
+        result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
+      return [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+
+    videos = []
+    try:
+      print(f"[Trending] Fetching real feed: {trending_url}")
+      videos = _fetch_feed()
+      print(f"[Trending] Real feed returned {len(videos)} videos")
+    except Exception as e:
+      print(f"[Trending] Real feed failed: {e} — using keyword fallback")
+
+    if len(videos) < 5:
+      print(f"[Trending] Insufficient results ({len(videos)}) — activating keyword fallback")
+      try:
+        videos = _fetch_keyword_fallback()
+      except Exception as fe:
+        print(f"[Trending] Fallback also failed: {fe}")
+        return JSONResponse({"error": "Failed to fetch trending videos"}, status_code=500)
+
+    all_videos = videos
+    with _trending_cache_lock:
+      _trending_cache[cache_key] = {
+        'results': all_videos,
+        'expires_at': now + TRENDING_CACHE_TTL
+      }
+    print(f"[Trending] Cached {len(all_videos)} results for '{cache_key}'")
+
+  # --- Slice with cursor — auto-extend cache when exhausted ---
+  GRID_COLS = 3  # Must match frontend grid columns
+  total = len(all_videos)
+  start = cursor
+  remaining = total - start
+
+  # Trigger extension BEFORE we run out — when remaining is less than a full page
+  if remaining <= limit:
+    print(f"[Trending] Cache running low: remaining={remaining}, limit={limit}. Fetching more...")
+    try:
+      import math
+      cat_keyword_map = {
+        "0":  "trending viral today India",
+        "10": "trending music songs India",
+        "20": "trending gaming India",
+        "25": "trending news today",
+        "17": "trending sports highlights",
+        "1":  "trending movies trailers",
+      }
+      base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
+      # Use cursor-based seed rotation so each extension fetches different results
+      seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits", "fresh", "must watch","instagram reels", "instagram viral reels today",
+               "2024", "2025", "2026", "today", "this week", "right now", "live", "epic", "amazing", "super", "mega"]
+      seed_index = (total // TRENDING_FETCH_SIZE) + int(time.time() // 600)
+      seed = seeds[seed_index % len(seeds)]
+      keyword = f"{base_keyword} {seed}"
+      print(f"[Trending] Extension fetch with keyword: '{keyword}'")
+
+      ydl_opts = {
+        **get_yt_search_opts(),
+        'extract_flat': True,
+        'skip_download': True,
+        'ignoreerrors': True,
+        **get_cookie_opts()
+      }
+      with YoutubeDL(ydl_opts) as ydl:
+        result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
+      new_videos = [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+
+      # Deduplicate against existing cache
+      existing_ids = set(v.get('id') for v in all_videos)
+      unique_new = [v for v in new_videos if v.get('id') not in existing_ids]
+      print(f"[Trending] Got {len(new_videos)} videos, {len(unique_new)} unique after dedup")
+
+      if unique_new:
+        all_videos = all_videos + unique_new
+        with _trending_cache_lock:
+          _trending_cache[cache_key] = {
+            'results': all_videos,
+            'expires_at': now + TRENDING_CACHE_TTL
+          }
+        total = len(all_videos)
+        print(f"[Trending] Cache extended to {total} videos")
+    except Exception as ext_err:
+      print(f"[Trending] Extension fetch failed: {ext_err}")
+
+  # Slice the page
+  end = min(start + limit, total)
+  page_videos = all_videos[start:end] if start < total else []
+
+  # Trim to multiple of GRID_COLS so we never serve partial rows
+  # ONLY trim if we have at least one full row to serve, otherwise we might trim to 0 and cause a dead end.
+  if len(page_videos) >= GRID_COLS and len(page_videos) % GRID_COLS != 0:
+    trim_count = len(page_videos) % GRID_COLS
+    if trim_count > 0:
+      page_videos = page_videos[:-trim_count]
+      end = start + len(page_videos)
+
+  # Only return -1 if we have absolutely nothing left AND couldn't find more
+  next_cursor = end if end < total else (total if len(page_videos) > 0 else -1)
+
+  return {
+    "results": page_videos,
+    "cursor": cursor,
+    "next_cursor": next_cursor,
+    "total": total,
+    "category_id": category_id,
+    "region": region,
+  }
+
 # Endpoint: Get video details (by URL)
 @app.get("/api/video")
 def get_video_details(url: str):
