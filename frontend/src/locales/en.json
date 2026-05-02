@@ -145,6 +145,7 @@
     "appearanceMode": "Appearance Mode",
     "appearanceModeDesc": "Choose between light and dark themes",
     "light": "Light",
+    "system": "System",
     "dark": "Dark",
     "preview": "YT-Deluxe Preview",
     "previewDesc": "Real-time style verification",

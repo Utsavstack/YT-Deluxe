@@ -94,6 +94,17 @@ const ThemeCustomization = ({ currentTheme, onThemeChange, currentAccentColor, o
               <span>{t('theme.light')}</span>
             </button>
             <button
+              onClick={(e) => handleThemeSelect(e, 'system')}
+              className={`relative z-10 flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${currentTheme === 'system' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              {currentTheme === 'system' && (
+                <motion.div layoutId="theme-active-pill" className="absolute inset-0 bg-primary shadow-sm rounded-full -z-10" />
+              )}
+              <Icon name="Monitor" size={16} />
+              <span>{t('theme.system')}</span>
+            </button>
+            <button
               onClick={(e) => handleThemeSelect(e, 'dark')}
               className={`relative z-10 flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${currentTheme === 'dark' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}

@@ -16,10 +16,9 @@ import { useTheme } from '../../utils/ThemeContext';
 
 const UserSettingsPreferences = () => {
   const { t, i18n } = useTranslation();
-  const { theme: currentTheme, setTheme: onThemeChange } = useTheme();
+  const { theme: currentTheme, setTheme: onThemeChange, accentColor: currentAccentColor, setAccentColor: handleAccentColorChange } = useTheme();
   const [activeSection, setActiveSection] = useState('account');
   const [currentLanguage, setCurrentLanguage] = useState('en');
-  const [currentAccentColor, setCurrentAccentColor] = useState('#2C5DA9');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Mock user data
@@ -81,18 +80,9 @@ const UserSettingsPreferences = () => {
       setCurrentLanguage(savedLanguage);
       i18n.changeLanguage(savedLanguage);
     }
-
-    const savedAccentColor = localStorage.getItem('ytdeluxe_accent_color');
-    if (savedAccentColor) setCurrentAccentColor(savedAccentColor);
   }, []);
 
   const handleThemeChange = (newTheme) => onThemeChange(newTheme);
-
-  const handleAccentColorChange = (color) => {
-    setCurrentAccentColor(color);
-    localStorage.setItem('ytdeluxe_accent_color', color);
-    document.documentElement?.style?.setProperty('--color-primary', color);
-  };
 
   const handleLanguageChange = (language) => {
     setCurrentLanguage(language);
