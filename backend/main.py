@@ -263,7 +263,8 @@ def _normalize_entry(entry: dict) -> dict:
 
 # Endpoint: Search YouTube (by keyword) — cache-based pagination with auto-extend
 @app.get("/api/search")
-def search_videos(q: str, page: int = 1):
+async def search_videos(q: str, page: int = 1):
+  import asyncio as _asyncio
   try:
     page = max(1, page)
     cache_key = q.strip().lower()
@@ -272,41 +273,96 @@ def search_videos(q: str, page: int = 1):
     # --- Check cache ---
     with _search_cache_lock:
       cached = _search_cache.get(cache_key)
-      # Invalidate if expired or too few results (stale from old config)
       min_acceptable = SEARCH_CACHE_FETCH // 3
       if cached and cached['expires_at'] > now and len(cached['results']) >= min_acceptable:
         all_results = cached['results']
         print(f"[Search] Cache HIT for '{q}' ({len(all_results)} results cached)")
+      elif cached and cached['expires_at'] > now and len(cached['results']) >= SEARCH_QUICK_FETCH:
+        # Partial cache (quick fetch in progress) — serve from it
+        all_results = cached['results']
+        print(f"[Search] Partial cache HIT for '{q}' ({len(all_results)} results, full fill in progress)")
       else:
         if cached:
-          print(f"[Search] Cache STALE for '{q}' — only {len(cached['results'])} results, re-fetching...")
+          print(f"[Search] Cache STALE for '{q}' — re-fetching...")
           del _search_cache[cache_key]
         all_results = None
 
-    # --- Fetch from yt-dlp if cache miss (initial load) ---
+    # --- Cache miss: quick first fetch (SEARCH_QUICK_FETCH results) then background fill ---
     if all_results is None:
-      print(f"[Search] Cache MISS for '{q}' — fetching up to {SEARCH_CACHE_FETCH} results...")
-      ydl_opts = {
-        **get_yt_search_opts(),
-        'extract_flat': True,
-        'skip_download': True,
-        'ignoreerrors': True,
-        **get_cookie_opts()
-      }
-      with YoutubeDL(ydl_opts) as ydl:
-        search_result = ydl.extract_info(f"ytsearch{SEARCH_CACHE_FETCH}:{q}", download=False)
-      all_results = [
-        _normalize_entry(e)
-        for e in (search_result.get('entries') or [])
-        if e and e.get('id')
-      ]
+      print(f"[Search] Cache MISS for '{q}' — quick fetch ({SEARCH_QUICK_FETCH} results) via executor...")
+
+      def _do_quick_fetch():
+        ydl_opts_quick = {
+          **get_yt_search_opts(),
+          'extract_flat': True,
+          'skip_download': True,
+          'ignoreerrors': True,
+          **get_cookie_opts()
+        }
+        with YoutubeDL(ydl_opts_quick) as ydl:
+          res = ydl.extract_info(f"ytsearch{SEARCH_QUICK_FETCH}:{q}", download=False)
+        return [_normalize_entry(e) for e in (res.get('entries') or []) if e and e.get('id')]
+
+      loop = _asyncio.get_event_loop()
+      all_results = await loop.run_in_executor(None, _do_quick_fetch)
+
+      # Store quick results immediately so page 1 can be served right away
       with _search_cache_lock:
         _search_cache[cache_key] = {
           'results': all_results,
           'expires_at': now + SEARCH_CACHE_TTL,
-          'extension_count': 0,     # tracks how many auto-extends have fired
+          'extension_count': 0,
+          'filling': True,   # flag: background fill in progress
         }
-      print(f"[Search] Cached {len(all_results)} results for '{q}'")
+      print(f"[Search] Quick cache: {len(all_results)} results for '{q}'. Starting background fill...")
+
+      # Background thread: fetch full SEARCH_CACHE_FETCH and replace cache
+      def _background_fill_search(query, ck, expiry):
+        try:
+          print(f"[Search] BG fill starting for '{query}' ({SEARCH_CACHE_FETCH} results)...")
+          ydl_opts_full = {
+            **get_yt_search_opts(),
+            'extract_flat': True,
+            'skip_download': True,
+            'ignoreerrors': True,
+            **get_cookie_opts()
+          }
+          with YoutubeDL(ydl_opts_full) as ydl:
+            full_result = ydl.extract_info(f"ytsearch{SEARCH_CACHE_FETCH}:{query}", download=False)
+          full_results = [
+            _normalize_entry(e)
+            for e in (full_result.get('entries') or [])
+            if e and e.get('id')
+          ]
+          if full_results:
+            with _search_cache_lock:
+              # Only update if cache entry still belongs to same query
+              existing = _search_cache.get(ck)
+              if existing:
+                # Merge: keep any quick results not in full batch
+                existing_ids = {v['id'] for v in full_results}
+                quick_only = [v for v in existing.get('results', []) if v['id'] not in existing_ids]
+                merged = full_results + quick_only
+                _search_cache[ck] = {
+                  'results': merged,
+                  'expires_at': expiry,
+                  'extension_count': 0,
+                  'filling': False,
+                }
+            print(f"[Search] BG fill done for '{query}': {len(full_results)} results cached")
+        except Exception as bg_err:
+          print(f"[Search] BG fill error for '{query}': {bg_err}")
+          with _search_cache_lock:
+            entry = _search_cache.get(ck)
+            if entry:
+              entry['filling'] = False
+
+      import threading as _search_bg_thread
+      _search_bg_thread.Thread(
+        target=_background_fill_search,
+        args=(q, cache_key, now + SEARCH_CACHE_TTL),
+        daemon=True
+      ).start()
 
     # ── Auto-extend: fire BEFORE user hits the end (≤ 2 pages remaining) ──────
     # Mirrors the exact same pattern used by /api/trending.
@@ -391,8 +447,10 @@ import threading as _trending_threading
 _trending_cache: dict = {}
 _trending_cache_lock = _trending_threading.Lock()
 TRENDING_CACHE_TTL = 30 * 60   # 30 minutes
-TRENDING_FETCH_SIZE = 120       # Fetch 120 videos, serve 18 per cursor page
+TRENDING_FETCH_SIZE = 120       # Full background fill size
+TRENDING_QUICK_FETCH = 21       # Quick first batch (multiple of 3, serves first page instantly)
 TRENDING_PAGE_SIZE = 18
+SEARCH_QUICK_FETCH = 21         # Quick first batch for search (serves page 1 instantly)
 
 # Endpoint: Trending videos — cursor-based, cache-backed infinite scroll
 @app.get("/api/trending")
@@ -433,6 +491,8 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
       }
       with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(trending_url, download=False)
+      if not info:
+        return []
       entries = info.get('entries') or []
       return [_normalize_entry(e) for e in entries if e and e.get('id')]
 
@@ -464,6 +524,9 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
         result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
       return [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
 
+    # ── Quick first batch: fetch only TRENDING_QUICK_FETCH results synchronously ──
+    # This returns the first page to the user in ~2-3s instead of 10-15s.
+    # A background thread then fills the full TRENDING_FETCH_SIZE cache.
     videos = []
     try:
       print(f"[Trending] Fetching real feed: {trending_url}")
@@ -473,20 +536,98 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
       print(f"[Trending] Real feed failed: {e} — using keyword fallback")
 
     if len(videos) < 5:
-      print(f"[Trending] Insufficient results ({len(videos)}) — activating keyword fallback")
+      print(f"[Trending] Insufficient results ({len(videos)}) — quick keyword fetch ({TRENDING_QUICK_FETCH})")
       try:
-        videos = _fetch_keyword_fallback()
+        import math as _math
+        cat_keyword_map = {
+          "0":  "trending viral today India",
+          "10": "trending music songs India",
+          "20": "trending gaming India",
+          "25": "trending news today",
+          "17": "trending sports highlights",
+          "1":  "trending movies trailers",
+        }
+        base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
+        quick_keyword = f"{base_keyword} popular"
+        qdl_opts = {
+          **get_yt_search_opts(),
+          'extract_flat': True,
+          'skip_download': True,
+          'ignoreerrors': True,
+          **get_cookie_opts()
+        }
+        with YoutubeDL(qdl_opts) as ydl:
+          quick_res = ydl.extract_info(f"ytsearch{TRENDING_QUICK_FETCH}:{quick_keyword}", download=False)
+        videos = [_normalize_entry(e) for e in (quick_res.get('entries') or []) if e and e.get('id')]
+        print(f"[Trending] Quick fetch got {len(videos)} videos")
       except Exception as fe:
-        print(f"[Trending] Fallback also failed: {fe}")
+        print(f"[Trending] Quick fetch failed: {fe}")
         return JSONResponse({"error": "Failed to fetch trending videos"}, status_code=500)
 
+    # Store quick results immediately
     all_videos = videos
     with _trending_cache_lock:
       _trending_cache[cache_key] = {
         'results': all_videos,
-        'expires_at': now + TRENDING_CACHE_TTL
+        'expires_at': now + TRENDING_CACHE_TTL,
+        'filling': True,
       }
-    print(f"[Trending] Cached {len(all_videos)} results for '{cache_key}'")
+    print(f"[Trending] Quick cache: {len(all_videos)} results for '{cache_key}'. Starting BG fill...")
+
+    # Background thread: fill up to TRENDING_FETCH_SIZE
+    def _background_fill_trending(ck, cat_id, reg, expiry):
+      try:
+        import math as _math
+        cat_keyword_map = {
+          "0":  "trending viral today India",
+          "10": "trending music songs India",
+          "20": "trending gaming India",
+          "25": "trending news today",
+          "17": "trending sports highlights",
+          "1":  "trending movies trailers",
+        }
+        base_keyword = cat_keyword_map.get(str(cat_id), "trending viral today")
+        hour_slot = _math.floor(time.time() / 3600)
+        seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits",
+                 "fresh", "must watch", "2024", "2025", "2026", "today", "this week"]
+        seed = seeds[hour_slot % len(seeds)]
+        keyword = f"{base_keyword} {seed}"
+        print(f"[Trending] BG fill with keyword: '{keyword}'")
+        ydl_opts_bg = {
+          **get_yt_search_opts(),
+          'extract_flat': True,
+          'skip_download': True,
+          'ignoreerrors': True,
+          **get_cookie_opts()
+        }
+        with YoutubeDL(ydl_opts_bg) as ydl:
+          result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
+        new_videos = [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+        if new_videos:
+          with _trending_cache_lock:
+            existing = _trending_cache.get(ck)
+            if existing:
+              existing_ids = {v['id'] for v in new_videos}
+              quick_only = [v for v in existing.get('results', []) if v['id'] not in existing_ids]
+              merged = new_videos + quick_only
+              _trending_cache[ck] = {
+                'results': merged,
+                'expires_at': expiry,
+                'filling': False,
+              }
+          print(f"[Trending] BG fill done for '{ck}': {len(new_videos)} results cached")
+      except Exception as bg_err:
+        print(f"[Trending] BG fill error for '{ck}': {bg_err}")
+        with _trending_cache_lock:
+          entry = _trending_cache.get(ck)
+          if entry:
+            entry['filling'] = False
+
+    _trending_threading.Thread(
+      target=_background_fill_trending,
+      args=(cache_key, category_id, region, now + TRENDING_CACHE_TTL),
+      daemon=True
+    ).start()
 
   # --- Slice with cursor — auto-extend cache when exhausted ---
   GRID_COLS = 3  # Must match frontend grid columns

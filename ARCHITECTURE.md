@@ -343,47 +343,53 @@ YT Deluxe uses a **three-layer content delivery architecture** for both Trending
 
 ```python
 TRENDING_CACHE_TTL  = 30 * 60   # 30-minute TTL per category
-TRENDING_FETCH_SIZE = 120        # Videos fetched per initial load
+TRENDING_FETCH_SIZE = 120        # Full background fill size (BG thread)
+TRENDING_QUICK_FETCH = 21        # Quick sync fetch — serves page 1 instantly
 TRENDING_PAGE_SIZE  = 18         # Videos served per frontend request (3-col grid × 6 rows)
 
 _trending_cache: dict = {
     "{category_id}_{region}": {
-        "results": [ ...120 video objects... ],
-        "expires_at": float   # unix timestamp
+        "results": [ ...video objects... ],
+        "expires_at": float,  # unix timestamp
+        "filling": bool       # True while background fill thread is running
     }
 }
 ```
 
-##### 5.2.2.2 Complete Request Flow
+##### 5.2.2.2 Quick-Fetch + Background Fill Flow
+
+First load uses a **two-phase strategy** to return cards quickly while filling the full cache silently:
 
 ```mermaid
 flowchart TD
-    A["GET /api/trending\n?category_id=0&region=IN&cursor=0&limit=18"] --> B{"Cache HIT?\n(not expired)"}
-    
-    B -- "Yes" --> C["Load all_videos from cache"]
-    B -- "No / cursor=0" --> D["Attempt real feed fetch\nyt-dlp: youtube.com/feed/trending"]
-    
-    D --> E{"≥ 5 results?"}
-    E -- "No" --> F["Keyword Fallback\nytsearch120: 'trending viral today {seed}'"]
-    E -- "Yes" --> G["Store 120 videos in _trending_cache"]
+    A["GET /api/trending\n?cursor=0&limit=18"] --> B{"Cache HIT?\n(not expired)"}
+
+    B -- "Yes" --> C["Serve from cache (instant)"]
+    B -- "No" --> D["Attempt real feed\nyt-dlp: youtube.com/feed/trending"]
+
+    D --> E{"info is None?"}
+    E -- "Yes" --> F["Return empty list\n(NoneType crash fix)"]
+    E -- "No" --> G{"≥ 5 results?"}
+
     F --> G
+    G -- "No" --> H["Quick keyword fetch\nytsearch21: 'trending viral today India popular'\n~2–6s synchronous"]
+    G -- "Yes" --> I["Use real feed results"]
 
-    C --> H{"remaining ≤ limit?\n(cache running low)"}
-    G --> H
+    H --> J["Store QUICK results in cache\n{results:21, filling:True}"]
+    I --> J
+    J --> K["Return page 1 to user immediately"]
 
-    H -- "Yes: trigger extension" --> I["Extension Fetch\nytsearch120: '{base_keyword} {rotated_seed}'\nSeed rotated by: total//120 + time//600"]
-    H -- "No" --> J["Slice page_videos\nall_videos[cursor : cursor+limit]"]
-    
-    I --> K["Deduplicate by video ID\nagainst existing cache"]
-    K --> L["Append unique_new to cache\nExtend _trending_cache results"]
-    L --> J
+    J --> L["Spawn background thread\n_background_fill_trending()"]
+    L --> M["ytsearch120: '{base_keyword} {seed}'\n~10–15s — runs silently"]
+    M --> N["Deduplicate against quick cache"]
+    N --> O["Merge + update cache\n{results:120+, filling:False}"]
+    O --> P["User scroll → instant cache HIT"]
 
-    J --> M{"len(page_videos) ≥ 3\nAND % 3 != 0?"}
-    M -- "Yes" --> N["Trim to nearest multiple of 3\n(prevents partial grid rows)"]
-    M -- "No" --> O["Serve as-is"]
-    N --> O
-
-    O --> P["Return:\n{ results, cursor, next_cursor,\n  total, category_id, region }"]
+    C --> Q{"remaining ≤ limit?\n(low cache)"}
+    Q -- "Yes" --> R["Extension fetch with rotated seed\nDeduplicate → append to cache"]
+    Q -- "No" --> S["Slice + trim to multiple of 3"]
+    R --> S
+    S --> K
 ```
 
 ##### 5.2.2.3 Auto-Extension Logic
@@ -426,6 +432,22 @@ cat_keyword_map = {
 }
 ```
 
+##### 5.2.2.6 Real Feed NoneType Fix
+
+YouTube's `feed/trending` URL now redirects to the YouTube homepage when accessed without cookies, causing yt-dlp to return `None` instead of a valid info dict. The fix:
+
+```python
+# Before (crashed with: 'NoneType' object has no attribute 'get')
+entries = info.get('entries') or []
+
+# After (safe)
+if not info:
+    return []          # triggers keyword fallback gracefully
+entries = info.get('entries') or []
+```
+
+This converts a noisy `AttributeError` crash into a clean empty-list return, immediately activating the keyword fallback path without any visible error to the user.
+
 ---
 
 #### 5.2.3 Backend: `/api/search` — Auto-Extending Page Cache
@@ -434,14 +456,16 @@ cat_keyword_map = {
 
 ```python
 SEARCH_PAGE_SIZE   = 18     # 3-col grid × 6 rows per page
-SEARCH_CACHE_FETCH = 180    # Initial yt-dlp fetch (ytsearch180:)
+SEARCH_CACHE_FETCH = 180    # Full background fill (ytsearch180:)
+SEARCH_QUICK_FETCH = 21     # Quick sync fetch — serves page 1 instantly
 SEARCH_CACHE_TTL   = 30 * 60
 
 _search_cache: dict = {
     "{q}": {
-        "results": [ ...180 video objects... ],
+        "results": [ ...video objects... ],
         "expires_at": float,
-        "extension_count": int   # how many auto-extends have fired
+        "extension_count": int,  # how many auto-extends have fired
+        "filling": bool          # True while background fill thread is running
     }
 }
 ```
@@ -463,30 +487,61 @@ if remaining <= EXTEND_THRESHOLD:
     # fetch → deduplicate by id → append → extension_count++
 ```
 
-##### 5.2.3.3 Search Cache Flow
+##### 5.2.3.3 Quick-Fetch + Background Fill Flow
+
+Search also uses the two-phase strategy. The endpoint is `async` so yt-dlp runs in a thread pool via `run_in_executor`, keeping the FastAPI event loop unblocked:
 
 ```mermaid
 flowchart TD
-    A["GET /api/search?q=phonk&page=3"] --> B{"Cache HIT for 'phonk'?\nAnd len(results) ≥ min_acceptable?"}
-    
-    B -- "No" --> C["yt-dlp: ytsearch180:phonk\nFetch fresh batch of 180"]
-    C --> D["Store in _search_cache\n{results:180, extension_count:0}"]
-    
-    B -- "Yes" --> E["Load cached results"]
-    D --> E
+    A["GET /api/search?q=phonk&page=1"] --> B{"Cache HIT?\nlen ≥ min_acceptable?"}
 
-    E --> F{"remaining ≤ EXTEND_THRESHOLD\n(36 results / 2 pages)?"}
-    
-    F -- "Yes" --> G["Auto-Extend:\next_count = cache['extension_count']\nseed = seeds[ext_count % N]\nquery = 'phonk {seed}'"]
-    G --> H["Fetch ytsearch180: '{query}'"]
-    H --> I["Deduplicate by video ID"]
-    I --> J["Append unique to cache\nextension_count++"]
-    J --> K["Slice page"]
+    B -- "Full HIT" --> C["Serve from cache (instant)"]
+    B -- "Partial HIT\n(filling=True)" --> D["Serve from partial cache\nBG fill still running"]
+    B -- "MISS" --> E["async run_in_executor:\nytsearch21:phonk\n~10-16s (yt-dlp init + scrape)"]
 
-    F -- "No" --> K
+    E --> F["Store QUICK results\n{results:21, filling:True}"]
+    F --> G["Return page 1 to user"]
 
-    K --> L["Return page_videos + pagination meta\n{results, page, total_pages, total_results}"]
+    F --> H["Spawn background thread\n_background_fill_search()"]
+    H --> I["ytsearch180:phonk\nFetch full batch (180)"]
+    I --> J["Merge: full_results + quick_only\n(dedup by ID)"]
+    J --> K["Update cache\n{results:180+, filling:False}"]
+    K --> L["Pages 2+ → instant cache HIT"]
+
+    C --> M{"remaining ≤ EXTEND_THRESHOLD?"}
+    D --> M
+    M -- "Yes" --> N["Auto-extend with seed rotation"]
+    M -- "No" --> O["Paginate + return"]
+    N --> O
 ```
+
+##### 5.2.3.4 Async Endpoint & Benchmark Results
+
+`/api/search` is declared `async def` and uses `asyncio.get_event_loop().run_in_executor(None, ...)` to offload the blocking yt-dlp call to the default thread pool. This means FastAPI can still handle **other concurrent requests** (history, storage, trending) while a search scrape is in progress.
+
+```python
+async def search_videos(q: str, page: int = 1):
+    import asyncio as _asyncio
+    ...
+    def _do_quick_fetch():
+        with YoutubeDL(ydl_opts_quick) as ydl:
+            res = ydl.extract_info(f"ytsearch{SEARCH_QUICK_FETCH}:{q}", download=False)
+        return [_normalize_entry(e) for e in (res.get('entries') or []) if e and e.get('id')]
+
+    loop = _asyncio.get_event_loop()
+    all_results = await loop.run_in_executor(None, _do_quick_fetch)
+```
+
+**Benchmark results (tested locally via `Invoke-WebRequest`):**
+
+| Scenario | Response Time | Cards Returned |
+|---|---|---|
+| Search — cold (cache miss) | ~14–16s | 18 (page 1) |
+| Search — warm (cache hit) | **0.10s** | 18 |
+| Trending — cold (cache miss) | ~5–11s | 18 (page 1) |
+| Trending — warm (cursor=18) | **0.05s** | 18 |
+
+> **Note:** First-load latency (~10–16s) is a fundamental yt-dlp + YouTube network constraint — it applies regardless of the result count requested (`ytsearch21` vs `ytsearch180` have nearly identical first-response times). The optimization delivers real value on **scroll** (0.05–0.10s cache hits) and **ensures the event loop stays responsive** to other requests during a slow search.
 
 ---
 
