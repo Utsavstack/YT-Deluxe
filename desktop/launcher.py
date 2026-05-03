@@ -136,6 +136,33 @@ class AppApi:
         except Exception:
             return False
 
+    def read_installer_config(self):
+        """Read installer-set preferences from Windows registry.
+        Returns dict with: download_path, auto_organize, update_notify,
+        allow_metadata, allow_network. Returns empty dict on failure.
+        """
+        try:
+            import winreg
+            config = {}
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                 r'Software\YTDeluxe\Settings')
+            for name, default in [
+                ('DownloadPath', ''),
+                ('AutoOrganize', '1'),
+                ('UpdateNotify', '1'),
+                ('AllowMetadata', '1'),
+                ('AllowNetwork', '1'),
+            ]:
+                try:
+                    val, _ = winreg.QueryValueEx(key, name)
+                    config[name] = val
+                except FileNotFoundError:
+                    config[name] = default
+            winreg.CloseKey(key)
+            return config
+        except Exception:
+            return {}
+
 
 def main():
     # ── Step 1: Start Backend ─────────────────────────────────────────────

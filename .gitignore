@@ -55,4 +55,5 @@ frontend/build/
 
 # Desktop runtime/build artifacts
 desktop/tempfiles/
-desktop/installer/
+desktop/installer/output/
+desktop/installer/MicrosoftEdgeWebview2Setup.exe
