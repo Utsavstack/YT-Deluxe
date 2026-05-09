@@ -10,34 +10,17 @@ const ChangelogAndFaq = () => {
 
   const changelog = [
     {
-      version: 'v1.1.0',
+      version: 'v1.0.0-beta',
       date: 'May 2026',
       type: 'latest',
       changes: [
-        'Added multi-language support (i18n integration)',
-        'Improved download engine stability & parsing speed',
-        'Enhanced dark mode aesthetic with liquid glass design',
-        'Added responsive gallery and mobile drawers'
-      ]
-    },
-    {
-      version: 'v1.0.5',
-      date: 'April 2026',
-      type: 'stable',
-      changes: [
-        'Fixed playlist downloading issues with large counts',
-        'Optimized background processes to reduce memory usage',
-        'Refined installer experience for Windows'
-      ]
-    },
-    {
-      version: 'v1.0.0',
-      date: 'March 2026',
-      type: 'stable',
-      changes: [
-        'Initial Release of YT Deluxe',
-        'High-speed video and audio downloading',
-        'Local settings, custom themes and preferences'
+        'Initial Public Beta Release of YT Deluxe',
+        'Premium Liquid Glass UI with dark and light mode',
+        'High-speed video and audio downloading (144p to 8K)',
+        'Multi-language support: English, Hindi, German, Hinglish',
+        'Precision Lossless Trimmer with FFmpeg stream copy',
+        'Native Windows installer built with Inno Setup',
+        'Privacy-first: no tracking, no accounts, fully local'
       ]
     }
   ];

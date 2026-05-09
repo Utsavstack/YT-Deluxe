@@ -14,7 +14,7 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 #define MyAppName "YT Deluxe"
-#define MyAppVersion "1.1.0 Beta"
+#define MyAppVersion "1.0.0 Beta"
 #define MyAppPublisher "Utsavstack"
 #define MyAppURL "https://github.com/Utsavstack/YT-Deluxe"
 #define MyAppExeName "YT-Deluxe.exe"

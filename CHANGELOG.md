@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to **YT Deluxe** will be documented in this file.
 
@@ -7,7 +7,7 @@ and adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## 1.0 [1.1.0-beta] 2026-05-09
+## 1.0 [1.0.0-beta] 2026-05-09
 
 > **Initial Public Beta Release** The first public version of YT Deluxe.
 > This is a beta release. Core features are stable, but some rough edges may exist.

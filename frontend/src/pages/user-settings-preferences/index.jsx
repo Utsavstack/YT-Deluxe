@@ -402,6 +402,13 @@ const UserSettingsPreferences = () => {
                 <div className="flex items-center font-medium">
                   <span>&copy; 2026 YT Deluxe &bull; Utsav Parmar</span>
                 </div>
+                  
+                <div className="flex items-center justify-center">
+                  <span className="px-2.5 py-1 rounded-lg bg-primary/5 border border-border/50 text-[10px] font-bold text-primary/70">
+                    v1.0.0-beta
+                  </span>
+                </div>
+
                 <div className="flex items-center space-x-6 font-semibold">
                   <button onClick={() => setActiveSection('privacy')} className="flex items-center hover:text-primary transition-colors">
                     {t('nav.privacy')}
