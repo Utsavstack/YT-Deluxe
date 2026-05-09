@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT-Deluxe Open Source Media Downloader</title>
+    <meta name="description" content="YT-Deluxe is a premium, open source desktop application for downloading media.">
+    <link href="https://fonts.googleapis.com/css2?family=Allan:wght@700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="32x32" href="../frontend/public/assets/images/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        main: 'var(--bg-main)',
+                        card: 'var(--bg-card)',
+                        primary: 'var(--text-primary)',
+                        secondary: 'var(--text-secondary)',
+                        border: 'var(--border-color)',
+                        accent: 'var(--accent-blue)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="antialiased selection:bg-accent selection:text-white">
+
+    <!-- Pill Navbar -->
+    <div class="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+        <nav class="nav-pill flex items-center justify-between px-6 py-3 w-full max-w-4xl transition-all duration-300">
+            <!-- Logo -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-xl shadow-[0_8px_16px_rgba(0,0,0,0.6)] shrink-0 group-hover:rotate-6 transition-transform overflow-hidden relative z-10">
+                        <img src="../frontend/public/assets/images/logo.webp" alt="YT Deluxe" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                        <svg style="display:none;" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="block">
+                        <h1 class="text-xl font-bold text-primary leading-none mb-0.5 tracking-tight" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</h1>
+                        <p class="text-[10px] text-white/60 leading-none tracking-tight" style="font-family: 'Inter', system-ui, sans-serif;">Premium Media Downloader</p>
+                    </div>
+                </a>
+            
+            <!-- Links -->
+            <div class="hidden md:flex items-center space-x-8 text-sm font-medium text-white/70">
+                <a href="features.html" class="hover:text-white transition-colors">Features</a>
+                <a href="updates.html" class="hover:text-white transition-colors">Changelog</a>
+                <a href="updates.html#faq" class="hover:text-white transition-colors">FAQ</a>
+                <div class="nav-dropdown">
+                    <button class="hover:text-white transition-colors flex items-center gap-1.5 outline-none">
+                        About
+                        <svg class="w-3.5 h-3.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="nav-dropdown-content">
+                        <a href="about.html" class="nav-dropdown-item">About YT Deluxe</a>
+                        <div class="h-px bg-white/5 my-1 mx-2"></div>
+                        <a href="privacy.html" class="nav-dropdown-item">Privacy Policy</a>
+                        <a href="terms.html" class="nav-dropdown-item">Terms & Conditions</a>
+                        <a href="license.html" class="nav-dropdown-item">License</a>
+                        <a href="disclaimer.html" class="nav-dropdown-item">Disclaimer</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-4">
+                <a href="https://github.com/Utsavstack/YT-Deluxe" target="_blank" rel="noopener noreferrer" class="btn-secondary gap-2 px-4 py-1.5 text-sm hidden sm:flex">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                    <span>GitHub</span>
+                </a>
+                <a href="#download" class="btn-primary px-4 py-2 text-sm hidden sm:flex">Download</a>
+            </div>
+            <!-- Hamburger Button -->
+            <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Toggle Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div id="mobile-drawer" class="mobile-drawer">
+        <!-- Drawer Header -->
+        <div class="p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-18 h-15 rounded-xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-xl border border-white/10 shadow-lg overflow-hidden flex items-center justify-center">
+                        <img src="../frontend/public/assets/images/logo.webp" alt="Logo" class="w-8 h-8 object-contain" />
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white leading-none" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</h2>
+                        <p class="text-[10px] text-white/40 font-medium mt-1">Premium Media Downloader</p>
+                    </div>
+                </div>
+                <button id="mobile-drawer-close" class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-white/500 hover:text-white transition-all bg-red-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Drawer Links -->
+        <div class="flex-1 py-4 overflow-y-auto custom-scrollbar">
+            <div class="px-3 space-y-2">
+                <a href="index.html" class="mobile-drawer-link active">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <span>Home</span>
+                </a>
+
+                <!-- Features Dropdown -->
+                <div class="mobile-drawer-dropdown">
+                    <button class="mobile-drawer-dropdown-btn mobile-drawer-link w-full">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            <span>Features</span>
+                        </div>
+                        <svg class="dropdown-chevron w-4 h-4 opacity-40 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="mobile-drawer-dropdown-content pl-12 space-y-1">
+                        <a href="features.html" class="mobile-drawer-sublink">Overview</a>
+                        <a href="features.html#gallery" class="mobile-drawer-sublink">Gallery</a>
+                        <a href="features.html#performance" class="mobile-drawer-sublink">Performance</a>
+                    </div>
+                </div>
+
+                <!-- About Dropdown -->
+                <div class="mobile-drawer-dropdown">
+                    <button class="mobile-drawer-dropdown-btn mobile-drawer-link w-full">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>About</span>
+                        </div>
+                        <svg class="dropdown-chevron w-4 h-4 opacity-40 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="mobile-drawer-dropdown-content pl-12 space-y-1">
+                        <a href="about.html" class="mobile-drawer-sublink">Our Story</a>
+                        <a href="privacy.html" class="mobile-drawer-sublink">Privacy Policy</a>
+                        <a href="terms.html" class="mobile-drawer-sublink">Terms of Service</a>
+                        <a href="license.html" class="mobile-drawer-sublink">License</a>
+                        <a href="disclaimer.html" class="mobile-drawer-sublink">Disclaimer</a>
+                    </div>
+                </div>
+                
+                <a href="updates.html" class="mobile-drawer-link">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Changelog</span>
+                </a>
+                <a href="updates.html#faq" class="mobile-drawer-link">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>FAQ</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section (HeroGeometric Style) -->
+    <section id="hero" class="relative w-full flex flex-col items-center justify-start overflow-hidden pt-20 md:pt-28 pb-12 md:pb-20">
+        <!-- Background Ambient Blur -->
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.1] via-transparent to-rose-500/[0.1] blur-3xl pointer-events-none"></div>
+
+        <!-- Mobile-only Ambient Background -->
+        <div class="absolute inset-0 md:hidden pointer-events-none z-0 overflow-hidden">
+            <div class="absolute top-[-10%] left-[-10%] w-[300px] h-[300px] bg-indigo-500/15 blur-[120px] rounded-full"></div>
+            <div class="absolute bottom-[10%] right-[-10%] w-[250px] h-[250px] bg-rose-500/15 blur-[100px] rounded-full"></div>
+            <div class="absolute top-[30%] right-[-5%] w-[150px] h-[150px] bg-violet-500/10 blur-[80px] rounded-full"></div>
+            <div class="absolute bottom-[20%] left-[5%] w-[200px] h-[200px] bg-blue-500/10 blur-[90px] rounded-full"></div>
+        </div>
+
+            <!-- Shape 1 -->
+            <div class="absolute left-[-10%] md:left-[-5%] top-[15%] md:top-[20%] hidden md:block">
+                <div class="animate-fade-in-up" style="animation-delay: 0.3s;">
+                    <div class="animate-float-slow">
+                        <div class="relative w-[300px] md:w-[600px] h-[70px] md:h-[140px]" style="transform: rotate(12deg);">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/[0.15] to-transparent backdrop-blur-[2px] border border-white/[0.1] shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_70%)]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shape 2 -->
+            <div class="absolute right-[-5%] md:right-[0%] top-[70%] md:top-[75%] hidden md:block">
+                <div class="animate-fade-in-up" style="animation-delay: 0.5s;">
+                    <div class="animate-float-slow" style="animation-delay: 1s;">
+                        <div class="relative w-[250px] md:w-[500px] h-[60px] md:h-[120px]" style="transform: rotate(-15deg);">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-rose-500/[0.15] to-transparent backdrop-blur-[2px] border border-white/[0.1] shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_70%)]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shape 3 -->
+            <div class="absolute left-[5%] md:left-[10%] bottom-[5%] md:bottom-[10%] hidden md:block">
+                <div class="animate-fade-in-up" style="animation-delay: 0.4s;">
+                    <div class="animate-float-slow" style="animation-delay: 2s;">
+                        <div class="relative w-[150px] md:w-[300px] h-[40px] md:h-[80px]" style="transform: rotate(-8deg);">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500/[0.15] to-transparent backdrop-blur-[2px] border border-white/[0.1] shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_70%)]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shape 4 -->
+            <div class="absolute right-[15%] md:right-[20%] top-[10%] md:top-[15%] hidden md:block">
+                <div class="animate-fade-in-up" style="animation-delay: 0.6s;">
+                    <div class="animate-float-slow" style="animation-delay: 0.5s;">
+                        <div class="relative w-[100px] md:w-[200px] h-[30px] md:h-[60px]" style="transform: rotate(20deg);">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-amber-500/[0.15] to-transparent backdrop-blur-[2px] border border-white/[0.1] shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_70%)]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shape 5 -->
+            <div class="absolute left-[20%] md:left-[25%] top-[5%] md:top-[10%] hidden md:block">
+                <div class="animate-fade-in-up" style="animation-delay: 0.7s;">
+                    <div class="animate-float-slow" style="animation-delay: 1.5s;">
+                        <div class="relative w-[75px] md:w-[150px] h-[20px] md:h-[40px]" style="transform: rotate(-25deg);">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500/[0.15] to-transparent backdrop-blur-[2px] border border-white/[0.1] shadow-[0_8px_32px_0_rgba(255,255,255,0.05)] after:absolute after:inset-0 after:rounded-full after:bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_70%)]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative z-10 container mx-auto px-4 md:px-6 mt-20 md:mt-8">
+            <div class="max-w-4xl mx-auto text-center">
+                
+                <!-- Badge -->
+                <div class="animate-fade-in-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-white/[0.08] to-white/[0.02] border border-white/[0.1] backdrop-blur-xl mb-8 md:mb-12 shadow-[0_0_20px_rgba(255,255,255,0.02)] transition-all hover:border-white/20 group" style="animation-delay: 0.1s;">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                    </span>
+                    <span class="text-[10px] md:text-xs font-bold text-white/80">
+                        YT-Deluxe Beta <span class="text-white/40 font-medium ml-1">v1.0.0</span>
+                    </span>
+                </div>
+
+                <!-- Titles -->
+                <div class="animate-fade-in-up" style="animation-delay: 0.2s;">
+                    <h1 class="text-4xl sm:text-6xl md:text-[5rem] font-bold mb-6 md:mb-8 tracking-tighter leading-none">
+                        <span class="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
+                            Elevate Your
+                        </span>
+                        <br />
+                        <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">
+                            Media Experience
+                        </span>
+                    </h1>
+                </div>
+
+                <!-- Subtitle -->
+                <div class="animate-fade-in-up" style="animation-delay: 0.4s;">
+                    <p class="text-sm sm:text-base md:text-lg text-white/40 mb-8 leading-relaxed font-light tracking-wide max-w-2xl mx-auto px-4">
+                        Zero-cost, exceptionally fast, and beautifully designed. Download video and audio in pristine quality with a single click. 
+                        <br> It's totally Free & Open source.
+                    </p>
+                </div>
+
+                <!-- Action Button -->
+                <div class="flex flex-col space-y-4 w-full sm:w-auto mt-12 mb-8 items-center relative z-10 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
+                    <a href="#download" class="btn-primary w-64 sm:w-auto px-5 py-3 md:px-8 md:py-4 text-sm md:text-lg relative group overflow-hidden">
+                        <!-- Shimmer effect -->
+                        <div class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-shimmer"></div>
+                        <svg class="w-5 h-5 md:w-6 md:h-6 mr-3 md:mr-4 relative z-10" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/>
+                        </svg>
+                        <span class="relative z-10 font-bold tracking-wide">Download for Windows</span>
+                    </a>
+                    
+                    <a href="https://github.com/Utsavstack/YT-Deluxe" target="_blank" rel="noopener noreferrer" class="btn-secondary px-5 py-2.5 md:px-7 md:py-3 text-[13px] md:text-base w-64 sm:w-auto">
+                        <svg class="w-4 h-4 md:w-5 md:h-5 mr-2" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path></svg>
+                        View on GitHub
+                    </a>
+                </div>
+                <p class="animate-fade-in-up text-xs text-secondary mt-6" style="animation-delay: 0.7s;">Free & Open Source | Powered by yt-dlp & ffmpeg</p>
+            </div>
+        </div>
+
+        <div class="absolute inset-0 bg-gradient-to-t from-[var(--bg-main)] via-transparent to-[var(--bg-main)]/80 pointer-events-none -z-10"></div>
+    </section>
+
+    <!-- Hero Screenshot Section -->
+    <section id="hero-screenshot" class="py-10 md:py-20 px-4 relative z-10">
+        <div class="max-w-6xl mx-auto">
+            <div class="glass-card p-2 md:p-4 shadow-2xl transform rotate-[-1deg] hover:rotate-0 transition-all duration-700 rounded-2xl reveal-on-scroll opacity-0 translate-y-8 scale-95">
+                <img src="../docs/assets/dark-images/home-page-dark.webp" class="w-full h-auto object-contain rounded-lg relative z-10 shadow-2xl" alt="YT-Deluxe Main Interface">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 px-4 relative overflow-hidden">
+        <!-- Ambient Shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div class="absolute right-[-5%] top-[10%]">
+                <div class="animate-float-slow" style="animation-duration: 15s;">
+                    <div class="relative w-[300px] h-[80px]" style="transform: rotate(-25deg);">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/[0.08] to-transparent backdrop-blur-md border border-white/[0.03]"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute left-[-5%] bottom-[20%]">
+                <div class="animate-float-slow" style="animation-duration: 18s; animation-delay: -5s;">
+                    <div class="relative w-[250px] h-[70px]" style="transform: rotate(35deg);">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/[0.08] to-transparent backdrop-blur-md border border-white/[0.03]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-5xl mx-auto relative z-10">
+            <div class="text-center mb-16 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">Everything you need.</h2>
+                <p class="text-lg text-secondary">A powerful suite of tools elegantly packaged into one application.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Feature 1: 4K/8K Video -->
+                <div class="bg-[#0f0f11] border border-white/[0.06] p-8 rounded-[1.5rem] hover:bg-[#131316] hover:-translate-y-2 hover:border-white/20 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 group reveal-on-scroll opacity-0 translate-y-8 scale-95 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-white/0 to-white/0 group-hover:from-indigo-500/[0.05] group-hover:via-white/[0.02] group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none"></div>
+                    <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-500 relative z-10">
+                        <svg class="w-5 h-5 drop-shadow-[0_0_8px_rgba(59,130,246,0)] group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 tracking-tight relative z-10 group-hover:text-indigo-200 transition-colors duration-500">4K/8K Video</h3>
+                    <p class="text-white/50 text-sm leading-relaxed relative z-10 group-hover:text-white/70 transition-colors duration-500">Download in full fidelity, supporting up to 8K resolution at high frame rates with HDR.</p>
+                </div>
+                
+                <!-- Feature 2: Audio Extraction -->
+                <div class="bg-[#0f0f11] border border-white/[0.06] p-8 rounded-[1.5rem] hover:bg-[#131316] hover:-translate-y-2 hover:border-white/20 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 group reveal-on-scroll opacity-0 translate-y-8 scale-95 delay-100 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-white/0 to-white/0 group-hover:from-purple-500/[0.05] group-hover:via-white/[0.02] group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none"></div>
+                    <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all duration-500 relative z-10">
+                        <svg class="w-5 h-5 drop-shadow-[0_0_8px_rgba(168,85,247,0)] group-hover:drop-shadow-[0_0_8px_rgba(168,85,247,0.5)] transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3zm12-3c-1.657 0-3-1.343-3-3s1.343-3 3-3 3 1.343 3 3-1.343 3-3 3zM9 10l12-3"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 tracking-tight relative z-10 group-hover:text-purple-200 transition-colors duration-500">Audio Extraction</h3>
+                    <p class="text-white/50 text-sm leading-relaxed relative z-10 group-hover:text-white/70 transition-colors duration-500">Seamlessly convert videos to high-bitrate MP3, FLAC, or Opus files for your library.</p>
+                </div>
+                
+                <!-- Feature 3: Built-in Trimmer -->
+                <div class="bg-[#0f0f11] border border-white/[0.06] p-8 rounded-[1.5rem] hover:bg-[#131316] hover:-translate-y-2 hover:border-white/20 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 group reveal-on-scroll opacity-0 translate-y-8 scale-95 delay-200 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-white/0 to-white/0 group-hover:from-indigo-500/[0.05] group-hover:via-white/[0.02] group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none"></div>
+                    <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-500 relative z-10">
+                        <svg class="w-5 h-5 drop-shadow-[0_0_8px_rgba(59,130,246,0)] group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 tracking-tight relative z-10 group-hover:text-indigo-200 transition-colors duration-500">Built-in Trimmer</h3>
+                    <p class="text-white/50 text-sm leading-relaxed relative z-10 group-hover:text-white/70 transition-colors duration-500">Clip only the segments you need before downloading, saving storage and time.</p>
+                </div>
+
+                <!-- Feature 4: Multi-language -->
+                <div class="bg-[#0f0f11] border border-white/[0.06] p-8 rounded-[1.5rem] hover:bg-[#131316] hover:-translate-y-2 hover:border-white/20 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 group reveal-on-scroll opacity-0 translate-y-8 scale-95 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-white/0 to-white/0 group-hover:from-indigo-500/[0.05] group-hover:via-white/[0.02] group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none"></div>
+                    <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-500 relative z-10">
+                        <svg class="w-5 h-5 drop-shadow-[0_0_8px_rgba(59,130,246,0)] group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 tracking-tight relative z-10 group-hover:text-indigo-200 transition-colors duration-500">Multi-language</h3>
+                    <p class="text-white/50 text-sm leading-relaxed relative z-10 group-hover:text-white/70 transition-colors duration-500">Full internationalization support with community-led translations for multiple languages.</p>
+                </div>
+
+                <!-- Feature 5: Liquid Glass UI -->
+                <div class="bg-[#0f0f11] border border-white/[0.06] p-8 rounded-[1.5rem] hover:bg-[#131316] hover:-translate-y-2 hover:border-white/20 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 group reveal-on-scroll opacity-0 translate-y-8 scale-95 delay-100 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-white/0 to-white/0 group-hover:from-purple-500/[0.05] group-hover:via-white/[0.02] group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none"></div>
+                    <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all duration-500 relative z-10">
+                        <svg class="w-5 h-5 drop-shadow-[0_0_8px_rgba(168,85,247,0)] group-hover:drop-shadow-[0_0_8px_rgba(168,85,247,0.5)] transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 tracking-tight relative z-10 group-hover:text-purple-200 transition-colors duration-500">Liquid Glass UI</h3>
+                    <p class="text-white/50 text-sm leading-relaxed relative z-10 group-hover:text-white/70 transition-colors duration-500">Modern design utilizing backdrop blurs and fluid animations for a deluxe feel.</p>
+                </div>
+
+                <!-- Feature 6: Privacy First -->
+                <div class="bg-[#0f0f11] border border-white/[0.06] p-8 rounded-[1.5rem] hover:bg-[#131316] hover:-translate-y-2 hover:border-white/20 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 group reveal-on-scroll opacity-0 translate-y-8 scale-95 delay-200 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-white/0 to-white/0 group-hover:from-indigo-500/[0.05] group-hover:via-white/[0.02] group-hover:to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none"></div>
+                    <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-500 relative z-10">
+                        <svg class="w-5 h-5 drop-shadow-[0_0_8px_rgba(59,130,246,0)] group-hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.956 11.956 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-3 tracking-tight relative z-10 group-hover:text-indigo-200 transition-colors duration-500">Privacy First</h3>
+                    <p class="text-white/50 text-sm leading-relaxed relative z-10 group-hover:text-white/70 transition-colors duration-500">No tracking, no accounts, and no data collection. All processing happens locally.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Gallery -->
+    <section id="gallery" class="py-24 relative overflow-hidden bg-black/40">
+        <div class="max-w-5xl mx-auto px-4 mb-16 text-center relative z-10 reveal-on-scroll">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">Beautifully crafted.</h2>
+            <p class="text-lg text-white/40">A glimpse into the sleek Liquid Glass interface.</p>
+        </div>
+
+        <!-- Gallery Row 1: Pro Dark Mode -->
+        <div class="space-y-4 mb-12">
+            <div class="flex items-center gap-4 px-4 max-w-6xl mx-auto">
+                <span class="text-[12px] font-bold text-white/20 uppercase tracking-widest">Pro Dark Mode</span>
+                <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+            </div>
+            
+            <div class="relative w-full overflow-hidden flex group reveal-on-scroll">
+                <!-- Fade Edges -->
+                <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent z-20 pointer-events-none"></div>
+                <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent z-20 pointer-events-none"></div>
+                
+                <!-- Track 1 -->
+                <div class="flex animate-marquee group-hover:[animation-play-state:paused] min-w-max py-4">
+                    <!-- Image 1-11 -->
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 0)">
+                        <div class="gallery-overlay">Main Dashboard</div>
+                        <img src="../docs/assets/dark-images/home-page-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 1)">
+                        <div class="gallery-overlay">Global Search</div>
+                        <img src="../docs/assets/dark-images/search-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 2)">
+                        <div class="gallery-overlay">Video Player</div>
+                        <img src="../docs/assets/dark-images/video-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 3)">
+                        <div class="gallery-overlay">Video Details</div>
+                        <img src="../docs/assets/dark-images/downloaded-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 4)">
+                        <div class="gallery-overlay">Quick Download</div>
+                        <img src="../docs/assets/dark-images/quick-download-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 5)">
+                        <div class="gallery-overlay">Advanced Options</div>
+                        <img src="../docs/assets/dark-images/adv-options-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 6)">
+                        <div class="gallery-overlay">Precision Trimmer</div>
+                        <img src="../docs/assets/dark-images/trimmer-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 7)">
+                        <div class="gallery-overlay">Download History</div>
+                        <img src="../docs/assets/dark-images/history-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 8)">
+                        <div class="gallery-overlay">User Profile</div>
+                        <img src="../docs/assets/dark-images/prof-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 9)">
+                        <div class="gallery-overlay">Theme Personalization</div>
+                        <img src="../docs/assets/dark-images/theme-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 10)">
+                        <div class="gallery-overlay">Multilingual UI</div>
+                        <img src="../docs/assets/dark-images/lang-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                    </div>
+                </div>
+                <!-- Track 2 (Duplicate) -->
+                <div class="flex animate-marquee group-hover:[animation-play-state:paused] min-w-max py-4" aria-hidden="true">
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 0)">
+                        <div class="gallery-overlay">Main Dashboard</div>
+                        <img src="../docs/assets/dark-images/home-page-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 1)">
+                        <div class="gallery-overlay">Global Search</div>
+                        <img src="../docs/assets/dark-images/search-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 2)">
+                        <div class="gallery-overlay">Video Player</div>
+                        <img src="../docs/assets/dark-images/video-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 3)">
+                        <div class="gallery-overlay">Video Details</div>
+                        <img src="../docs/assets/dark-images/downloaded-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 4)">
+                        <div class="gallery-overlay">Quick Download</div>
+                        <img src="../docs/assets/dark-images/quick-download-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 5)">
+                        <div class="gallery-overlay">Advanced Options</div>
+                        <img src="../docs/assets/dark-images/adv-options-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 6)">
+                        <div class="gallery-overlay">Precision Trimmer</div>
+                        <img src="../docs/assets/dark-images/trimmer-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 7)">
+                        <div class="gallery-overlay">Download History</div>
+                        <img src="../docs/assets/dark-images/history-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 8)">
+                        <div class="gallery-overlay">User Profile</div>
+                        <img src="../docs/assets/dark-images/prof-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 9)">
+                        <div class="gallery-overlay">Theme Personalization</div>
+                        <img src="../docs/assets/dark-images/theme-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 10)">
+                        <div class="gallery-overlay">Multilingual UI</div>
+                        <img src="../docs/assets/dark-images/lang-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery Row 2: Elegant Light Mode (Reverse) -->
+        <div class="space-y-4">
+            <div class="flex items-center gap-4 px-4 max-w-6xl mx-auto">
+                <span class="text-[12px] font-bold text-white/20 uppercase tracking-widest">Elegant Light Mode</span>
+                <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+            </div>
+            
+            <div class="relative w-full overflow-hidden flex group reveal-on-scroll">
+                <!-- Fade Edges -->
+                <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent z-20 pointer-events-none"></div>
+                <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent z-20 pointer-events-none"></div>
+                
+                <!-- Track 1 -->
+                <div class="flex animate-marquee-reverse group-hover:[animation-play-state:paused] min-w-max py-4">
+                    <!-- Image 11-21 (indices 11-21 in galleryData) -->
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 11)">
+                        <div class="gallery-overlay">Main Dashboard</div>
+                        <img src="../docs/assets/light-images/home-page-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 12)">
+                        <div class="gallery-overlay">Global Search</div>
+                        <img src="../docs/assets/light-images/search-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 13)">
+                        <div class="gallery-overlay">Video Player</div>
+                        <img src="../docs/assets/light-images/video-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 14)">
+                        <div class="gallery-overlay">Video Details</div>
+                        <img src="../docs/assets/light-images/downloaded-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 15)">
+                        <div class="gallery-overlay">Quick Download</div>
+                        <img src="../docs/assets/light-images/quick-download-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 16)">
+                        <div class="gallery-overlay">Advanced Options</div>
+                        <img src="../docs/assets/light-images/adv-options-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 17)">
+                        <div class="gallery-overlay">Precision Trimmer</div>
+                        <img src="../docs/assets/light-images/trimmer-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 18)">
+                        <div class="gallery-overlay">Download History</div>
+                        <img src="../docs/assets/light-images/history-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 19)">
+                        <div class="gallery-overlay">User Profile</div>
+                        <img src="../docs/assets/light-images/prof-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 20)">
+                        <div class="gallery-overlay">Theme Personalization</div>
+                        <img src="../docs/assets/light-images/theme-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 21)">
+                        <div class="gallery-overlay">Multilingual UI</div>
+                        <img src="../docs/assets/light-images/lang-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                    </div>
+                </div>
+                <!-- Track 2 (Duplicate) -->
+                <div class="flex animate-marquee-reverse group-hover:[animation-play-state:paused] min-w-max py-4" aria-hidden="true">
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 11)">
+                        <div class="gallery-overlay">Main Dashboard</div>
+                        <img src="../docs/assets/light-images/home-page-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 12)">
+                        <div class="gallery-overlay">Global Search</div>
+                        <img src="../docs/assets/light-images/search-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 13)">
+                        <div class="gallery-overlay">Video Player</div>
+                        <img src="../docs/assets/light-images/video-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 14)">
+                        <div class="gallery-overlay">Video Details</div>
+                        <img src="../docs/assets/light-images/downloaded-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 15)">
+                        <div class="gallery-overlay">Quick Download</div>
+                        <img src="../docs/assets/light-images/quick-download-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 16)">
+                        <div class="gallery-overlay">Advanced Options</div>
+                        <img src="../docs/assets/light-images/adv-options-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 17)">
+                        <div class="gallery-overlay">Precision Trimmer</div>
+                        <img src="../docs/assets/light-images/trimmer-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 18)">
+                        <div class="gallery-overlay">Download History</div>
+                        <img src="../docs/assets/light-images/history-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 19)">
+                        <div class="gallery-overlay">User Profile</div>
+                        <img src="../docs/assets/light-images/prof-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 20)">
+                        <div class="gallery-overlay">Theme Personalization</div>
+                        <img src="../docs/assets/light-images/theme-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                    </div>
+                    <div class="px-3 gallery-item relative cursor-pointer" onclick="openModal(this, 21)">
+                        <div class="gallery-overlay">Multilingual UI</div>
+                        <img src="../docs/assets/light-images/lang-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="py-24 px-4 relative overflow-hidden">
+        <!-- Ambient Shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div class="absolute right-[10%] bottom-[10%]">
+                <div class="animate-float-slow" style="animation-duration: 12s; animation-delay: -2s;">
+                    <div class="relative w-[400px] h-[100px]" style="transform: rotate(-15deg);">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500/[0.08] to-transparent backdrop-blur-md border border-white/[0.03]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-4xl mx-auto glass-card p-10 md:p-16 text-center border-accent/20 border relative z-10 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">
+            <h2 class="text-3xl md:text-5xl font-bold mb-6 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">Ready to upgrade your workflow?</h2>
+            <p class="text-lg text-secondary mb-10 max-w-xl mx-auto">Get YT-Deluxe today and experience the fastest, most reliable way to save media offline.</p>
+            
+            <div class="flex flex-col items-center justify-center space-y-4">
+                <a href="#" id="main-download-btn" class="btn-primary px-6 py-3 md:px-8 md:py-4 text-base md:text-lg w-full sm:w-auto">
+                    Download Latest Release
+                </a>
+                <p class="text-sm text-secondary" id="download-meta">Windows 10/11 • v1.0.0 • ~80MB</p>
+                
+                <!-- Recaptcha placeholder -->
+                <div class="mt-4 p-4 border border-border rounded bg-main/50 text-xs text-secondary w-full max-w-xs flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="captcha-mock" class="rounded text-accent focus:ring-accent w-4 h-4">
+                        <label for="captcha-mock">I'm not a robot</label>
+                    </div>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/ad/RecaptchaLogo.svg" alt="reCAPTCHA" class="h-6 opacity-50 dark:invert">
+                </div>
+            </div>
+
+            <!-- System Requirements -->
+            <div class="mt-16 max-w-xl mx-auto border-t border-white/[0.06] pt-12 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
+                <h3 class="text-xl font-bold text-white mb-6 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                    System Requirements
+                </h3>
+                <div class="bg-[#0f0f11] border border-white/[0.06] rounded-[1rem] overflow-hidden shadow-lg">
+                    <table class="w-full text-sm text-left">
+                        <tbody class="divide-y divide-white/[0.06]">
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="py-4 px-6 text-white/50 font-medium w-1/3 border-r border-white/[0.06]">OS</td>
+                                <td class="py-4 px-6 text-white/90">Windows 10 / 11 (64-bit)</td>
+                            </tr>
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="py-4 px-6 text-white/50 font-medium w-1/3 border-r border-white/[0.06]">RAM</td>
+                                <td class="py-4 px-6 text-white/90">4 GB minimum</td>
+                            </tr>
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="py-4 px-6 text-white/50 font-medium w-1/3 border-r border-white/[0.06]">Disk Space</td>
+                                <td class="py-4 px-6 text-white/90">~200 MB</td>
+                            </tr>
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="py-4 px-6 text-white/50 font-medium w-1/3 border-r border-white/[0.06]">Internet</td>
+                                <td class="py-4 px-6 text-white/90">Required for downloads</td>
+                            </tr>
+                            <tr class="hover:bg-white/[0.02] transition-colors">
+                                <td class="py-4 px-6 text-white/50 font-medium w-1/3 border-r border-white/[0.06]">Runtime</td>
+                                <td class="py-4 px-6 text-white/90">WebView2 (auto-install)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Install Guide -->
+    <section id="install-guide" class="py-20 px-4 bg-card/30 relative overflow-hidden">
+        <!-- Ambient Shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div class="absolute left-[5%] top-[30%]">
+                <div class="animate-float-slow" style="animation-duration: 16s; animation-delay: -7s;">
+                    <div class="relative w-[350px] h-[90px]" style="transform: rotate(45deg);">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-rose-500/[0.06] to-transparent backdrop-blur-md border border-white/[0.03]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-3xl mx-auto relative z-10">
+            <h2 class="text-3xl md:text-4xl font-bold mb-10 text-center tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">Installation Guide</h2>
+            <div class="space-y-8 relative" id="timeline-container">
+                <!-- Static dim background line -->
+                <div class="absolute top-0 left-5 md:left-1/2 w-px bg-white/[0.05] -translate-x-px md:-translate-x-1/2" id="timeline-bg-line" style="height: 100%;"></div>
+                
+                <!-- Animated bright foreground line -->
+                <div class="absolute top-0 left-5 md:left-1/2 w-[3px] bg-[#0245ff] -translate-x-px md:-translate-x-1/2 shadow-[0_0_10px_#0245ff] transition-all duration-300 ease-out origin-top rounded-full z-0" id="timeline-progress" style="height: 0%;"></div>
+                
+                <!-- Step 1 -->
+                <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group timeline-step opacity-0 translate-y-8 transition-all duration-700 ease-out">
+                    <div class="timeline-circle flex items-center justify-center w-10 h-10 rounded-full border-[6px] border-[#0a0a0c] bg-card text-white/40 font-bold text-sm shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 transition-colors duration-500">1</div>
+                    <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[#0a0a0c] border border-white/[0.04] rounded-[1.5rem] p-6 hover:bg-[#0f0f11] transition-colors shadow-lg">
+                        <h4 class="font-bold text-white mb-2 text-lg">Download the Installer</h4>
+                        <p class="text-sm text-white/50 leading-relaxed">Click the download button above to get the latest `YT-Deluxe-Setup.exe` file.</p>
+                    </div>
+                </div>
+                
+                <!-- Step 2 -->
+                <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group timeline-step opacity-0 translate-y-8 transition-all duration-700 ease-out">
+                    <div class="timeline-circle flex items-center justify-center w-10 h-10 rounded-full border-[6px] border-[#0a0a0c] bg-card text-white/40 font-bold text-sm shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 transition-colors duration-500">2</div>
+                    <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[#0a0a0c] border border-white/[0.04] rounded-[1.5rem] p-6 hover:bg-[#0f0f11] transition-colors shadow-lg">
+                        <h4 class="font-bold text-white mb-2 text-lg">Run the Setup</h4>
+                        <p class="text-sm text-white/50 leading-relaxed">Open the downloaded file and follow the standard Windows installation wizard.</p>
+                    </div>
+                </div>
+                
+                <!-- Step 3 -->
+                <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group timeline-step opacity-0 translate-y-8 transition-all duration-700 ease-out">
+                    <div class="timeline-circle flex items-center justify-center w-10 h-10 rounded-full border-[6px] border-[#0a0a0c] bg-card text-white/40 font-bold text-sm shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 transition-colors duration-500">3</div>
+                    <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-[#0a0a0c] border border-white/[0.04] rounded-[1.5rem] p-6 hover:bg-[#0f0f11] transition-colors shadow-lg">
+                        <h4 class="font-bold text-white mb-2 text-lg">Launch & Enjoy</h4>
+                        <p class="text-sm text-white/50 leading-relaxed">Launch YT-Deluxe from your Start menu or desktop shortcut and start downloading.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Changelog / Previous Versions -->
+    <section id="changelog" class="py-24 px-4 relative overflow-hidden">
+        <!-- Ambient Shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div class="absolute right-[-10%] top-[40%]">
+                <div class="animate-float-slow" style="animation-duration: 14s; animation-delay: -3s;">
+                    <div class="relative w-[280px] h-[70px]" style="transform: rotate(-40deg);">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/[0.08] to-transparent backdrop-blur-md border border-white/[0.03]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-3xl mx-auto relative z-10" id="releases">
+            <h2 class="text-3xl md:text-4xl font-bold mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">Release History</h2>
+            <div class="space-y-4" id="changelog-container">
+                <!-- v1.1.0 Capsule -->
+                <div class="changelog-item is-open bg-[#0a0a0c] border border-white/[0.04] rounded-[2.5rem] hover:bg-[#0f0f11] transition-colors group cursor-pointer overflow-hidden reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-100">
+                    <button class="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:px-8 outline-none text-left">
+                        <div class="flex items-center space-x-4">
+                            <span class="bg-[#14234b] text-[#5584ff] font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase">LATEST</span>
+                            <span class="text-white font-bold md:text-lg">v1.0.0 <span class="text-white/40 font-normal ml-1"> Production</span></span>
+                        </div>
+                        <div class="text-white/40 text-sm mt-3 md:mt-0 font-medium tracking-wide">
+                            March 24, 2026
+                        </div>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100">
+                        <div class="overflow-hidden">
+                            <div class="px-5 md:px-8 pb-6 pt-4 border-t border-white/[0.04] mx-4 md:mx-8 text-white/50 text-sm">
+                                <ul class="list-disc pl-5 space-y-2">
+                                    <li>Initial stable release of YT-Deluxe.</li>
+                                    <li>Added beautiful glassmorphic UI with floating geometric ambient shapes.</li>
+                                    <li>Implemented highly reliable yt-dlp backend with automatic dependency resolution.</li>
+                                    <li>Integrated comprehensive settings panel and download queue.</li>
+                                </ul>
+                                <div class="mt-6">
+                                    <a href="https://github.com/Utsavstack/YT-Deluxe/releases/latest" target="_blank" class="text-[#5584ff] hover:text-[#749aff] transition-colors font-medium">Download Windows Installer &rarr;</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- v0.9.0 Capsule -->
+                <div class="changelog-item bg-[#0a0a0c] border border-white/[0.04] rounded-[2.5rem] hover:bg-[#0f0f11] transition-colors group cursor-pointer overflow-hidden reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
+                    <button class="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:px-8 outline-none text-left">
+                        <div class="flex items-center space-x-4">
+                            <span class="bg-white/5 text-white/40 font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase">BETA</span>
+                            <span class="text-white/60 font-bold md:text-lg">v0.9.0 <span class="text-white/30 font-normal ml-1"> Initial Beta</span></span>
+                        </div>
+                        <div class="text-white/30 text-sm mt-3 md:mt-0 font-medium tracking-wide">
+                            February 12, 2026
+                        </div>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100">
+                        <div class="overflow-hidden">
+                            <div class="px-5 md:px-8 pb-6 pt-4 border-t border-white/[0.04] mx-4 md:mx-8 text-white/50 text-sm">
+                                <ul class="list-disc pl-5 space-y-2">
+                                    <li>Early access beta release.</li>
+                                    <li>Basic video downloading capabilities integrated.</li>
+                                    <li>Initial dark theme draft.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-8">
+                <a href="https://github.com/Utsavstack/YT-Deluxe/releases" target="_blank" class="text-sm text-accent hover:underline">View all releases on GitHub &rarr;</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-24 px-4 bg-card/30 relative overflow-hidden">
+        <!-- Ambient Shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div class="absolute left-[-15%] bottom-[10%]">
+                <div class="animate-float-slow" style="animation-duration: 20s; animation-delay: -8s;">
+                    <div class="relative w-[450px] h-[120px]" style="transform: rotate(20deg);">
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/[0.08] to-transparent backdrop-blur-md border border-white/[0.03]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="max-w-3xl mx-auto relative z-10">
+            <h2 class="text-3xl md:text-4xl font-bold mb-10 text-center tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">Frequently Asked Questions</h2>
+            <div class="space-y-4">
+                <div class="faq-item is-open bg-[#0f0f11] border border-white/[0.06] p-6 rounded-[1rem] hover:bg-[#131316] transition-colors group cursor-pointer reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">
+                    <button class="w-full text-left font-semibold text-white flex justify-between items-center outline-none">
+                        Is YT-Deluxe completely free?
+                        <span class="text-white/50 shrink-0 ml-4">
+                            <svg class="w-5 h-5 group-[.is-open]:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <svg class="w-5 h-5 hidden group-[.is-open]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100 group-[.is-open]:mt-4">
+                        <div class="overflow-hidden">
+                            <p class="text-white/50 text-sm leading-relaxed pb-1">Yes. YT-Deluxe is 100% free and always will be. It's open-source under the GNU General Public License v3.0. No subscriptions, no premium tiers, no hidden fees. Ever.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item bg-[#0f0f11] border border-white/[0.06] p-6 rounded-[1rem] hover:bg-[#131316] transition-colors group cursor-pointer reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">
+                    <button class="w-full text-left font-semibold text-white flex justify-between items-center outline-none">
+                        Does YT-Deluxe collect personal data?
+                        <span class="text-white/50 shrink-0 ml-4">
+                            <svg class="w-5 h-5 group-[.is-open]:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <svg class="w-5 h-5 hidden group-[.is-open]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100 group-[.is-open]:mt-4">
+                        <div class="overflow-hidden">
+                            <p class="text-white/50 text-sm leading-relaxed pb-1">No. We believe in privacy first. YT-Deluxe does not collect, store, or transmit any of your personal data or usage metrics. All processing happens locally on your machine.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item bg-[#0f0f11] border border-white/[0.06] p-6 rounded-[1rem] hover:bg-[#131316] transition-colors group cursor-pointer">
+                    <button class="w-full text-left font-semibold text-white flex justify-between items-center outline-none">
+                        What is yt-dlp and how does it power YT-Deluxe?
+                        <span class="text-white/50 shrink-0 ml-4">
+                            <svg class="w-5 h-5 group-[.is-open]:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <svg class="w-5 h-5 hidden group-[.is-open]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100 group-[.is-open]:mt-4">
+                        <div class="overflow-hidden">
+                            <p class="text-white/50 text-sm leading-relaxed pb-1">yt-dlp is a powerful, open-source command-line media downloader. YT-Deluxe acts as a premium Graphical User Interface (GUI) wrapper around yt-dlp, making its advanced features accessible to everyone without needing to use the terminal.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item bg-[#0f0f11] border border-white/[0.06] p-6 rounded-[1rem] hover:bg-[#131316] transition-colors group cursor-pointer">
+                    <button class="w-full text-left font-semibold text-white flex justify-between items-center outline-none">
+                        Does it support 4K and 8K downloads?
+                        <span class="text-white/50 shrink-0 ml-4">
+                            <svg class="w-5 h-5 group-[.is-open]:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <svg class="w-5 h-5 hidden group-[.is-open]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100 group-[.is-open]:mt-4">
+                        <div class="overflow-hidden">
+                            <p class="text-white/50 text-sm leading-relaxed pb-1">Yes! As long as the source video is available in 4K or 8K, YT-Deluxe can download it in full fidelity, including HDR and high frame rates (60fps).</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item bg-[#0f0f11] border border-white/[0.06] p-6 rounded-[1rem] hover:bg-[#131316] transition-colors group cursor-pointer">
+                    <button class="w-full text-left font-semibold text-white flex justify-between items-center outline-none">
+                        Is it safe? Will my antivirus flag it?
+                        <span class="text-white/50 shrink-0 ml-4">
+                            <svg class="w-5 h-5 group-[.is-open]:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <svg class="w-5 h-5 hidden group-[.is-open]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100 group-[.is-open]:mt-4">
+                        <div class="overflow-hidden">
+                            <p class="text-white/50 text-sm leading-relaxed pb-1">YT-Deluxe is 100% safe and open-source, allowing anyone to audit the code. However, because it is a new standalone executable, some aggressive antivirus software might temporarily flag it as "unrecognized". This is a false positive.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-item bg-[#0f0f11] border border-white/[0.06] p-6 rounded-[1rem] hover:bg-[#131316] transition-colors group cursor-pointer">
+                    <button class="w-full text-left font-semibold text-white flex justify-between items-center outline-none">
+                        How do I report a bug or request a feature?
+                        <span class="text-white/50 shrink-0 ml-4">
+                            <svg class="w-5 h-5 group-[.is-open]:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <svg class="w-5 h-5 hidden group-[.is-open]:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </span>
+                    </button>
+                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100 group-[.is-open]:mt-4">
+                        <div class="overflow-hidden">
+                            <p class="text-white/50 text-sm leading-relaxed pb-1">You can report bugs or request new features directly on our GitHub repository's Issues page. We actively welcome community feedback and contributions!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer id="footer" class="border-t border-white/[0.04] bg-[#0a0a0c] pt-16 pb-8 px-4 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-100">
+        <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-4 mb-12">
+            <div class="col-span-2 md:col-span-2 md:pr-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-xl shadow-[0_8px_16px_rgba(0,0,0,0.6)] shrink-0 overflow-hidden relative z-10">
+                        <img src="../frontend/public/assets/images/logo.webp" alt="YT Deluxe" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                        <svg style="display:none;" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="block">
+                        <h1 class="text-xl font-bold text-primary leading-none mb-0.5 tracking-tight" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</h1>
+                        <p class="text-[10px] text-white/60 leading-none tracking-tight" style="font-family: 'Inter', system-ui, sans-serif;">Premium Media Downloader</p>
+                    </div>
+                </div>
+                <p class="text-sm text-white/40 leading-relaxed mb-6 max-w-sm">
+                    A Free & Open Source, Feature-Rich YouTube Downloader & Media Manager with a Premium Liquid Glass UI for Web & Desktop.
+                </p>
+                <!-- Social Links -->
+                <div class="flex items-center gap-4 mt-2">
+                    <a href="https://github.com/Utsavstack" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="GitHub">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.744.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    </a>
+                    <a href="https://linkedin.com/in/utsav-parmar" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="LinkedIn">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    </a>
+                    <a href="https://instagram.com/_its_me_utsav_" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="Instagram">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    </a>
+                    <a href="https://x.com/iutsavparmar" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="Twitter">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.292 19.494h2.039L6.486 3.24H4.298l13.311 17.407z"/></svg>
+                    </a>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-white mb-4">Product</h4>
+                <ul class="space-y-3 text-sm text-white/40">
+                    <li><a href="about.html" class="hover:text-white transition-colors">About YT Deluxe</a></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe#readme" target="_blank" class="hover:text-white transition-colors">Documentation</a></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/releases" target="_blank" class="hover:text-white transition-colors">Releases</a></li>
+                    <li><a href="updates.html" class="hover:text-white transition-colors">Changelog</a></li>
+                    <li><a href="updates.html#faq" class="hover:text-white transition-colors">FAQ</a></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/issues" target="_blank" class="hover:text-white transition-colors">Report a Bug</a></li>
+                    <li><a href="features.html" class="hover:text-white transition-colors">Features</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-white mb-4">Resources</h4>
+                <ul class="space-y-3 text-sm text-white/40">
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe" target="_blank" class="hover:text-white transition-colors">Source Code</a></li>
+                    <li><a href="https://github.com/yt-dlp/yt-dlp" target="_blank" class="hover:text-white transition-colors">yt-dlp</a></li>
+                    <li><a href="https://ffmpeg.org/" target="_blank" class="hover:text-white transition-colors">FFmpeg</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-white mb-4">Legal</h4>
+                <ul class="space-y-3 text-sm text-white/40">
+                    <li><a href="privacy.html" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                    <li><a href="terms.html" class="hover:text-white transition-colors">Terms & Conditions</a></li>
+                    <li><a href="license.html" class="hover:text-white transition-colors">License</a></li>
+                    <li><a href="disclaimer.html" class="hover:text-white transition-colors">Disclaimer</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-center items-center pt-8 border-t border-white/[0.04] text-xs text-white/30">
+            <p>&copy; 2026 YT Deluxe. All rights reserved Utsavstack.</p>
+        </div>
+    </footer>
+
+    <!-- Fullscreen Image Modal (Premium Version) -->
+    <div id="image-modal" class="fixed inset-0 z-[100] bg-black/95 hidden flex flex-col items-center justify-center opacity-0 transition-all duration-500 backdrop-blur-2xl" onclick="closeModal()">
+        <!-- Close Button -->
+        <button onclick="closeModal()" class="absolute top-8 right-8 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 p-3 rounded-2xl backdrop-blur-md transition-all duration-300 z-[110] border border-white/10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <!-- Navigation Buttons -->
+        <button onclick="prevImage(event)" class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 text-white/30 hover:text-white bg-white/5 hover:bg-white/10 p-4 rounded-full backdrop-blur-md transition-all duration-300 z-[110] border border-white/5 group">
+            <svg class="w-8 h-8 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <button onclick="nextImage(event)" class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 text-white/30 hover:text-white bg-white/5 hover:bg-white/10 p-4 rounded-full backdrop-blur-md transition-all duration-300 z-[110] border border-white/5 group">
+            <svg class="w-8 h-8 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+
+        <!-- Image Container -->
+        <div class="relative w-full max-w-5xl px-4 md:px-0 flex flex-col items-center">
+            <div class="relative w-full group overflow-hidden rounded-2xl border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] bg-white/5">
+                <img id="modal-img" src="" class="w-full h-auto object-contain max-h-[80vh] opacity-0 transition-opacity duration-500" onclick="event.stopPropagation()">
+                <div id="modal-loader" class="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                    <div class="w-8 h-8 border-2 border-[#5584ff] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+            
+            <!-- Info Footer -->
+            <div class="mt-6 text-center">
+                <h3 id="modal-title" class="text-xl font-bold text-white mb-1">Screenshot Name</h3>
+                <p id="modal-count" class="text-xs font-bold tracking-[0.2em] text-white/30 uppercase">Image 1 of 22</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gallery Data for Modal
+        const galleryData = [
+            { src: '../docs/assets/dark-images/home-page-dark.webp', title: 'Main Dashboard (Dark)' },
+            { src: '../docs/assets/dark-images/search-dark.webp', title: 'Global Search UI' },
+            { src: '../docs/assets/dark-images/video-dark.webp', title: 'Media Player Interface' },
+            { src: '../docs/assets/dark-images/downloaded-dark.webp', title: 'Download Details & Metadata' },
+            { src: '../docs/assets/dark-images/quick-download-dark.webp', title: 'Quick Format Selection' },
+            { src: '../docs/assets/dark-images/adv-options-dark.webp', title: 'Advanced Encoding Controls' },
+            { src: '../docs/assets/dark-images/trimmer-dark.webp', title: 'Precision Lossless Trimmer' },
+            { src: '../docs/assets/dark-images/history-dark.webp', title: 'Download Management History' },
+            { src: '../docs/assets/dark-images/prof-dark.webp', title: 'User Profile & Settings' },
+            { src: '../docs/assets/dark-images/theme-dark.webp', title: 'Premium Theme Engine' },
+            { src: '../docs/assets/dark-images/lang-dark.webp', title: 'Global Language Support' },
+            // Light Images
+            { src: '../docs/assets/light-images/home-page-light.webp', title: 'Main Dashboard (Light)' },
+            { src: '../docs/assets/light-images/search-light.webp', title: 'Global Search UI' },
+            { src: '../docs/assets/light-images/video-light.webp', title: 'Media Player Interface' },
+            { src: '../docs/assets/light-images/downloaded-light.webp', title: 'Download Details & Metadata' },
+            { src: '../docs/assets/light-images/quick-download-light.webp', title: 'Quick Format Selection' },
+            { src: '../docs/assets/light-images/adv-options-light.webp', title: 'Advanced Encoding Controls' },
+            { src: '../docs/assets/light-images/trimmer-light.webp', title: 'Precision Lossless Trimmer' },
+            { src: '../docs/assets/light-images/history-light.webp', title: 'Download Management History' },
+            { src: '../docs/assets/light-images/prof-light.webp', title: 'User Profile & Settings' },
+            { src: '../docs/assets/light-images/theme-light.webp', title: 'Premium Theme Engine' },
+            { src: '../docs/assets/light-images/lang-light.webp', title: 'Global Language Support' }
+        ];
+
+        let currentImageIndex = 0;
+
+        function openModal(el, index) {
+            const modal = document.getElementById('image-modal');
+            currentImageIndex = index;
+            updateModalContent();
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+            }, 10);
+            
+            document.body.style.overflow = 'hidden';
+        }
+
+        function updateModalContent() {
+            const modalImg = document.getElementById('modal-img');
+            const modalTitle = document.getElementById('modal-title');
+            const modalCount = document.getElementById('modal-count');
+            const loader = document.getElementById('modal-loader');
+            
+            const data = galleryData[currentImageIndex];
+            
+            modalImg.style.opacity = '0';
+            loader.style.display = 'flex';
+            
+            modalImg.src = data.src;
+            modalTitle.innerText = data.title;
+            modalCount.innerText = `Image ${currentImageIndex + 1} of ${galleryData.length}`;
+            
+            modalImg.onload = () => {
+                modalImg.style.opacity = '1';
+                loader.style.display = 'none';
+            };
+        }
+
+        function nextImage(e) {
+            if (e) e.stopPropagation();
+            currentImageIndex = (currentImageIndex + 1) % galleryData.length;
+            updateModalContent();
+        }
+
+        function prevImage(e) {
+            if (e) e.stopPropagation();
+            currentImageIndex = (currentImageIndex - 1 + galleryData.length) % galleryData.length;
+            updateModalContent();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }, 500);
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('image-modal');
+            if (modal.classList.contains('hidden')) return;
+            
+            if (e.key === 'ArrowRight') nextImage();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

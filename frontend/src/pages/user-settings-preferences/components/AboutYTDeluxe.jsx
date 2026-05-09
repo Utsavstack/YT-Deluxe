@@ -156,7 +156,7 @@ const AboutYTDeluxe = () => {
       </motion.div>
 
       {/* Features Full Width */}
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 flex flex-col">
+      <motion.div id="features-section" variants={itemVariants} className="glass-card p-6 md:p-8 flex flex-col">
         <h2 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2"> 
           <Icon name="Feature" size={20} className="text-amber-500" />
           {t('aboutUs.premiumEdge')}
@@ -181,8 +181,8 @@ const AboutYTDeluxe = () => {
       </motion.div>
 
       {/* Developer Context */}
-      <motion.div variants={itemVariants} className="glass-card p-8 border-t-4 border-primary/20 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
+      <motion.div variants={itemVariants} className="glass-card p-8 border-t-4 border-primary/20 relative overflow-hidden group/card">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover/card:scale-110 transition-transform duration-1000">
           <Icon name="Cpu" size={180} />
         </div>
         <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
@@ -233,7 +233,7 @@ const AboutYTDeluxe = () => {
             <motion.a
               whileHover={{ scale: 1.02, x: -3 }}
               whileTap={{ scale: 0.98 }}
-              href="https://www.linkedin.com/in/utsavparmar-full-stack-dev"
+              href="https://linkedin.com/in/utsavparmar-full-stack-dev"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
@@ -241,6 +241,36 @@ const AboutYTDeluxe = () => {
               <div className="flex items-center space-x-3">
                 <Icon name="Linkedin" size={20} className="group-hover:text-primary" />
                 <span className="text-sm font-bold">{t('aboutUs.professional')}</span>
+              </div>
+              <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+            </motion.a>
+
+            <motion.a
+              whileHover={{ scale: 1.02, x: -3 }}
+              whileTap={{ scale: 0.98 }}
+              href="https://instagram.com/_its_me_utsav_"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <Icon name="Instagram" size={20} className="group-hover:text-primary" />
+                <span className="text-sm font-bold">Instagram</span>
+              </div>
+              <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+            </motion.a>
+
+            <motion.a
+              whileHover={{ scale: 1.02, x: -3 }}
+              whileTap={{ scale: 0.98 }}
+              href="https://x.com/iutsavparmar"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <svg className="w-5 h-5 group-hover:text-primary transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.292 19.494h2.039L6.486 3.24H4.298l13.311 17.407z"/></svg>
+                <span className="text-sm font-bold">Twitter</span>
               </div>
               <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
             </motion.a>

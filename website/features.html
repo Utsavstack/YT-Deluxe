@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Features & Gallery - YT-Deluxe</title>
+    <meta name="description" content="Explore the powerful features and beautiful interface of YT-Deluxe, the premium open-source media downloader.">
+    <link href="https://fonts.googleapis.com/css2?family=Allan:wght@700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        main: 'var(--bg-main)',
+                        card: 'var(--bg-card)',
+                        primary: 'var(--text-primary)',
+                        secondary: 'var(--text-secondary)',
+                        border: 'var(--border-color)',
+                        accent: 'var(--accent-blue)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="antialiased selection:bg-accent selection:text-white">
+
+    <!-- Pill Navbar -->
+    <div class="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+        <nav class="nav-pill flex items-center justify-between px-6 py-3 w-full max-w-4xl transition-all duration-300">
+            <!-- Logo -->
+            <a href="index.html" class="flex items-center gap-3 group">
+                <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-xl shadow-[0_8px_16px_rgba(0,0,0,0.6)] shrink-0 group-hover:rotate-6 transition-transform overflow-hidden relative z-10">
+                    <img src="../frontend/public/assets/images/logo.webp" alt="YT Deluxe" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                    <svg style="display:none;" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div class="block">
+                    <h1 class="text-xl font-bold text-primary leading-none mb-0.5 tracking-tight" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</h1>
+                    <p class="text-[10px] text-white/60 leading-none tracking-tight" style="font-family: 'Inter', system-ui, sans-serif;">Features & Gallery</p>
+                </div>
+            </a>
+            
+            <!-- Links -->
+            <div class="hidden md:flex items-center space-x-8 text-sm font-medium text-white/70">
+                <a href="index.html" class="hover:text-white transition-colors">Home</a>
+                <a href="#detailed-features" class="hover:text-white transition-colors">Detailed Features</a>
+                <a href="#gallery" class="hover:text-white transition-colors">Gallery</a>
+                <a href="#tech-specs" class="hover:text-white transition-colors">Tech Specs</a>
+            </div>
+
+            <!-- Hamburger Button -->
+            <button id="mobile-menu-btn" class="hamburger-btn" aria-label="Toggle Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div id="mobile-overlay" class="mobile-overlay"></div>
+    <div id="mobile-drawer" class="mobile-drawer">
+        <!-- Drawer Header -->
+        <div class="p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-18 h-15 rounded-xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-xl border border-white/10 shadow-lg overflow-hidden flex items-center justify-center">
+                        <img src="../frontend/public/assets/images/logo.webp" alt="Logo" class="w-8 h-8 object-contain" />
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white leading-none" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</h2>
+                        <p class="text-[10px] text-white/40 font-medium mt-1">Premium Media Downloader</p>
+                    </div>
+                </div>
+                <button id="mobile-drawer-close" class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-white/500 hover:text-white transition-all bg-red-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Drawer Links -->
+        <div class="flex-1 py-4 overflow-y-auto custom-scrollbar">
+            <div class="px-3 space-y-2">
+                <a href="index.html" class="mobile-drawer-link">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <span>Home</span>
+                </a>
+
+                <!-- Features Dropdown -->
+                <div class="mobile-drawer-dropdown is-open">
+                    <button class="mobile-drawer-dropdown-btn mobile-drawer-link w-full active">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            <span>Features</span>
+                        </div>
+                        <svg class="dropdown-chevron w-4 h-4 opacity-40 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="mobile-drawer-dropdown-content pl-12 space-y-1">
+                        <a href="features.html" class="mobile-drawer-sublink active">Overview</a>
+                        <a href="features.html#gallery" class="mobile-drawer-sublink">Gallery</a>
+                        <a href="features.html#performance" class="mobile-drawer-sublink">Performance</a>
+                    </div>
+                </div>
+
+                <a href="updates.html" class="mobile-drawer-link">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Changelog</span>
+                </a>
+                <a href="updates.html#faq" class="mobile-drawer-link">
+                    <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>FAQ</span>
+                </a>
+
+                <!-- About Dropdown -->
+                <div class="mobile-drawer-dropdown">
+                    <button class="mobile-drawer-dropdown-btn mobile-drawer-link w-full">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>About</span>
+                        </div>
+                        <svg class="dropdown-chevron w-4 h-4 opacity-40 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="mobile-drawer-dropdown-content pl-12 space-y-1">
+                        <a href="about.html" class="mobile-drawer-sublink">Our Story</a>
+                        <a href="privacy.html" class="mobile-drawer-sublink">Privacy Policy</a>
+                        <a href="terms.html" class="mobile-drawer-sublink">Terms of Service</a>
+                        <a href="license.html" class="mobile-drawer-sublink">License</a>
+                        <a href="disclaimer.html" class="mobile-drawer-sublink">Disclaimer</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="relative min-h-screen pt-40 pb-20 px-4 z-10 overflow-hidden">
+        <!-- Ambient Background Shapes -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+            <div class="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-500/10 blur-[150px] rounded-full"></div>
+            <div class="absolute bottom-[10%] right-[-10%] w-[500px] h-[500px] bg-rose-500/10 blur-[150px] rounded-full"></div>
+            <div class="absolute top-[40%] right-[10%] w-[400px] h-[400px] bg-violet-500/5 blur-[120px] rounded-full rotate-45 animate-float-slow"></div>
+        </div>
+        
+        <div class="max-w-6xl mx-auto space-y-32">
+            
+            <!-- Hero -->
+            <div class="text-center reveal-on-scroll">
+                <h1 class="text-5xl md:text-7xl font-bold mb-6 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">
+                    Engineered for <br> Excellence.
+                </h1>
+                <p class="text-lg md:text-xl text-secondary max-w-2xl mx-auto leading-relaxed">
+                    A deep dive into the features that make YT-Deluxe the most powerful, 
+                    private, and beautiful media manager ever built.
+                </p>
+                <div class="mt-12 flex justify-center gap-4">
+                    <div class="px-6 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
+                        <span class="text-xs font-bold tracking-widest text-white/40">Performance First</span>
+                    </div>
+                    <div class="px-6 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm">
+                        <span class="text-xs font-bold tracking-widest text-white/40">Privacy Core</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Features Section -->
+            <section id="detailed-features" class="space-y-24">
+                <!-- Feature 1: Search & Preview -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center reveal-on-scroll">
+                    <div class="space-y-6">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Search & Live Preview</h2>
+                        <p class="text-white/50 leading-relaxed text-lg">
+                            Don't download the wrong video again. YT-Deluxe features a rich search experience with real-time results. 
+                            Simply hover over any result to trigger a <strong>live video preview</strong>, allowing you to verify content before committing to a download.
+                        </p>
+                        <ul class="space-y-3 text-white/40">
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Paste direct URLs or search by keywords
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Picture-in-Picture (PiP) mini-player support
+                            </li>
+                            <li class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Rich metadata: views, duration, and channel info
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="glass-card p-2 rounded-3xl group overflow-hidden border-indigo-500/20 shadow-2xl shadow-indigo-500/5">
+                        <img src="../docs/assets/dark-images/home-page-dark.webp" alt="Search Dashboard" class="w-full h-auto rounded-2xl group-hover:scale-[1.02] transition-transform duration-700">
+                    </div>
+                </div>
+
+                <!-- Feature 2: High-Fidelity Download -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center md:flex-row-reverse reveal-on-scroll">
+                    <div class="md:order-2 space-y-6">
+                        <div class="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">8K Ultra HD & HDR</h2>
+                        <p class="text-white/50 leading-relaxed text-lg">
+                            Experience media as it was intended. From mobile-friendly 144p to cinema-grade <strong>8K resolution</strong>. 
+                            YT-Deluxe automatically selects the best available streams for video and audio, merging them seamlessly with FFmpeg.
+                        </p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                                <span class="block text-white font-bold mb-1">Formats</span>
+                                <span class="text-xs text-white/30 tracking-widest uppercase">MP4, MKV, WebM, MOV</span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 p-4 rounded-2xl">
+                                <span class="block text-white font-bold mb-1">Audio</span>
+                                <span class="text-xs text-white/30 tracking-widest uppercase">MP3, M4A, Opus, FLAC</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:order-1 glass-card p-2 rounded-3xl group overflow-hidden border-rose-500/20 shadow-2xl shadow-rose-500/5">
+                        <img src="../docs/assets/dark-images/video-dark.webp" alt="Download Quality Selection" class="w-full h-auto rounded-2xl group-hover:scale-[1.02] transition-transform duration-700">
+                    </div>
+                </div>
+
+                <!-- Feature 3: Precision Trimmer -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center reveal-on-scroll">
+                    <div class="space-y-6">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path></svg>
+                        </div>
+                        <h2 class="text-3xl md:text-4xl font-bold text-white tracking-tight">Zero-Loss Trimmer</h2>
+                        <p class="text-white/50 leading-relaxed text-lg">
+                            Don't waste space on a 2-hour video when you only need a 30-second clip. Our precision trimmer uses FFmpeg stream copying to cut video and audio 
+                            without any quality loss and with near-instant speed.
+                        </p>
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-4 bg-[#0a0a0c] p-4 rounded-xl border border-white/5">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">1</div>
+                                <span class="text-white/70 text-sm">Drag timeline handles to select range</span>
+                            </div>
+                            <div class="flex items-center gap-4 bg-[#0a0a0c] p-4 rounded-xl border border-white/5">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">2</div>
+                                <span class="text-white/70 text-sm">Preview the exact clip in the player</span>
+                            </div>
+                            <div class="flex items-center gap-4 bg-[#0a0a0c] p-4 rounded-xl border border-white/5">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">3</div>
+                                <span class="text-white/70 text-sm">Download instantly with no re-encoding</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card p-2 rounded-3xl group overflow-hidden border-amber-500/20 shadow-2xl shadow-amber-500/5">
+                        <img src="../docs/assets/dark-images/trimmer-dark.webp" alt="Trimmer Interface" class="w-full h-auto rounded-2xl group-hover:scale-[1.02] transition-transform duration-700">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gallery Section -->
+            <section id="gallery" class="space-y-12">
+                <div class="text-center reveal-on-scroll space-y-4">
+                    <h2 class="text-3xl md:text-5xl font-bold text-white tracking-tight">The Interface</h2>
+                    <p class="text-white/40 max-w-xl mx-auto">A visual showcase of the Liquid Glass design system in action.</p>
+                    
+                    <!-- View Toggle -->
+                    <div class="flex justify-center pt-4">
+                        <div class="relative flex p-1 bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-xl">
+                            <!-- Sliding background pill -->
+                            <div id="gallery-toggle-pill" class="absolute top-1 bottom-1 left-1 w-[100px] bg-accent/20 border border-accent/30 rounded-xl transition-all duration-500 ease-out z-0 shadow-[0_0_20px_rgba(44,73,169,0.2)]"></div>
+                            
+                            <button onclick="switchGalleryView('marquee')" class="relative z-10 w-[100px] py-2.5 text-sm font-bold transition-colors duration-300 gallery-toggle-btn active" id="btn-marquee">
+                                Carousel
+                            </button>
+                            <button onclick="switchGalleryView('grid')" class="relative z-10 w-[100px] py-2.5 text-sm font-bold transition-colors duration-300 gallery-toggle-btn" id="btn-grid">
+                                Grid View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capsule (Marquee) View -->
+                <div id="gallery-marquee-view" class="space-y-8">
+                    <!-- Row 1: Dark Mode Showcase -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 px-4 max-w-6xl mx-auto">
+                            <span class="text-[15px] font-bold text-white/40">Pro Dark Mode</span>
+                            <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+                        </div>
+                        <div class="relative w-full overflow-hidden flex group reveal-on-scroll">
+                            <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent z-20 pointer-events-none"></div>
+                            <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent z-20 pointer-events-none"></div>
+                            
+                            <div class="flex animate-marquee group-hover:[animation-play-state:paused] min-w-max py-4">
+                                <!-- Image 1-11 -->
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 0)">
+                                    <div class="gallery-overlay">Main Dashboard</div>
+                                    <img src="../docs/assets/dark-images/home-page-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 1)">
+                                    <div class="gallery-overlay">Global Search</div>
+                                    <img src="../docs/assets/dark-images/search-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 2)">
+                                    <div class="gallery-overlay">Video Player</div>
+                                    <img src="../docs/assets/dark-images/video-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 3)">
+                                    <div class="gallery-overlay">Video Details</div>
+                                    <img src="../docs/assets/dark-images/downloaded-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 4)">
+                                    <div class="gallery-overlay">Quick Download</div>
+                                    <img src="../docs/assets/dark-images/quick-download-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 5)">
+                                    <div class="gallery-overlay">Advanced Options</div>
+                                    <img src="../docs/assets/dark-images/adv-options-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 6)">
+                                    <div class="gallery-overlay">Precision Trimmer</div>
+                                    <img src="../docs/assets/dark-images/trimmer-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 7)">
+                                    <div class="gallery-overlay">Download History</div>
+                                    <img src="../docs/assets/dark-images/history-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 8)">
+                                    <div class="gallery-overlay">User Profile</div>
+                                    <img src="../docs/assets/dark-images/prof-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 9)">
+                                    <div class="gallery-overlay">Theme Personalization</div>
+                                    <img src="../docs/assets/dark-images/theme-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 10)">
+                                    <div class="gallery-overlay">Multilingual UI</div>
+                                    <img src="../docs/assets/dark-images/lang-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                                </div>
+                            </div>
+                            <!-- Duplicate for Loop -->
+                            <div class="flex animate-marquee group-hover:[animation-play-state:paused] min-w-max py-4" aria-hidden="true">
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 0)">
+                                    <div class="gallery-overlay">Main Dashboard</div>
+                                    <img src="../docs/assets/dark-images/home-page-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 1)">
+                                    <div class="gallery-overlay">Global Search</div>
+                                    <img src="../docs/assets/dark-images/search-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 2)">
+                                    <div class="gallery-overlay">Video Player</div>
+                                    <img src="../docs/assets/dark-images/video-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 3)">
+                                    <div class="gallery-overlay">Video Details</div>
+                                    <img src="../docs/assets/dark-images/downloaded-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 4)">
+                                    <div class="gallery-overlay">Quick Download</div>
+                                    <img src="../docs/assets/dark-images/quick-download-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 5)">
+                                    <div class="gallery-overlay">Advanced Options</div>
+                                    <img src="../docs/assets/dark-images/adv-options-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 6)">
+                                    <div class="gallery-overlay">Precision Trimmer</div>
+                                    <img src="../docs/assets/dark-images/trimmer-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 7)">
+                                    <div class="gallery-overlay">Download History</div>
+                                    <img src="../docs/assets/dark-images/history-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 8)">
+                                    <div class="gallery-overlay">User Profile</div>
+                                    <img src="../docs/assets/dark-images/prof-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 9)">
+                                    <div class="gallery-overlay">Theme Personalization</div>
+                                    <img src="../docs/assets/dark-images/theme-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 10)">
+                                    <div class="gallery-overlay">Multilingual UI</div>
+                                    <img src="../docs/assets/dark-images/lang-dark.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Light Mode & UI Details -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 px-4 max-w-6xl mx-auto">
+                            <span class="text-[15px] font-bold text-white/40">Elegant Light Mode</span>
+                            <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+                        </div>
+                        <div class="relative w-full overflow-hidden flex group reveal-on-scroll">
+                            <div class="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black to-transparent z-20 pointer-events-none"></div>
+                            <div class="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black to-transparent z-20 pointer-events-none"></div>
+                            
+                            <div class="flex animate-marquee-reverse group-hover:[animation-play-state:paused] min-w-max py-4">
+                                <!-- Image 11-21 -->
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 11)">
+                                    <div class="gallery-overlay">Main Dashboard</div>
+                                    <img src="../docs/assets/light-images/home-page-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 12)">
+                                    <div class="gallery-overlay">Global Search</div>
+                                    <img src="../docs/assets/light-images/search-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 13)">
+                                    <div class="gallery-overlay">Video Player</div>
+                                    <img src="../docs/assets/light-images/video-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 14)">
+                                    <div class="gallery-overlay">Video Details</div>
+                                    <img src="../docs/assets/light-images/downloaded-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 15)">
+                                    <div class="gallery-overlay">Quick Download</div>
+                                    <img src="../docs/assets/light-images/quick-download-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 16)">
+                                    <div class="gallery-overlay">Advanced Options</div>
+                                    <img src="../docs/assets/light-images/adv-options-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 17)">
+                                    <div class="gallery-overlay">Precision Trimmer</div>
+                                    <img src="../docs/assets/light-images/trimmer-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 18)">
+                                    <div class="gallery-overlay">Download History</div>
+                                    <img src="../docs/assets/light-images/history-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 19)">
+                                    <div class="gallery-overlay">User Profile</div>
+                                    <img src="../docs/assets/light-images/prof-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 20)">
+                                    <div class="gallery-overlay">Theme Personalization</div>
+                                    <img src="../docs/assets/light-images/theme-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 21)">
+                                    <div class="gallery-overlay">Multilingual UI</div>
+                                    <img src="../docs/assets/light-images/lang-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                                </div>
+                            </div>
+                            <!-- Duplicate for Loop -->
+                            <div class="flex animate-marquee-reverse group-hover:[animation-play-state:paused] min-w-max py-4" aria-hidden="true">
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 11)">
+                                    <div class="gallery-overlay">Main Dashboard</div>
+                                    <img src="../docs/assets/light-images/home-page-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Home Page">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 12)">
+                                    <div class="gallery-overlay">Global Search</div>
+                                    <img src="../docs/assets/light-images/search-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Search">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 13)">
+                                    <div class="gallery-overlay">Video Player</div>
+                                    <img src="../docs/assets/light-images/video-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Video">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 14)">
+                                    <div class="gallery-overlay">Video Details</div>
+                                    <img src="../docs/assets/light-images/downloaded-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Details">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 15)">
+                                    <div class="gallery-overlay">Quick Download</div>
+                                    <img src="../docs/assets/light-images/quick-download-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Quick Download">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 16)">
+                                    <div class="gallery-overlay">Advanced Options</div>
+                                    <img src="../docs/assets/light-images/adv-options-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Adv Options">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 17)">
+                                    <div class="gallery-overlay">Precision Trimmer</div>
+                                    <img src="../docs/assets/light-images/trimmer-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Trimmer">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 18)">
+                                    <div class="gallery-overlay">Download History</div>
+                                    <img src="../docs/assets/light-images/history-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="History">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 19)">
+                                    <div class="gallery-overlay">User Profile</div>
+                                    <img src="../docs/assets/light-images/prof-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Profile">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 20)">
+                                    <div class="gallery-overlay">Theme Personalization</div>
+                                    <img src="../docs/assets/light-images/theme-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Theme">
+                                </div>
+                                <div class="px-3 gallery-item relative" onclick="openModal(this, 21)">
+                                    <div class="gallery-overlay">Multilingual UI</div>
+                                    <img src="../docs/assets/light-images/lang-light.webp" class="h-[180px] md:h-[300px] w-auto object-contain rounded-xl border border-white/[0.06] shadow-xl transition-all duration-500 hover:scale-[1.05]" alt="Language">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid View (Hidden by default) -->
+                <div id="gallery-grid-view" class="hidden reveal-on-scroll px-4 space-y-12">
+                    <!-- Dark Section -->
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-4 max-w-6xl mx-auto">
+                            <span class="text-[10px] font-bold tracking-[0.2em] text-white/20 uppercase">Pro Dark Mode</span>
+                            <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div class="gallery-item-grid" onclick="openModal(this, 0)">
+                                <img src="../docs/assets/dark-images/home-page-dark.webp" class="gallery-img-grid" alt="Main Dashboard">
+                                <div class="gallery-overlay-grid">Main Dashboard</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 1)">
+                                <img src="../docs/assets/dark-images/search-dark.webp" class="gallery-img-grid" alt="Search">
+                                <div class="gallery-overlay-grid">Global Search</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 2)">
+                                <img src="../docs/assets/dark-images/video-dark.webp" class="gallery-img-grid" alt="Video">
+                                <div class="gallery-overlay-grid">Video Player</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 3)">
+                                <img src="../docs/assets/dark-images/downloaded-dark.webp" class="gallery-img-grid" alt="Details">
+                                <div class="gallery-overlay-grid">Video Details</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 4)">
+                                <img src="../docs/assets/dark-images/quick-download-dark.webp" class="gallery-img-grid" alt="Quick Download">
+                                <div class="gallery-overlay-grid">Quick Download</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 5)">
+                                <img src="../docs/assets/dark-images/adv-options-dark.webp" class="gallery-img-grid" alt="Adv Options">
+                                <div class="gallery-overlay-grid">Advanced Options</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 6)">
+                                <img src="../docs/assets/dark-images/trimmer-dark.webp" class="gallery-img-grid" alt="Trimmer">
+                                <div class="gallery-overlay-grid">Precision Trimmer</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 7)">
+                                <img src="../docs/assets/dark-images/history-dark.webp" class="gallery-img-grid" alt="History">
+                                <div class="gallery-overlay-grid">Download History</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 8)">
+                                <img src="../docs/assets/dark-images/prof-dark.webp" class="gallery-img-grid" alt="Profile">
+                                <div class="gallery-overlay-grid">User Profile</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 9)">
+                                <img src="../docs/assets/dark-images/theme-dark.webp" class="gallery-img-grid" alt="Theme">
+                                <div class="gallery-overlay-grid">Theme Engine</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 10)">
+                                <img src="../docs/assets/dark-images/lang-dark.webp" class="gallery-img-grid" alt="Language">
+                                <div class="gallery-overlay-grid">Multilingual UI</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Light Section -->
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-4 max-w-6xl mx-auto">
+                            <span class="text-[10px] font-bold tracking-[0.2em] text-white/20">Elegant Light Mode</span>
+                            <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div class="gallery-item-grid" onclick="openModal(this, 11)">
+                                <img src="../docs/assets/light-images/home-page-light.webp" class="gallery-img-grid" alt="Main Dashboard">
+                                <div class="gallery-overlay-grid">Main Dashboard</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 12)">
+                                <img src="../docs/assets/light-images/search-light.webp" class="gallery-img-grid" alt="Search">
+                                <div class="gallery-overlay-grid">Global Search</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 13)">
+                                <img src="../docs/assets/light-images/video-light.webp" class="gallery-img-grid" alt="Video">
+                                <div class="gallery-overlay-grid">Video Player</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 14)">
+                                <img src="../docs/assets/light-images/downloaded-light.webp" class="gallery-img-grid" alt="Details">
+                                <div class="gallery-overlay-grid">Video Details</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 15)">
+                                <img src="../docs/assets/light-images/quick-download-light.webp" class="gallery-img-grid" alt="Quick Download">
+                                <div class="gallery-overlay-grid">Quick Download</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 16)">
+                                <img src="../docs/assets/light-images/adv-options-light.webp" class="gallery-img-grid" alt="Adv Options">
+                                <div class="gallery-overlay-grid">Advanced Options</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 17)">
+                                <img src="../docs/assets/light-images/trimmer-light.webp" class="gallery-img-grid" alt="Trimmer">
+                                <div class="gallery-overlay-grid">Precision Trimmer</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 18)">
+                                <img src="../docs/assets/light-images/history-light.webp" class="gallery-img-grid" alt="History">
+                                <div class="gallery-overlay-grid">Download History</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 19)">
+                                <img src="../docs/assets/light-images/prof-light.webp" class="gallery-img-grid" alt="Profile">
+                                <div class="gallery-overlay-grid">User Profile</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 20)">
+                                <img src="../docs/assets/light-images/theme-light.webp" class="gallery-img-grid" alt="Theme">
+                                <div class="gallery-overlay-grid">Theme Engine</div>
+                            </div>
+                            <div class="gallery-item-grid" onclick="openModal(this, 21)">
+                                <img src="../docs/assets/light-images/lang-light.webp" class="gallery-img-grid" alt="Language">
+                                <div class="gallery-overlay-grid">Multilingual UI</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </section>
+
+            <!-- Technical Specifications -->
+            <section id="tech-specs" class="reveal-on-scroll relative">
+                <!-- Ambient Glow for this section -->
+                <div class="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+                    <div class="absolute top-[20%] left-[-15%] w-[600px] h-[600px] bg-indigo-500/5 blur-[150px] rounded-full"></div>
+                    <div class="absolute bottom-[20%] right-[-15%] w-[500px] h-[500px] bg-rose-500/5 blur-[150px] rounded-full"></div>
+                </div>
+                
+                <div class="glass-card p-8 md:p-16 border-white/5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-16 opacity-[0.02] scale-150 pointer-events-none">
+                        <svg class="w-64 h-64 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                    </div>
+                    
+                    <div class="relative z-10">
+                        <h2 class="text-3xl md:text-4xl font-bold text-white mb-12 tracking-tight">Technical Architecture</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                            <div class="space-y-4">
+                                <h3 class="text-indigo-400 font-bold uppercase tracking-widest text-xs">Core Engine</h3>
+                                <ul class="space-y-4">
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Extractor</span>
+                                        <span class="text-white text-sm font-medium">yt-dlp</span>
+                                    </li>
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Media Processor</span>
+                                        <span class="text-white text-sm font-medium">FFmpeg</span>
+                                    </li>
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Bot Bypass</span>
+                                        <span class="text-white text-sm font-medium">PO Token Provider</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="space-y-4">
+                                <h3 class="text-rose-400 font-bold uppercase tracking-widest text-xs">Full Stack</h3>
+                                <ul class="space-y-4">
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Frontend</span>
+                                        <span class="text-white text-sm font-medium">React + Vite</span>
+                                    </li>
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Styling</span>
+                                        <span class="text-white text-sm font-medium">Tailwind + Framer</span>
+                                    </li>
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Backend</span>
+                                        <span class="text-white text-sm font-medium">FastAPI (Python)</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="space-y-4">
+                                <h3 class="text-amber-400 font-bold uppercase tracking-widest text-xs">Desktop Native</h3>
+                                <ul class="space-y-4">
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Window Shell</span>
+                                        <span class="text-white text-sm font-medium">PyWebView</span>
+                                    </li>
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Bundler</span>
+                                        <span class="text-white text-sm font-medium">PyInstaller</span>
+                                    </li>
+                                    <li class="flex justify-between items-center border-b border-white/5 pb-2">
+                                        <span class="text-white/60 text-sm">Installer</span>
+                                        <span class="text-white text-sm font-medium">Inno Setup 6</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer id="footer" class="border-t border-white/[0.04] bg-[#0a0a0c] pt-16 pb-8 px-4 reveal-on-scroll">
+        <div class="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 md:gap-4 mb-12">
+            <div class="col-span-2 md:col-span-2 md:pr-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-xl shadow-[0_8px_16px_rgba(0,0,0,0.6)] shrink-0 overflow-hidden relative z-10">
+                        <img src="../frontend/public/assets/images/logo.webp" alt="YT Deluxe" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                        <svg style="display:none;" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <div class="block">
+                        <h1 class="text-xl font-bold text-primary leading-none mb-0.5 tracking-tight" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</h1>
+                        <p class="text-[10px] text-white/60 leading-none tracking-tight" style="font-family: 'Inter', system-ui, sans-serif;">Premium Media Downloader</p>
+                    </div>
+                </div>
+                <p class="text-sm text-white/40 leading-relaxed mb-6 max-w-sm">
+                    A Free & Open Source, Feature-Rich YouTube Downloader & Media Manager with a Premium Liquid Glass UI for Web & Desktop.
+                </p>
+                <!-- Social Links -->
+                <div class="flex items-center gap-4 mt-2">
+                    <a href="https://github.com/Utsavstack" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="GitHub">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.744.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    </a>
+                    <a href="https://linkedin.com/in/utsav-parmar" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="LinkedIn">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    </a>
+                    <a href="https://instagram.com/_its_me_utsav_" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="Instagram">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    </a>
+                    <a href="https://x.com/iutsavparmar" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.1] transition-all duration-300 group" title="X (Twitter)">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.292 19.494h2.039L6.486 3.24H4.298l13.311 17.407z"/></svg>
+                    </a>
+                </div>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-white mb-4">Product</h4>
+                <ul class="space-y-3 text-sm text-white/40">
+                    <li><a href="about.html" class="hover:text-white transition-colors">About YT Deluxe</a></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe#readme" target="_blank" class="hover:text-white transition-colors">Documentation</a></li>
+                    <li><a href="updates.html#changelog" class="hover:text-white transition-colors">Changelog</a></li>
+                    <li><a href="updates.html#faq" class="hover:text-white transition-colors">FAQ</a></li>
+                    <li><a href="features.html" class="hover:text-white transition-colors">Features</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-white mb-4">Resources</h4>
+                <ul class="space-y-3 text-sm text-white/40">
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe" target="_blank" class="hover:text-white transition-colors">Source Code</a></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/issues" target="_blank" class="hover:text-white transition-colors">Report a Bug</a></li>
+                    <li><a href="https://github.com/yt-dlp/yt-dlp" target="_blank" class="hover:text-white transition-colors">yt-dlp</a></li>
+                    <li><a href="https://ffmpeg.org/" target="_blank" class="hover:text-white transition-colors">FFmpeg</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-white mb-4">Legal</h4>
+                <ul class="space-y-3 text-sm text-white/40">
+                    <li><a href="privacy.html" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                    <li><a href="terms.html" class="hover:text-white transition-colors">Terms & Conditions</a></li>
+                    <li><a href="license.html" class="hover:text-white transition-colors">License</a></li>
+                    <li><a href="disclaimer.html" class="hover:text-white transition-colors">Disclaimer</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-center items-center pt-8 border-t border-white/[0.04] text-xs text-white/30">
+            <p>&copy; 2026 YT Deluxe. All rights reserved Utsavstack.</p>
+        </div>
+    </footer>
+
+    <!-- Fullscreen Image Modal -->
+    <div id="image-modal" class="fixed inset-0 z-[100] bg-black/95 hidden flex flex-col items-center justify-center opacity-0 transition-all duration-500 backdrop-blur-2xl" onclick="closeModal()">
+        <!-- Close Button -->
+        <button onclick="closeModal()" class="absolute top-8 right-8 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 p-3 rounded-2xl backdrop-blur-md transition-all duration-300 z-[110] border border-white/10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <!-- Navigation Buttons -->
+        <button onclick="prevImage(event)" class="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 text-white/30 hover:text-white bg-white/5 hover:bg-white/10 p-4 rounded-full backdrop-blur-md transition-all duration-300 z-[110] border border-white/5 group">
+            <svg class="w-8 h-8 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <button onclick="nextImage(event)" class="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 text-white/30 hover:text-white bg-white/5 hover:bg-white/10 p-4 rounded-full backdrop-blur-md transition-all duration-300 z-[110] border border-white/5 group">
+            <svg class="w-8 h-8 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+
+        <!-- Image Container -->
+        <div class="relative w-full max-w-5xl px-4 md:px-0 flex flex-col items-center">
+            <div class="relative w-full group overflow-hidden rounded-2xl border border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.8)] bg-white/5">
+                <img id="modal-img" src="" class="w-full h-auto object-contain max-h-[80vh] opacity-0 transition-opacity duration-500" onclick="event.stopPropagation()">
+                <div id="modal-loader" class="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                    <div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+            
+            <!-- Info Footer -->
+            <div class="mt-6 text-center reveal-on-scroll">
+                <h3 id="modal-title" class="text-xl font-bold text-white mb-1">Screenshot Name</h3>
+                <p id="modal-count" class="text-xs font-bold tracking-[0.2em] text-white/30 uppercase">Image 1 of 22</p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Core Gallery Item Styles */
+        .gallery-item {
+            position: relative !important;
+            @apply cursor-pointer overflow-hidden rounded-xl border border-white/10 transition-all duration-500 hover:scale-[1.05] hover:z-30 hover:shadow-2xl hover:shadow-indigo-500/20 shrink-0;
+        }
+        .gallery-img {
+            @apply h-[180px] md:h-[300px] w-auto object-contain transition-transform duration-700;
+        }
+        .gallery-item:hover .gallery-img {
+            @apply scale-110;
+        }
+        
+        /* Floating Badge Label - Premium Glassmorphism */
+        .gallery-overlay, .gallery-overlay-grid {
+            position: absolute !important;
+            top: 1rem !important;
+            left: 1rem !important;
+            padding: 0.5rem 1rem !important;
+            background: rgba(0, 0, 0, 0.7) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-left: 3px solid #5584ff !important; /* Premium accent line */
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            font-size: 10px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.15em !important;
+            z-index: 40 !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(85, 132, 255, 0.1) !important;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            pointer-events: none !important;
+            opacity: 0.9 !important; /* Always slightly visible for discovery */
+            transform: translateY(0) !important;
+        }
+        
+        .gallery-item:hover .gallery-overlay,
+        .gallery-item-grid:hover .gallery-overlay-grid {
+            opacity: 1 !important;
+            background: rgba(0, 0, 0, 0.85) !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-left: 3px solid #5584ff !important;
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.7), 0 0 20px rgba(85, 132, 255, 0.3) !important;
+            transform: translateY(-2px) !important;
+        }
+
+        /* Grid Specific Styles */
+        .gallery-item-grid {
+            position: relative !important;
+            @apply cursor-pointer overflow-hidden rounded-xl border border-white/10 transition-all duration-700 hover:scale-[1.05] hover:shadow-2xl hover:shadow-accent/20 bg-white/[0.02];
+            aspect-ratio: 16 / 9;
+        }
+        .gallery-img-grid {
+            @apply h-full w-full object-cover transition-transform duration-700;
+        }
+        .gallery-item-grid:hover .gallery-img-grid {
+            @apply scale-110;
+        }
+
+        .gallery-toggle-btn.active {
+            @apply text-white;
+        }
+        .gallery-toggle-btn:not(.active) {
+            @apply text-white/40 hover:text-white/70;
+        }
+
+        @keyframes marquee-reverse {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(0%); }
+        }
+        .animate-marquee-reverse {
+            animation: marquee-reverse 80s linear infinite;
+        }
+    </style>
+
+    <script>
+        // Updated View Switching with Sliding Pill
+        function switchGalleryView(view) {
+            const marqueeView = document.getElementById('gallery-marquee-view');
+            const gridView = document.getElementById('gallery-grid-view');
+            const marqueeBtn = document.getElementById('btn-marquee');
+            const gridBtn = document.getElementById('btn-grid');
+            const pill = document.getElementById('gallery-toggle-pill');
+
+            if (view === 'grid') {
+                pill.style.left = '104px';
+                marqueeView.style.opacity = '0';
+                setTimeout(() => {
+                    marqueeView.classList.add('hidden');
+                    gridView.classList.remove('hidden');
+                    gridView.style.opacity = '0';
+                    setTimeout(() => {
+                        gridView.style.opacity = '1';
+                    }, 10);
+                }, 300);
+                gridBtn.classList.add('active');
+                marqueeBtn.classList.remove('active');
+            } else {
+                pill.style.left = '4px';
+                gridView.style.opacity = '0';
+                setTimeout(() => {
+                    gridView.classList.add('hidden');
+                    marqueeView.classList.remove('hidden');
+                    marqueeView.style.opacity = '0';
+                    setTimeout(() => {
+                        marqueeView.style.opacity = '1';
+                    }, 10);
+                }, 300);
+                marqueeBtn.classList.add('active');
+                gridBtn.classList.remove('active');
+            }
+        }
+
+        // Global Gallery Data for Modal Navigation
+        const galleryData = [
+            { src: '../docs/assets/dark-images/home-page-dark.webp', title: 'Main Dashboard (Dark)' },
+            { src: '../docs/assets/dark-images/search-dark.webp', title: 'Global Search UI' },
+            { src: '../docs/assets/dark-images/video-dark.webp', title: 'Media Player Interface' },
+            { src: '../docs/assets/dark-images/downloaded-dark.webp', title: 'Download Details & Metadata' },
+            { src: '../docs/assets/dark-images/quick-download-dark.webp', title: 'Quick Format Selection' },
+            { src: '../docs/assets/dark-images/adv-options-dark.webp', title: 'Advanced Encoding Controls' },
+            { src: '../docs/assets/dark-images/trimmer-dark.webp', title: 'Precision Lossless Trimmer' },
+            { src: '../docs/assets/dark-images/history-dark.webp', title: 'Download Management History' },
+            { src: '../docs/assets/dark-images/prof-dark.webp', title: 'User Profile & Settings' },
+            { src: '../docs/assets/dark-images/theme-dark.webp', title: 'Premium Theme Engine' },
+            { src: '../docs/assets/dark-images/lang-dark.webp', title: 'Global Language Support' },
+            // Light Images
+            { src: '../docs/assets/light-images/home-page-light.webp', title: 'Main Dashboard (Light)' },
+            { src: '../docs/assets/light-images/search-light.webp', title: 'Global Search UI' },
+            { src: '../docs/assets/light-images/video-light.webp', title: 'Media Player Interface' },
+            { src: '../docs/assets/light-images/downloaded-light.webp', title: 'Download Details & Metadata' },
+            { src: '../docs/assets/light-images/quick-download-light.webp', title: 'Quick Format Selection' },
+            { src: '../docs/assets/light-images/adv-options-light.webp', title: 'Advanced Encoding Controls' },
+            { src: '../docs/assets/light-images/trimmer-light.webp', title: 'Precision Lossless Trimmer' },
+            { src: '../docs/assets/light-images/history-light.webp', title: 'Download Management History' },
+            { src: '../docs/assets/light-images/prof-light.webp', title: 'User Profile & Settings' },
+            { src: '../docs/assets/light-images/theme-light.webp', title: 'Premium Theme Engine' },
+            { src: '../docs/assets/light-images/lang-light.webp', title: 'Global Language Support' }
+        ];
+
+        let currentImageIndex = 0;
+
+        function openModal(el, index) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-img');
+            const loader = document.getElementById('modal-loader');
+            
+            currentImageIndex = index;
+            updateModalContent();
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+            }, 10);
+            
+            document.body.style.overflow = 'hidden';
+        }
+
+        function updateModalContent() {
+            const modalImg = document.getElementById('modal-img');
+            const modalTitle = document.getElementById('modal-title');
+            const modalCount = document.getElementById('modal-count');
+            const loader = document.getElementById('modal-loader');
+            
+            const data = galleryData[currentImageIndex];
+            
+            modalImg.style.opacity = '0';
+            loader.style.display = 'flex';
+            
+            modalImg.src = data.src;
+            modalTitle.innerText = data.title;
+            modalCount.innerText = `Image ${currentImageIndex + 1} of ${galleryData.length}`;
+            
+            modalImg.onload = () => {
+                modalImg.style.opacity = '1';
+                loader.style.display = 'none';
+            };
+        }
+
+        function nextImage(e) {
+            if (e) e.stopPropagation();
+            currentImageIndex = (currentImageIndex + 1) % galleryData.length;
+            updateModalContent();
+        }
+
+        function prevImage(e) {
+            if (e) e.stopPropagation();
+            currentImageIndex = (currentImageIndex - 1 + galleryData.length) % galleryData.length;
+            updateModalContent();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }, 500);
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('image-modal');
+            if (modal.classList.contains('hidden')) return;
+            
+            if (e.key === 'ArrowRight') nextImage();
+            if (e.key === 'ArrowLeft') prevImage();
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

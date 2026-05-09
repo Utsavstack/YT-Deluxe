@@ -9,8 +9,10 @@ import DownloadPreferences from './components/DownloadPreferences';
 import LanguageSettings from './components/LanguageSettings';
 import AccountManagement from './components/AccountManagement';
 import AboutYTDeluxe from './components/AboutYTDeluxe';
+import ChangelogAndFaq from './components/ChangelogAndFaq';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsAndConditions from './components/TermsAndConditions';
+import LicenseAndDisclaimer from './components/LicenseAndDisclaimer';
 
 import { useTheme } from '../../utils/ThemeContext';
 
@@ -69,9 +71,11 @@ const UserSettingsPreferences = () => {
     { id: 'theme', label: t('nav.theme'), icon: 'Palette', description: t('nav.themeDesc') },
     { id: 'downloads', label: t('nav.downloads'), icon: 'Download', description: t('nav.downloadsDesc') },
     { id: 'language', label: t('nav.language'), icon: 'Globe', description: t('nav.languageDesc') },
+    { id: 'updates', label: t('nav.updates', 'Updates & FAQ'), icon: 'Zap', description: t('nav.updatesDesc', 'Changelog and support') },
     { id: 'about', label: t('nav.about'), icon: 'Info', description: t('nav.aboutDesc') },
     { id: 'privacy', label: t('nav.privacy'), icon: 'Shield', description: t('nav.privacyDesc') },
-    { id: 'terms', label: t('nav.terms'), icon: 'FileText', description: t('nav.termsDesc') }
+    { id: 'terms', label: t('nav.terms'), icon: 'FileText', description: t('nav.termsDesc') },
+    { id: 'license', label: t('nav.license', 'License & Disclaimer'), icon: 'Scale', description: t('nav.licenseDesc', 'Legal terms and licenses') }
   ];
 
   useEffect(() => {
@@ -97,6 +101,8 @@ const UserSettingsPreferences = () => {
         return <DownloadPreferences preferences={downloadPreferences} onPreferencesChange={setDownloadPreferences} />;
       case 'language':
         return <LanguageSettings currentLanguage={currentLanguage} onLanguageChange={handleLanguageChange} settings={languageSettings} onSettingsChange={setLanguageSettings} />;
+      case 'updates':
+        return <ChangelogAndFaq />;
       case 'account':
         return <AccountManagement user={user} onUserUpdate={setUser} />;
       case 'about':
@@ -105,6 +111,8 @@ const UserSettingsPreferences = () => {
         return <PrivacyPolicy />;
       case 'terms':
         return <TermsAndConditions />;
+      case 'license':
+        return <LicenseAndDisclaimer />;
       default:
         return null;
     }
@@ -332,8 +340,10 @@ const UserSettingsPreferences = () => {
 
                 <div className="flex items-center space-x-3">
                   {[
-                    { icon: 'Github', url: 'https://github.com/Utsavstack' },
-                    { icon: 'Linkedin', url: 'https://www.linkedin.com/in/utsavparmar-full-stack-dev' }
+                    { type: 'icon', name: 'Github', url: 'https://github.com/Utsavstack' },
+                    { type: 'icon', name: 'Linkedin', url: 'https://linkedin.com/in/utsavparmar-full-stack-dev' },
+                    { type: 'svg', content: <svg className="w-[16px] h-[16px]" fill="currentColor" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.292 19.494h2.039L6.486 3.24H4.298l13.311 17.407z"/></svg>, url: 'https://x.com/iutsavparmar' },
+                    { type: 'icon', name: 'Instagram', url: 'https://instagram.com/_its_me_utsav_' }
                   ].map((social, idx) => (
                     <motion.a
                       key={idx}
@@ -344,7 +354,7 @@ const UserSettingsPreferences = () => {
                       rel="noopener noreferrer"
                       className="w-10 h-10 rounded-xl bg-accent/30 flex items-center justify-center text-muted-foreground hover:text-primary transition-all duration-300 border border-transparent hover:border-primary/20"
                     >
-                      <Icon name={social.icon} size={18} />
+                      {social.type === 'icon' ? <Icon name={social.name} size={18} /> : social.content}
                     </motion.a>
                   ))}
                 </div>
@@ -353,25 +363,34 @@ const UserSettingsPreferences = () => {
               {/* Navigation Map */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-left w-full lg:w-auto flex-1 lg:ml-12">
                 <div className="space-y-4">
-                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">{t('footer.system')}</h4>
+                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">Product</h4>
                   <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li><button onClick={() => setActiveSection('account')} className="hover:text-primary transition-colors flex items-center group">{t('footer.profile')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
-                    <li><button onClick={() => setActiveSection('theme')} className="hover:text-primary transition-colors flex items-center group">{t('footer.appearance')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
-                    <li><button onClick={() => setActiveSection('downloads')} className="hover:text-primary transition-colors flex items-center group">{t('footer.engine')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('about')} className="hover:text-primary transition-colors flex items-center group">About YT Deluxe <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/tree/main/docs" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">Documentation <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/releases" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">Releases <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><button onClick={() => setActiveSection('updates')} className="hover:text-primary transition-colors flex items-center group">Changelog <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('updates')} className="hover:text-primary transition-colors flex items-center group">FAQ <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/issues" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">Report a Bug <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><button onClick={() => { setActiveSection('about'); setTimeout(() => document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-primary transition-colors flex items-center group">Features <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
                   </ul>
                 </div>
+                
                 <div className="space-y-4">
-                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">{t('footer.security')}</h4>
+                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">Resources</h4>
                   <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li><button onClick={() => setActiveSection('privacy')} className="hover:text-primary transition-colors flex items-center group">{t('footer.privacyHub')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
-                    <li><button onClick={() => setActiveSection('terms')} className="hover:text-primary transition-colors flex items-center group">{t('footer.eula')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><a href="https://github.com/Utsavstack/YT-Deluxe" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">Source Code <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">yt-dlp <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><a href="https://ffmpeg.org/" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">FFmpeg <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
                   </ul>
                 </div>
+
                 <div className="space-y-4">
-                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">{t('footer.aboutSection')}</h4>
+                  <h4 className="text-xs font-semibold text-foreground tracking-wider opacity-70">Legal</h4>
                   <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li><button onClick={() => setActiveSection('about')} className="hover:text-primary transition-colors flex items-center group">{t('footer.history')} <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
-                    <li><a href="https://github.com/Utsavstack/YT-Deluxe" className="hover:text-primary transition-colors flex items-center group">{t('footer.repository')} <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><button onClick={() => setActiveSection('privacy')} className="hover:text-primary transition-colors flex items-center group">Privacy Policy <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('terms')} className="hover:text-primary transition-colors flex items-center group">Terms & Conditions <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('license')} className="hover:text-primary transition-colors flex items-center group">License <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
+                    <li><button onClick={() => setActiveSection('license')} className="hover:text-primary transition-colors flex items-center group">Disclaimer <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
                   </ul>
                 </div>
               </div>

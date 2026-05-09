@@ -128,9 +128,9 @@ Most YouTube downloaders on the internet are:
 
 **Home / Search Page**
 <p align="center">
-  <img src="docs/assets/home-page-dark.webp" width="48%" alt="Home Page - Dark Mode">
+  <img src="docs/assets/dark-images/home-page-dark.webp" width="48%" alt="Home Page - Dark Mode">
   &nbsp;
-  <img src="docs/assets/home-page-light.webp" width="48%" alt="Home Page - Light Mode">
+  <img src="docs/assets/light-images/home-page-light.webp" width="48%" alt="Home Page - Light Mode">
 </p>
 
 ---
@@ -138,45 +138,36 @@ Most YouTube downloaders on the internet are:
 
 **Video Player**
 <p align="center">
-  <img src="docs/assets/video-dark.webp" width="48%" alt="Video Player - Dark Mode">
+  <img src="docs/assets/dark-images/video-dark.webp" width="48%" alt="Video Player - Dark Mode">
   &nbsp;
-  <img src="docs/assets/video-light.webp" width="48%" alt="Video Player - Light Mode">
-</p>
-
----
-
-**Video Details & Description**
-<p align="center">
-  <img src="docs/assets/description-dark.webp" width="48%" alt="Video Description - Dark Mode">
-  &nbsp;
-  <img src="docs/assets/description-light.webp" width="48%" alt="Video Description - Light Mode">
+  <img src="docs/assets/light-images/video-light.webp" width="48%" alt="Video Player - Light Mode">
 </p>
 
 ---
 
 **Quick Download**
 <p align="center">
-  <img src="docs/assets/quick-download-dark.webp" width="48%" alt="Quick Download - Dark Mode">
+  <img src="docs/assets/dark-images/quick-download-dark.webp" width="48%" alt="Quick Download - Dark Mode">
   &nbsp;
-  <img src="docs/assets/quick-download-light.webp" width="48%" alt="Quick Download - Light Mode">
+  <img src="docs/assets/light-images/quick-download-light.webp" width="48%" alt="Quick Download - Light Mode">
 </p>
 
 ---
 
 **Advanced Download Options**
 <p align="center">
-  <img src="docs/assets/adv-options-dark.webp" width="48%" alt="Advanced Options - Dark Mode">
+  <img src="docs/assets/dark-images/adv-options-dark.webp" width="48%" alt="Advanced Options - Dark Mode">
   &nbsp;
-  <img src="docs/assets/adv-options-light.webp" width="48%" alt="Advanced Options - Light Mode">
+  <img src="docs/assets/light-images/adv-options-light.webp" width="48%" alt="Advanced Options - Light Mode">
 </p>
 
 ---
 
 **Precision Trimmer**
 <p align="center">
-  <img src="docs/assets/trimmer-dark.webp" width="48%" alt="Trimmer - Dark Mode">
+  <img src="docs/assets/dark-images/trimmer-dark.webp" width="48%" alt="Trimmer - Dark Mode">
   &nbsp;
-  <img src="docs/assets/trimmer-light.webp" width="48%" alt="Trimmer - Light Mode">
+  <img src="docs/assets/light-images/trimmer-light.webp" width="48%" alt="Trimmer - Light Mode">
 </p>
 
 ---
@@ -187,36 +178,36 @@ Most YouTube downloaders on the internet are:
 
 **Download History**
 <p align="center">
-  <img src="docs/assets/history-dark.webp" width="48%" alt="History - Dark Mode">
+  <img src="docs/assets/dark-images/history-dark.webp" width="48%" alt="History - Dark Mode">
   &nbsp;
-  <img src="docs/assets/history-light.webp" width="48%" alt="History - Light Mode">
+  <img src="docs/assets/light-images/history-light.webp" width="48%" alt="History - Light Mode">
 </p>
 
 ---
 
 **Profile / About**
 <p align="center">
-  <img src="docs/assets/prof-dark.webp" width="48%" alt="Profile - Dark Mode">
+  <img src="docs/assets/dark-images/prof-dark.webp" width="48%" alt="Profile - Dark Mode">
   &nbsp;
-  <img src="docs/assets/prof-light.webp" width="48%" alt="Profile - Light Mode">
+  <img src="docs/assets/light-images/prof-light.webp" width="48%" alt="Profile - Light Mode">
 </p>
 
 ---
 
 **Theme Settings**
 <p align="center">
-  <img src="docs/assets/theme-dark.webp" width="48%" alt="Theme Settings - Dark Mode">
+  <img src="docs/assets/dark-images/theme-dark.webp" width="48%" alt="Theme Settings - Dark Mode">
   &nbsp;
-  <img src="docs/assets/theme-light.webp" width="48%" alt="Theme Settings - Light Mode">
+  <img src="docs/assets/light-images/theme-light.webp" width="48%" alt="Theme Settings - Light Mode">
 </p>
 
 ---
 
 **Language Settings**
 <p align="center">
-  <img src="docs/assets/lang-dark.webp" width="48%" alt="Language Settings - Dark Mode">
+  <img src="docs/assets/dark-images/lang-dark.webp" width="48%" alt="Language Settings - Dark Mode">
   &nbsp;
-  <img src="docs/assets/lang-light.webp" width="48%" alt="Language Settings - Light Mode">
+  <img src="docs/assets/light-images/lang-light.webp" width="48%" alt="Language Settings - Light Mode">
 </p>
 
 ---
@@ -331,8 +322,11 @@ Even a star on GitHub helps a lot - it shows others the project is worth their t
     <td align="center">
       <strong>Utsav Parmar</strong><br>
       Full-Stack Developer<br>
-      <a href="https://github.com/Utsavstack">GitHub</a> &bull;
-      <a href="https://www.linkedin.com/in/utsavparmar-full-stack-dev">LinkedIn</a>
+      <br>
+      <a href="https://github.com/Utsavstack"><img src="https://img.shields.io/badge/GitHub-100000?style=flat-square&logo=github&logoColor=white" alt="GitHub"></a>
+      <a href="https://www.linkedin.com/in/utsavparmar-full-stack-dev"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat-square&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+      <a href="https://x.com/iutsavparmar"><img src="https://img.shields.io/badge/X-000000?style=flat-square&logo=x&logoColor=white" alt="X (Twitter)"></a>
+      <a href="https://instagram.com/_its_me_utsav_"><img src="https://img.shields.io/badge/Instagram-E4405F?style=flat-square&logo=instagram&logoColor=white" alt="Instagram"></a>
     </td>
   </tr>
 </table>
@@ -564,6 +558,6 @@ These terms may be updated at any time. The latest version will always be availa
 <p align="center">
   Built with love as a Free &amp; Open Source Project<br>
   <strong>Made With❤️UP7</strong><br><br>
-  <em>Last Updated: April 2026</em>
+  <em>Last Updated: May 2026</em>
 </p>
 
