@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 Page Not Found | YT Deluxe</title>
+    <meta name="description" content="The page you are looking for doesn't exist.">
+    <link href="https://fonts.googleapis.com/css2?family=Allan:wght@700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="antialiased bg-[#030303] text-white min-h-screen flex flex-col items-center justify-center px-4">
+
+    <!-- Ambient Background -->
+    <div class="fixed inset-0 bg-gradient-to-br from-indigo-500/[0.06] via-transparent to-rose-500/[0.06] blur-3xl pointer-events-none"></div>
+
+    <!-- Content -->
+    <div class="relative z-10 text-center max-w-lg mx-auto">
+
+        <!-- 404 Number -->
+        <div class="mb-8">
+            <span class="text-[8rem] md:text-[10rem] font-bold leading-none bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/30 to-rose-300 select-none" style="font-family: 'Allan', system-ui, sans-serif;">404</span>
+        </div>
+
+        <!-- Logo + Title -->
+        <div class="flex items-center justify-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-white/25 to-white/5 backdrop-blur-xl shadow-[0_8px_16px_rgba(0,0,0,0.6)] overflow-hidden flex items-center justify-center">
+                <img src="assets/logo.webp" alt="YT Deluxe" class="w-12 h-12 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <svg style="display:none;" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <span class="text-xl font-bold text-white" style="font-family: 'Allan', system-ui, sans-serif;">YT Deluxe</span>
+        </div>
+
+        <h1 class="text-2xl md:text-3xl font-bold text-white mb-4 tracking-tight">Page not found</h1>
+        <p class="text-white/40 text-sm md:text-base leading-relaxed mb-10">
+            The page you're looking for has been deleted, or doesn't exist.
+            Let's get you back on track.
+        </p>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="index.html" class="btn-primary px-7 py-3 text-sm font-bold">
+                ← Back to Home
+            </a>
+            <a href="https://github.com/Utsavstack/YT-Deluxe/issues" target="_blank" rel="noopener noreferrer" class="btn-secondary px-7 py-3 text-sm">
+                Report an Issue
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer Note -->
+    <p class="relative z-10 mt-16 text-xs text-white/20">© 2026 YT Deluxe · Utsavstack</p>
+
+</body>
+</html>
