@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Allan:wght@700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -132,7 +133,34 @@
         </div>
     </div>
 
-    <!-- Hero Section -->
+    <!-- Analytics Stats Bar -->
+    <section class="py-6 px-4 border-b border-white/[0.04]">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            <div class="flex flex-col items-center gap-1">
+                <span id="stat-total-downloads" class="text-2xl font-bold text-white">&mdash;</span>
+                <span class="text-[11px] text-white/30 uppercase tracking-widest flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Total Downloads
+                </span>
+            </div>
+            <div class="w-px h-10 bg-white/[0.06] hidden md:block"></div>
+            <div class="flex flex-col items-center gap-1">
+                <span id="stat-page-views" class="text-2xl font-bold text-white">&mdash;</span>
+                <span class="text-[11px] text-white/30 uppercase tracking-widest flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    Page Views
+                </span>
+            </div>
+            <div class="w-px h-10 bg-white/[0.06] hidden md:block"></div>
+            <div class="flex flex-col items-center gap-1">
+                <span id="stat-latest-version" class="text-2xl font-bold text-white">&mdash;</span>
+                <span class="text-[11px] text-white/30 uppercase tracking-widest flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Latest Version
+                </span>
+            </div>
+        </div>
+    </section>
     <section class="relative pt-40 pb-20 overflow-hidden">
         <!-- Ambient Background Shapes -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none -z-10">
@@ -155,107 +183,48 @@
         </div>
     </section>
 
-    <!-- Detailed Changelog Section -->
+    <!-- Release Notes Section (Latest Release) -->
+    <section id="release-notes" class="py-16 px-4 relative bg-white/[0.01]">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-4 mb-8">
+                <h2 class="text-3xl font-bold text-white tracking-tight">Release Notes</h2>
+                <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+            </div>
+            <div class="glass-card p-8 border-white/5 relative overflow-hidden reveal-on-scroll">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                    <div>
+                        <div class="flex items-center gap-3 mb-1">
+                            <span id="release-notes-version" class="text-2xl font-bold text-white">&mdash;</span>
+                            <span class="px-2 py-0.5 rounded-md bg-accent/20 text-accent text-[10px] font-bold uppercase tracking-wider">Latest</span>
+                        </div>
+                        <p id="release-notes-date" class="text-white/30 text-sm">&mdash;</p>
+                    </div>
+                    <a id="release-notes-download" href="#" target="_blank"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-sm font-semibold hover:bg-accent/20 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Download
+                    </a>
+                </div>
+                <div id="release-notes-body" class="prose prose-invert prose-sm max-w-none text-white/60 leading-relaxed space-y-2">
+                    <p class="text-white/20 italic text-sm">Loading release notes&hellip;</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Full Changelog Section -->
     <section id="changelog" class="py-20 px-4 relative">
         <div class="max-w-4xl mx-auto">
             <div class="flex items-center gap-4 mb-12">
-                <h2 class="text-3xl font-bold text-white tracking-tight">Full Changelog</h2>
+                <h2 class="text-3xl font-bold text-white tracking-tight">Previous Versions</h2>
                 <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
             </div>
-
-            <div class="space-y-12">
-                <!-- Version 1.0.0 -->
-                <div class="glass-card p-8 border-white/5 relative overflow-hidden reveal-on-scroll">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                        <div>
-                            <div class="flex items-center gap-3 mb-1">
-                                <span class="text-2xl font-bold text-white">v1.0.0</span>
-                                <span class="px-2 py-0.5 rounded-md bg-accent/20 text-accent text-[10px] font-bold uppercase tracking-wider">Latest Stable</span>
-                            </div>
-                            <p class="text-white/30 text-sm">Released on May 8, 2026</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <span class="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white/60">Desktop</span>
-                            <span class="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white/60">Web</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="space-y-4">
-                            <h4 class="text-sm font-bold text-white/80 uppercase tracking-widest flex items-center gap-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                New Features
-                            </h4>
-                            <ul class="space-y-3">
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Premium "Liquid Glass" UI overhaul for entire application.
-                                </li>
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    High-fidelity screenshot gallery with interactive modal.
-                                </li>
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Integrated Precision Lossless Trimmer (Beta).
-                                </li>
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Multi-language support for 15+ international locales.
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="space-y-4">
-                            <h4 class="text-sm font-bold text-white/80 uppercase tracking-widest flex items-center gap-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                Improvements
-                            </h4>
-                            <ul class="space-y-3">
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Enhanced download engine with faster metadata fetching.
-                                </li>
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Reduced binary size by 15% through dependency pruning.
-                                </li>
-                                <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                    <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    Optimized memory usage during long 4K downloads.
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Version 0.9.5 -->
-                <div class="glass-card p-8 border-white/5 relative overflow-hidden reveal-on-scroll">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                        <div>
-                            <div class="flex items-center gap-3 mb-1">
-                                <span class="text-xl font-bold text-white">v0.9.5</span>
-                                <span class="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/30 text-[10px] font-bold uppercase tracking-wider">Beta</span>
-                            </div>
-                            <p class="text-white/30 text-sm">Released on April 15, 2026</p>
-                        </div>
-                    </div>
-                    <div class="space-y-4">
-                        <ul class="space-y-3">
-                            <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                <span class="w-1.5 h-1.5 rounded-full bg-white/20 mt-2 shrink-0"></span>
-                                Fixed an issue where some age-restricted videos would fail to fetch.
-                            </li>
-                            <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                <span class="w-1.5 h-1.5 rounded-full bg-white/20 mt-2 shrink-0"></span>
-                                Added custom filename template support in settings.
-                            </li>
-                            <li class="flex items-start gap-3 text-sm text-white/50 leading-relaxed">
-                                <span class="w-1.5 h-1.5 rounded-full bg-white/20 mt-2 shrink-0"></span>
-                                Initial release of the desktop installer for Windows.
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+            <div id="dynamic-changelog" class="space-y-4">
+                <div class="text-center py-12 text-white/20 text-sm">Loading release history&hellip;</div>
+            </div>
+            <div class="mt-8 text-center">
+                <a href="https://github.com/Utsavstack/YT-Deluxe/releases" target="_blank"
+                   class="text-sm text-accent hover:underline">View all releases on GitHub &rarr;</a>
             </div>
         </div>
     </section>

@@ -16,6 +16,9 @@ import LicenseAndDisclaimer from './components/LicenseAndDisclaimer';
 
 import { useTheme } from '../../utils/ThemeContext';
 
+// ── Auto-reads from package.json — just bump version there, no manual UI updates needed
+const APP_VERSION = `v${import.meta.env.VITE_APP_VERSION || import.meta.env.PACKAGE_VERSION || '1.0.0-beta'}`;
+
 const UserSettingsPreferences = () => {
   const { t, i18n } = useTranslation();
   const { theme: currentTheme, setTheme: onThemeChange, accentColor: currentAccentColor, setAccentColor: handleAccentColorChange } = useTheme();
@@ -405,7 +408,7 @@ const UserSettingsPreferences = () => {
                   
                 <div className="flex items-center justify-center">
                   <span className="px-2.5 py-1 rounded-lg bg-primary/5 border border-border/50 text-[10px] font-bold text-primary/70">
-                    v1.0.0-beta
+                    {APP_VERSION}
                   </span>
                 </div>
 

@@ -14,7 +14,7 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 #define MyAppName "YT Deluxe"
-#define MyAppVersion "1.0.0 Beta"
+#define MyAppVersion "1.0.0-beta"
 #define MyAppPublisher "Utsavstack"
 #define MyAppURL "https://github.com/Utsavstack/YT-Deluxe"
 #define MyAppExeName "YT-Deluxe.exe"
@@ -30,7 +30,7 @@ AppSupportURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=output
-OutputBaseFilename=YT-Deluxe-Setup
+OutputBaseFilename=YT-Deluxe-Setup-v1.0.0-beta
 SetupIconFile=..\assets\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -567,7 +567,7 @@ begin
       RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
         'AutoOrganize', '0');
 
-    // Update notification (from finish page toggle)
+    // Update notification preference
     if FinishUpdateNotifyCheck <> nil then
     begin
       if FinishUpdateNotifyCheck.Checked then
@@ -586,6 +586,11 @@ begin
         RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
           'UpdateNotify', '0');
     end;
+
+    // Save installed version so the app can compare with GitHub latest release
+    // App reads this from localStorage key 'ytdeluxe_installed_version'
+    RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
+      'InstalledVersion', 'v{#MyAppVersion}');
 
     if PrivacyNetworkCheck.Checked then
       RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',

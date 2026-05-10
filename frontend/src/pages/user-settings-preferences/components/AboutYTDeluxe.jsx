@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import Icon from '../../../components/AppIcon';
 
+// ── Read from package.json via Vite — auto-updates when you bump package.json
+const APP_VERSION  = `v${import.meta.env.VITE_APP_VERSION || import.meta.env.PACKAGE_VERSION || '1.0.0-beta'}`;
+const isPreRelease = /alpha|beta|rc|pre/i.test(APP_VERSION);
+const releaseType  = isPreRelease ? 'Beta' : 'Stable';
+
 const AboutYTDeluxe = () => {
   const { t } = useTranslation();
 
@@ -110,9 +115,8 @@ const AboutYTDeluxe = () => {
               <p className="text-base md:text-md text-muted-foreground font-medium max-w-xl mx-auto leading-relaxed">
                 {t('aboutUs.heroSubtitle')}
               </p>
-              <div className="flex items-center justify-center space-x-2 pt-2">
-                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">v1.0.0</span>
-                <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">{t('aboutUs.prodReady')}</span>
+              <div className="flex items-center justify-center pt-2">
+                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">{APP_VERSION}</span>
               </div>
             </div>
           </div>

@@ -64,7 +64,9 @@
     "dev": "vite",
     "start": "vite",
     "build": "vite build --sourcemap",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "sync-version": "node sync-version.js",
+    "postversion": "npm run sync-version"
   },
   "eslintConfig": {
     "extends": [

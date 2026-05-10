@@ -667,16 +667,6 @@
                 <a href="#" id="main-download-btn" class="btn-primary px-6 py-3 md:px-8 md:py-4 text-base md:text-lg w-full sm:w-auto">
                     Download Latest Release
                 </a>
-                <p class="text-sm text-secondary" id="download-meta">Windows 10/11 • v1.0.0 • ~80MB</p>
-                
-                <!-- Recaptcha placeholder -->
-                <div class="mt-4 p-4 border border-border rounded bg-main/50 text-xs text-secondary w-full max-w-xs flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <input type="checkbox" id="captcha-mock" class="rounded text-accent focus:ring-accent w-4 h-4">
-                        <label for="captcha-mock">I'm not a robot</label>
-                    </div>
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/ad/RecaptchaLogo.svg" alt="reCAPTCHA" class="h-6 opacity-50 dark:invert">
-                </div>
             </div>
 
             <!-- System Requirements -->
@@ -782,59 +772,9 @@
         <div class="max-w-3xl mx-auto relative z-10" id="releases">
             <h2 class="text-3xl md:text-4xl font-bold mb-8 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700">Release History</h2>
             <div class="space-y-4" id="changelog-container">
-                <!-- v1.1.0 Capsule -->
-                <div class="changelog-item is-open bg-[#0a0a0c] border border-white/[0.04] rounded-[2.5rem] hover:bg-[#0f0f11] transition-colors group cursor-pointer overflow-hidden reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-100">
-                    <button class="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:px-8 outline-none text-left">
-                        <div class="flex items-center space-x-4">
-                            <span class="bg-[#14234b] text-[#5584ff] font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase">LATEST</span>
-                            <span class="text-white font-bold md:text-lg">v1.0.0 <span class="text-white/40 font-normal ml-1"> Production</span></span>
-                        </div>
-                        <div class="text-white/40 text-sm mt-3 md:mt-0 font-medium tracking-wide">
-                            March 24, 2026
-                        </div>
-                    </button>
-                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100">
-                        <div class="overflow-hidden">
-                            <div class="px-5 md:px-8 pb-6 pt-4 border-t border-white/[0.04] mx-4 md:mx-8 text-white/50 text-sm">
-                                <ul class="list-disc pl-5 space-y-2">
-                                    <li>Initial stable release of YT-Deluxe.</li>
-                                    <li>Added beautiful glassmorphic UI with floating geometric ambient shapes.</li>
-                                    <li>Implemented highly reliable yt-dlp backend with automatic dependency resolution.</li>
-                                    <li>Integrated comprehensive settings panel and download queue.</li>
-                                </ul>
-                                <div class="mt-6">
-                                    <a href="https://github.com/Utsavstack/YT-Deluxe/releases/latest" target="_blank" class="text-[#5584ff] hover:text-[#749aff] transition-colors font-medium">Download Windows Installer &rarr;</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- v0.9.0 Capsule -->
-                <div class="changelog-item bg-[#0a0a0c] border border-white/[0.04] rounded-[2.5rem] hover:bg-[#0f0f11] transition-colors group cursor-pointer overflow-hidden reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
-                    <button class="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:px-8 outline-none text-left">
-                        <div class="flex items-center space-x-4">
-                            <span class="bg-white/5 text-white/40 font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase">BETA</span>
-                            <span class="text-white/60 font-bold md:text-lg">v0.9.0 <span class="text-white/30 font-normal ml-1"> Initial Beta</span></span>
-                        </div>
-                        <div class="text-white/30 text-sm mt-3 md:mt-0 font-medium tracking-wide">
-                            February 12, 2026
-                        </div>
-                    </button>
-                    <div class="grid grid-rows-[0fr] opacity-0 transition-all duration-300 ease-in-out group-[.is-open]:grid-rows-[1fr] group-[.is-open]:opacity-100">
-                        <div class="overflow-hidden">
-                            <div class="px-5 md:px-8 pb-6 pt-4 border-t border-white/[0.04] mx-4 md:mx-8 text-white/50 text-sm">
-                                <ul class="list-disc pl-5 space-y-2">
-                                    <li>Early access beta release.</li>
-                                    <li>Basic video downloading capabilities integrated.</li>
-                                    <li>Initial dark theme draft.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Dynamically rendered by main.js renderIndexChangelog() -->
             </div>
-            <div class="text-center mt-8">
+            <div class="text-center mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <a href="https://github.com/Utsavstack/YT-Deluxe/releases" target="_blank" class="text-sm text-accent hover:underline">View all releases on GitHub &rarr;</a>
             </div>
         </div>

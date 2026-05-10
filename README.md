@@ -1,13 +1,13 @@
 <h1 align="center">
   <br>
-  <!-- Replace with your actual logo path -->
-  <img src="/frontend/public/assets/images/logo.webp" width="100" alt="YT Deluxe Logo">
+  <img src="/frontend/public/assets/images/logo.webp" width="100" alt="YT-Deluxe Logo">
   <br>
-  YT Deluxe
+  YT-Deluxe
   <br>
 </h1>
 
 <h4 align="center">
+  Premium YouTube Media Downloader<br><br>
   A Free & Open Source, Feature-Rich YouTube Downloader &amp; Media Manager<br>
   with a Premium Liquid Glass UI for Web &amp; Desktop.
 </h4>

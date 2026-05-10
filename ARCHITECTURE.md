@@ -12,12 +12,15 @@
 
 <h1 align="center">
   <br>
-  <!-- Replace with your actual logo path -->
-  <img src="/frontend/public/assets/images/logo.webp" width="100" alt="YT Deluxe Logo">
+  <img src="/frontend/public/assets/images/logo.webp" width="100" alt="YT-Deluxe Logo">
   <br>
-  YT Deluxe
+  YT-Deluxe
   <br>
 </h1>
+
+<h4 align="center">
+  Premium YouTube Media Downloader
+</h4>
 
 **YT Deluxe** is a *Free & OpenSource, Full-stack, Feature-rich* **YouTube Downloader and Media Management Hybrid (Web & Desktop) Application** with a **"Premium Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to **Search**, **Preview**, and **Download** YouTube Videos and Audio with a streamlined, premium experience.
 
@@ -66,10 +69,13 @@ In today’s digital-first world, YouTube is one of the largest sources of video
 ## 3. Demo
 
 
-![Preview](docs/assets/home-page-light.webp)
----     
-![Preview](docs/assets/video-light.webp)
----
+**Home / Search Page**
+<p align="center">
+  <img src="docs/assets/dark-images/home-page-dark.webp" width="48%" alt="Home Page - Dark Mode">
+  &nbsp;
+  <img src="docs/assets/light-images/home-page-light.webp" width="48%" alt="Home Page - Light Mode">
+</p>
+
 
 ## 4. Project Structure
 
@@ -337,14 +343,14 @@ YT Deluxe uses a **three-layer content delivery architecture** for both Trending
 
 ---
 
-#### 5.2.2 Backend: `/api/trending` — Cursor-Based Infinite Cache
+#### 5.2.2 Backend: `/api/trending` Cursor-Based Infinite Cache
 
 ##### 5.2.2.1 Constants & Cache Structure
 
 ```python
 TRENDING_CACHE_TTL  = 30 * 60   # 30-minute TTL per category
 TRENDING_FETCH_SIZE = 120        # Full background fill size (BG thread)
-TRENDING_QUICK_FETCH = 21        # Quick sync fetch — serves page 1 instantly
+TRENDING_QUICK_FETCH = 21        # Quick sync fetch serves page 1 instantly
 TRENDING_PAGE_SIZE  = 18         # Videos served per frontend request (3-col grid × 6 rows)
 
 _trending_cache: dict = {
@@ -380,7 +386,7 @@ flowchart TD
     J --> K["Return page 1 to user immediately"]
 
     J --> L["Spawn background thread\n_background_fill_trending()"]
-    L --> M["ytsearch120: '{base_keyword} {seed}'\n~10–15s — runs silently"]
+    L --> M["ytsearch120: '{base_keyword} {seed}'\n~10–15s runs silently"]
     M --> N["Deduplicate against quick cache"]
     N --> O["Merge + update cache\n{results:120+, filling:False}"]
     O --> P["User scroll → instant cache HIT"]
@@ -404,7 +410,7 @@ if remaining <= limit:              # about to run out
     # fetch → deduplicate → append to _trending_cache
 ```
 
-Seed rotation uses `(total // TRENDING_FETCH_SIZE) + int(time.time() // 600)` — so every 10-minute window and every new batch uses a different seed, ensuring diverse content.
+Seed rotation uses `(total // TRENDING_FETCH_SIZE) + int(time.time() // 600)` so every 10-minute window and every new batch uses a different seed, ensuring diverse content.
 
 ##### 5.2.2.4 Grid-Aligned Responses
 
@@ -450,14 +456,14 @@ This converts a noisy `AttributeError` crash into a clean empty-list return, imm
 
 ---
 
-#### 5.2.3 Backend: `/api/search` — Auto-Extending Page Cache
+#### 5.2.3 Backend: `/api/search` Auto-Extending Page Cache
 
 ##### 5.2.3.1 Constants & Cache Structure
 
 ```python
 SEARCH_PAGE_SIZE   = 18     # 3-col grid × 6 rows per page
 SEARCH_CACHE_FETCH = 180    # Full background fill (ytsearch180:)
-SEARCH_QUICK_FETCH = 21     # Quick sync fetch — serves page 1 instantly
+SEARCH_QUICK_FETCH = 21     # Quick sync fetch serves page 1 instantly
 SEARCH_CACHE_TTL   = 30 * 60
 
 _search_cache: dict = {
@@ -536,12 +542,12 @@ async def search_videos(q: str, page: int = 1):
 
 | Scenario | Response Time | Cards Returned |
 |---|---|---|
-| Search — cold (cache miss) | ~14–16s | 18 (page 1) |
-| Search — warm (cache hit) | **0.10s** | 18 |
-| Trending — cold (cache miss) | ~5–11s | 18 (page 1) |
-| Trending — warm (cursor=18) | **0.05s** | 18 |
+| Search  cold (cache miss) | ~14–16s | 18 (page 1) |
+| Search  warm (cache hit) | **0.10s** | 18 |
+| Trending  cold (cache miss) | ~5–11s | 18 (page 1) |
+| Trending  warm (cursor=18) | **0.05s** | 18 |
 
-> **Note:** First-load latency (~10–16s) is a fundamental yt-dlp + YouTube network constraint — it applies regardless of the result count requested (`ytsearch21` vs `ytsearch180` have nearly identical first-response times). The optimization delivers real value on **scroll** (0.05–0.10s cache hits) and **ensures the event loop stays responsive** to other requests during a slow search.
+> **Note:** First-load latency (~10–16s) is a fundamental yt-dlp + YouTube network constraint it applies regardless of the result count requested (`ytsearch21` vs `ytsearch180` have nearly identical first-response times). The optimization delivers real value on **scroll** (0.05–0.10s cache hits) and **ensures the event loop stays responsive** to other requests during a slow search.
 
 ---
 
@@ -555,7 +561,7 @@ Both `TrendingSection` and `SearchResults` use `react-virtuoso`'s `VirtuosoGrid`
 <VirtuosoGrid
   useWindowScroll          // Uses window scroll, NOT internal scrollbar
   style={{ overflow: 'hidden' }}  // Prevents double scrollbar bug
-  data={videos}            // Accumulated array — never reset on load-more
+  data={videos}            // Accumulated array never reset on load-more
   endReached={onLoadMore}  // Fires when user nears bottom
   overscan={400}           // 400px of pre-rendered DOM buffer above/below viewport
   components={{
@@ -597,17 +603,17 @@ As the user scrolls:
 - Cards leaving viewport (+ overscan zone) are **unmounted**
 - Only ~12–18 cards exist in the DOM at any time regardless of total list size
 
-##### 5.2.4.3 Stable DOM Node — Preventing Scroll Jumps
+##### 5.2.4.3 Stable DOM Node Preventing Scroll Jumps
 
 A critical bug was discovered: swapping between a skeleton `<div>` and `<VirtuosoGrid>` caused the browser to reset scroll position to `0` on data arrival. The fix: **always render `VirtuosoGrid`**. Skeletons live inside its `Footer` slot, so the DOM node is never unmounted.
 
 ```jsx
-// ❌ BEFORE (caused scroll jump on first load):
+// BEFORE (caused scroll jump on first load):
 if (isLoading) return <div className="grid...">{skeletons}</div>;
 return <VirtuosoGrid data={videos} .../>;
 
-// ✅ AFTER (stable DOM, no scroll jump):
-<VirtuosoGrid
+// AFTER (stable DOM, no scroll jump):
+<VirtuosoGrid>
   data={videos}   // empty array [] during initial load
   components={{
     Footer: () => (
@@ -619,7 +625,7 @@ return <VirtuosoGrid data={videos} .../>;
 
 ---
 
-#### 5.2.5 Frontend: TrendingSection — State Machine
+#### 5.2.5 Frontend: TrendingSection State Machine
 
 State is managed in `home-search-dashboard/index.jsx` and passed down as props:
 
@@ -662,7 +668,7 @@ sequenceDiagram
 
 ---
 
-#### 5.2.6 Frontend: SearchResults — Loading Stage Machine
+#### 5.2.6 Frontend: SearchResults Loading Stage Machine
 
 `SearchResults.jsx` uses a **2-stage loading state machine** unique from TrendingSection:
 
@@ -698,7 +704,7 @@ All skeleton loaders across the app (TrendingSection, SearchResults, VideoDetail
 
 | Token | Value | Purpose |
 |---|---|---|
-| `bg-muted` | CSS var (light: `#e5e7eb`, dark: `#1f2937`) | **Solid** skeleton block — visible in both themes |
+| `bg-muted` | CSS var (light: `#e5e7eb`, dark: `#1f2937`) | **Solid** skeleton block visible in both themes |
 | `animate-shimmer` | Tailwind keyframe: `bgPosition 0%→200%` | Sweep animation |
 | `via-white/50` | Light mode shimmer | High-contrast sweep |
 | `dark:via-white/5` | Dark mode shimmer | Subtle sweep |
@@ -711,7 +717,7 @@ All skeleton loaders across the app (TrendingSection, SearchResults, VideoDetail
 ```jsx
 const SkeletonCard = () => (
   <div className="glass-card shadow-glass-md rounded-[24px] overflow-hidden relative bg-card/40">
-    {/* Shimmer sweep — positioned absolute, travels left-to-right */}
+    {/* Shimmer sweep positioned absolute, travels left-to-right */}
     <div className="absolute inset-0 z-10 bg-gradient-to-r
       from-transparent via-white/50 dark:via-white/5 to-transparent
       bg-[length:200%_100%] animate-shimmer pointer-events-none"
@@ -737,7 +743,7 @@ const SkeletonCard = () => (
 );
 ```
 
-> **Key difference from old design:** Previously used `bg-muted/30` and `bg-muted/40` (semi-transparent), making skeletons invisible on light backgrounds. Changed to solid `bg-muted` — visible in both themes.
+> **Key difference from old design:** Previously used `bg-muted/30` and `bg-muted/40` (semi-transparent), making skeletons invisible on light backgrounds. Changed to solid `bg-muted` visible in both themes.
 
 ---
 
@@ -768,7 +774,7 @@ const SearchBar = ({ ..., initialValue = '' }) => {
 
 ---
 
-#### 5.2.9 Complete Data Flow — Search Infinite Scroll
+#### 5.2.9 Complete Data Flow Search Infinite Scroll
 
 ```mermaid
 sequenceDiagram
@@ -806,7 +812,7 @@ sequenceDiagram
 
 ---
 
-#### 5.2.10 Complete Data Flow — Trending Infinite Scroll
+#### 5.2.10 Complete Data Flow Trending Infinite Scroll
 
 ```mermaid
 sequenceDiagram
@@ -1651,6 +1657,94 @@ flowchart TD
   - **Native Downloads**: The backend has direct permission to write to the user's `Downloads/YT Deluxe Downloads` folder.
   - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
 - **One-Click Launch**: The `launcher.py` entry point ensures that both the server and the UI window open and close together gracefully.
+
+---
+
+### 5.9 System Architecture & Workflows
+
+YT Deluxe operates on a highly integrated mono-repo architecture. The entire lifecyclerom coding to building, packaging, and web distributions fully automated and synchronized.
+
+#### 5.9.1 Mono-Repo Deployment Architecture
+How the codebase is structured and distributed.
+
+```mermaid
+graph TD
+    subgraph Mono-Repo [YT-Deluxe GitHub Repository]
+        A[Frontend / React Vite]
+        B[Backend / FastAPI Python]
+        C[Desktop / PyInstaller & Inno Setup]
+        D[Website / Static Landing Page]
+    end
+
+    subgraph CI/CD & Build
+        A -->|NPM Build| Bundled_UI
+        B -->|PyInstaller| Executable_Engine
+        Bundled_UI & Executable_Engine --> C
+        C -->|ISCC compiler| Setup_EXE[YT-Deluxe-Setup.exe]
+        D -->|Auto-Sync| Vercel[Vercel Edge Network]
+    end
+
+    Setup_EXE -->|Manual Upload| GHR[GitHub Releases]
+    Vercel -->|Hosts| Web[yt-deluxe.vercel.app]
+```
+
+**How it works:**
+- **Single Source of Truth:** The entire project (React Frontend, Python Backend, Windows Installer script, and the Static Website) lives in one repository. 
+- **Desktop Build:** The React UI is bundled via NPM, the Python backend is compiled via PyInstaller, and both are packaged into a native `.exe` using Inno Setup.
+- **Web Deployment:** The `website/` directory is an ultra-fast, static landing page connected directly to Vercel. Any push to the repository automatically deploys the website to the edge network without requiring complex CI/CD YAML files.
+
+#### 5.9.2 Version Synchronization Pipeline
+How version numbers stay perfectly synced across React, the Windows Registry, and the Installer.
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant PKG as package.json
+    participant VITE as Vite Config
+    participant SYNC as sync-version.js
+    participant ISS as setup.iss
+    
+    Dev->>PKG: Runs `npm version [bump]`
+    PKG->>VITE: Build-time injection
+    VITE->>ReactApp: import.meta.env.VITE_APP_VERSION
+    PKG->>SYNC: Triggers `postversion` hook
+    SYNC->>ISS: Patches `#define MyAppVersion`
+    SYNC->>ISS: Renames OutputBaseFilename
+    Note over ISS,ReactApp: 100% Synchronized Source of Truth
+```
+
+**How it works:**
+- **The Problem:** Hardcoding versions (e.g., `v1.0.0-beta`) across React components, HTML files, and PascalScript installer files is prone to human error.
+- **The Solution:** We established `frontend/package.json` as the master version controller.
+- **The Flow:** When the developer bumps the version, Vite automatically injects it into the React application environment (`import.meta.env.VITE_APP_VERSION`). Simultaneously, an NPM `postversion` hook triggers a custom Node script (`sync-version.js`) that physically rewrites the Inno Setup (`setup.iss`) variables to ensure the final `.exe` is perfectly version-matched.
+
+#### 5.9.3 Dynamic App Updates & API Rate Limiting
+How the Desktop App and Website fetch the latest `.exe` without hitting GitHub API limits.
+
+```mermaid
+graph TD
+    User((User)) -->|Visits Web / Opens App| Cache{Check LocalStorage<br>Cache TTL}
+    
+    Cache -->|Valid / Fresh| DOM[Render cached UI & Download Link]
+    Cache -->|Expired / None| API[Fetch api.github.com/releases/latest]
+    
+    API -->|Save to Storage| Cache
+    API --> Parse[Parse Markdown & Extract .exe Asset]
+    Parse --> DOM
+    
+    subgraph Cache Strategy
+        W[Web: 1-Hour Cache]
+        A[App: 24-Hour Cache]
+    end
+    
+    Note over Cache,API: Protects against DDoS<br>and GitHub 60 req/hr limits
+```
+
+**How it works:**
+- **API Rate Limiting Defense:** The GitHub Releases API heavily restricts unauthenticated requests (max 60 per hour per IP). To prevent the app or website from crashing during high traffic, we implemented a strict dual-cache strategy.
+- **Web Cache (1 Hour):** The landing page caches the API response in `localStorage`. If 10,000 users visit the site in an hour, only 1 request goes to GitHub.
+- **Desktop Cache (24 Hours):** The installed app checks for updates in the background. To save massive bandwidth and preserve API quotas, the app only pings GitHub once every 24 hours.
+- **Markdown Parsing:** The JavaScript engine natively intercepts GitHub's raw markdown changelog, parses `**bold**` and `` `code` `` tags, and dynamically renders fluid, collapsible UI accordions without any server-side rendering.
 
 ---
 
