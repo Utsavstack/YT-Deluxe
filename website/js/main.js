@@ -134,9 +134,15 @@ async function renderRelease() {
     const heroDownloadBtn = document.getElementById('hero-download-btn');
     if (heroDownloadBtn && release.downloadUrl) heroDownloadBtn.href = release.downloadUrl;
 
+    const heroBtnVer = document.getElementById('hero-btn-version');
+    if (heroBtnVer) heroBtnVer.textContent = release.version;
+
     // Meta text under download button
     const downloadMeta = document.getElementById('download-meta');
     if (downloadMeta) downloadMeta.textContent = `Windows 10/11 \u2022 ${release.version} \u2022 ${release.size}`;
+
+    const mainDownloadMeta = document.getElementById('main-download-meta');
+    if (mainDownloadMeta) mainDownloadMeta.textContent = `${release.version} \u2022 ${release.date}`;
 
     // Analytics stats
     const statDownloads = document.getElementById('stat-downloads');

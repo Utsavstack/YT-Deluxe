@@ -306,7 +306,10 @@
                         <svg class="w-5 h-5 md:w-6 md:h-6 mr-3 md:mr-4 relative z-10" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.801"/>
                         </svg>
-                        <span class="relative z-10 font-bold tracking-wide">Download for Windows</span>
+                        <div class="flex flex-col items-center relative z-10 leading-tight">
+                            <span class="font-bold tracking-wide">Download for Windows</span>
+                            <span id="hero-btn-version" class="text-[13px] opacity-60 font-medium mr-[23px] mt-[1px]"></span>
+                        </div>
                     </a>
                     
                     <a href="https://github.com/Utsavstack/YT-Deluxe" target="_blank" rel="noopener noreferrer" class="btn-secondary px-5 py-2.5 md:px-7 md:py-3 text-[13px] md:text-base w-64 sm:w-auto">
@@ -663,14 +666,15 @@
             <h2 class="text-3xl md:text-5xl font-bold mb-6 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-white/90 to-rose-300">Ready to upgrade your workflow?</h2>
             <p class="text-lg text-secondary mb-10 max-w-xl mx-auto">Get YT-Deluxe today and experience the fastest, most reliable way to save media offline.</p>
             
-            <div class="flex flex-col items-center justify-center space-y-4">
+            <div class="flex flex-col items-center justify-center space-y-5">
                 <a href="#" id="main-download-btn" class="btn-primary px-6 py-3 md:px-8 md:py-4 text-base md:text-lg w-full sm:w-auto">
                     Download Latest Release
                 </a>
+                <p id="main-download-meta" class="text-sm text-white/50 font-medium tracking-wide"></p>
             </div>
 
             <!-- System Requirements -->
-            <div class="mt-16 max-w-xl mx-auto border-t border-white/[0.06] pt-12 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
+            <div class="mt-10 max-w-xl mx-auto border-t border-white/[0.06] pt-8 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
                 <h3 class="text-xl font-bold text-white mb-6 flex items-center justify-center gap-2">
                     <svg class="w-5 h-5 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
                     System Requirements
