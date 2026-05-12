@@ -31,6 +31,15 @@ const GlobalPIPPlayer = () => {
   const [videoReady, setVideoReady] = useState(false);
   const [embedError, setEmbedError] = useState(false);
 
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   // Ping YouTube iframe to listen
   useEffect(() => {
     let intervalId;
@@ -141,14 +150,25 @@ const GlobalPIPPlayer = () => {
   };
 
   const handleMouseEnter = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setIsHovered(true);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (isPlaying && isFullscreen) {
+       hoverTimeoutRef.current = setTimeout(() => setIsHovered(false), 2500);
+    }
   };
 
   const handleMouseLeave = () => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovered(false);
-    }, 1500); // Wait 1.5s before hiding controls
+    if (!isFullscreen) {
+      hoverTimeoutRef.current = setTimeout(() => setIsHovered(false), 1500);
+    }
+  };
+
+  const handleMouseMove = () => {
+    setIsHovered(true);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (isPlaying) {
+      hoverTimeoutRef.current = setTimeout(() => setIsHovered(false), 2500);
+    }
   };
 
   const handleDownloadRedirect = (e) => {
@@ -178,9 +198,10 @@ const GlobalPIPPlayer = () => {
           dragMomentum={true}
           dragTransition={{ bounceStiffness: 400, bounceDamping: 25, power: 0.2 }}
           whileDrag={{ scale: 1.02, cursor: "grabbing" }}
-          className="fixed bottom-6 right-6 z-[9999] bg-black rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.6)] border border-white/20 overflow-hidden w-[340px] aspect-video group"
+          className={`fixed bottom-6 right-6 z-[9999] bg-black shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/10 overflow-hidden group ${isFullscreen ? 'w-full h-full rounded-none inset-0 max-w-none max-h-none border-none' : 'w-[360px] aspect-video rounded-2xl'} ${isFullscreen && !isHovered ? 'cursor-none' : ''}`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onMouseMove={handleMouseMove}
         >
           {/* IFrame Player */}
           {!embedError ? (
@@ -221,7 +242,7 @@ const GlobalPIPPlayer = () => {
           )}
 
           {/* Top Title Bar (Draggable Area) */}
-          <div className="absolute top-0 left-0 right-0 h-12 z-20 bg-gradient-to-b from-black/90 to-transparent flex items-start justify-between px-3 pt-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className={`absolute top-0 left-0 right-0 h-12 z-20 bg-gradient-to-b from-black/90 to-transparent flex items-start justify-between px-3 pt-2.5 transition-opacity duration-500 ease-out ${isHovered || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
             <div className="font-semibold text-white text-[12px] line-clamp-1 mr-4 drop-shadow-md cursor-grab active:cursor-grabbing flex-1 pb-2">
               {pipVideo?.title}
             </div>
@@ -235,64 +256,73 @@ const GlobalPIPPlayer = () => {
 
           {/* Center Play/Pause Overlay */}
           <div 
-            className={`absolute inset-0 z-10 flex items-center justify-center cursor-pointer transition-opacity duration-300 ${!isPlaying ? 'opacity-100 bg-black/40' : (isHovered ? 'opacity-100' : 'opacity-0')}`}
+            className={`absolute inset-0 z-10 flex items-center justify-center cursor-pointer transition-opacity duration-500 ease-out ${!isPlaying ? 'opacity-100 bg-black/50 backdrop-blur-[2px]' : (isHovered ? 'opacity-100 bg-black/30' : 'opacity-0')}`}
             onClick={togglePlay}
           >
-            <div className={`flex items-center space-x-6 transform transition-transform ${isHovered || !isPlaying ? 'scale-100' : 'scale-90 relative top-2'}`}>
+            <div className={`flex items-center ${isFullscreen ? 'space-x-12' : 'space-x-4'} transform transition-transform duration-500 ease-out ${isHovered || !isPlaying ? 'scale-100 translate-y-0' : 'scale-90 translate-y-4'}`}>
               {/* Back 10s */}
-              <button onClick={(e) => seekBy(-10, e)} className="text-white/80 hover:text-white p-2 rounded-full hover:bg-white/20 backdrop-blur-sm transition-colors active:scale-95 text-xs font-bold font-mono">
-                -10
+              <button 
+                onClick={(e) => seekBy(-10, e)} 
+                className={`text-white/90 hover:text-white ${isFullscreen ? 'p-4' : 'p-2'} rounded-full hover:bg-white/20 hover:backdrop-blur-md transition-all active:scale-90 flex flex-col items-center`}
+                title="Rewind 10s"
+              >
+                <Icon name="RotateCcw" size={isFullscreen ? 28 : 18} strokeWidth={2} />
               </button>
               
               {/* Big Play/Pause */}
               <button 
                  onClick={togglePlay} 
-                 className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-primary hover:border-primary/50 transition-all hover:scale-105 active:scale-95"
+                 className={`${isFullscreen ? 'w-20 h-20' : 'w-12 h-12'} rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white hover:bg-white/30 hover:border-white/40 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all hover:scale-110 active:scale-95`}
               >
-                <Icon name={isPlaying ? "Pause" : "Play"} size={24} fill={isPlaying ? "none" : "currentColor"} className={isPlaying ? "" : "ml-1"} />
+                <Icon name={isPlaying ? "Pause" : "Play"} size={isFullscreen ? 36 : 20} fill={isPlaying ? "none" : "currentColor"} className={isPlaying ? "" : "ml-0.5"} />
               </button>
               
               {/* Forward 10s */}
-              <button onClick={(e) => seekBy(10, e)} className="text-white/80 hover:text-white p-2 rounded-full hover:bg-white/20 backdrop-blur-sm transition-colors active:scale-95 text-xs font-bold font-mono">
-                +10
+              <button 
+                onClick={(e) => seekBy(10, e)} 
+                className={`text-white/90 hover:text-white ${isFullscreen ? 'p-4' : 'p-2'} rounded-full hover:bg-white/20 hover:backdrop-blur-md transition-all active:scale-90 flex flex-col items-center`}
+                title="Forward 10s"
+              >
+                <Icon name="RotateCw" size={isFullscreen ? 28 : 18} strokeWidth={2} />
               </button>
             </div>
           </div>
 
           {/* Bottom Controls Bar */}
-          <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none">
+          <div className={`absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none transition-transform duration-500 ease-out ${isHovered || !isPlaying ? 'translate-y-0' : 'translate-y-full'}`}>
+             
              {/* Progress Bar Area */}
-             <div className={`w-full relative h-1.5 hover:h-2 transition-all bg-white/20 cursor-pointer flex items-center pointer-events-auto ${isHovered || !isPlaying ? 'opacity-100' : 'opacity-0 translate-y-2'} duration-300`}>
-                <div className="absolute top-0 left-0 h-full bg-primary pointer-events-none rounded-r-full" style={{ width: `${Math.max(0, Math.min(100, (currentTime || 0) / (duration || pipVideo?.duration || 1) * 100))}%` }} />
+             <div className="w-full relative h-1.5 hover:h-2.5 transition-all bg-white/20 cursor-pointer flex items-center pointer-events-auto">
+                <div className="absolute top-0 left-0 h-full bg-primary pointer-events-none" style={{ width: `${Math.max(0, Math.min(100, (currentTime || 0) / (duration || pipVideo?.duration || 1) * 100))}%` }} />
                 <input 
                   type="range" min="0" max={duration || pipVideo?.duration || 100} value={currentTime || 0} 
                   onChange={handleSeekChange} onClick={(e) => e.stopPropagation()} 
-                  className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 hover:[&::-webkit-slider-thumb]:w-3 hover:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full" 
+                  className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 hover:[&::-webkit-slider-thumb]:w-3.5 hover:[&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full transition-all" 
                 />
              </div>
 
              {/* Bottom row actions */}
-             <div className={`px-2 py-1.5 bg-gradient-to-t from-black/90 to-black/20 flex justify-between items-center pointer-events-auto transition-all duration-300 ${isHovered || !isPlaying ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}>
-               <div className="flex items-center space-x-2">
-                 <button onClick={toggleMute} className="text-white hover:text-primary p-1 rounded transition-colors active:scale-90">
-                   <Icon name={isMuted ? "VolumeX" : "Volume2"} size={16} />
+             <div className="px-3 py-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex justify-between items-center pointer-events-auto">
+               <div className="flex items-center space-x-3">
+                 <button onClick={toggleMute} className="text-white hover:text-red-500 hover:bg-white/10 p-1.5 rounded-full transition-colors active:scale-90">
+                   <Icon name={isMuted ? "VolumeX" : "Volume2"} size={18} />
                  </button>
-                 <span className="text-[10px] select-none font-bold text-white/90 font-mono tracking-widest">
-                   {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration || pipVideo?.duration || 0))}
+                 <span className="text-[11px] select-none font-medium text-white/90 tracking-wide drop-shadow-md">
+                   {formatDuration(Math.floor(currentTime))} <span className="text-white/50 mx-1">/</span> {formatDuration(Math.floor(duration || pipVideo?.duration || 0))}
                  </span>
                </div>
                
-               <div className="flex items-center space-x-1">
+               <div className="flex items-center space-x-2">
                  <button 
                    onClick={handleDownloadRedirect}
-                   className="text-[10px] bg-primary/20 hover:bg-primary text-primary hover:text-white border border-primary/30 px-2 py-1 mr-1 rounded-md ml-1 font-bold tracking-wide transition-all uppercase flex items-center gap-1 active:scale-95"
+                   className="text-[11px] bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 px-3 py-1.5 rounded-full font-semibold tracking-wide transition-all uppercase flex items-center gap-1.5 active:scale-95"
                    title="Download Video"
                  >
-                   <Icon name="DownloadCloud" size={12} strokeWidth={2.5}/> Download
+                   <Icon name="Download" size={13} strokeWidth={2.5}/> Download
                  </button>
                  
-                 <button onClick={requestFullscreen} className="text-white hover:text-primary p-1 rounded transition-colors active:scale-90">
-                   <Icon name="Maximize" size={14} />
+                 <button onClick={requestFullscreen} className="text-white hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-colors active:scale-90 ml-1">
+                   <Icon name={isFullscreen ? "Minimize" : "Maximize"} size={16} />
                  </button>
                </div>
              </div>

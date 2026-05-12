@@ -709,6 +709,70 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
     "region": region,
   }
 
+# ── Endpoint: YouTube Search Suggestions (real-time autocomplete) ──────────
+# Uses Google's public YouTube suggestion API — same as ytdlnis / YouTube app
+@app.get("/api/suggestions")
+async def get_search_suggestions(q: str, lang: str = "en"):
+  """
+  Returns real-time YouTube keyword suggestions for the given query.
+  Uses Firefox client UA for clean JSON (no JSONP wrapper).
+  Response: { "suggestions": ["suggestion1", "suggestion2", ...] }
+  """
+  if not q or not q.strip():
+    return {"suggestions": []}
+  try:
+    import urllib.request
+    import urllib.parse
+    import json as _json
+    import re as _re
+    query_encoded = urllib.parse.quote(q.strip())
+
+    # 'firefox' client returns clean JSON: ["query", ["sug1", "sug2", ...]]
+    url = (
+      f"https://suggestqueries.google.com/complete/search"
+      f"?client=firefox&ds=yt&q={query_encoded}&hl={lang}"
+    )
+    headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0",
+      "Accept": "application/json",
+      "Accept-Language": f"{lang},en;q=0.9",
+    }
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=5) as resp:
+      raw = resp.read().decode("utf-8")
+
+    data = _json.loads(raw)
+    # Firefox format: ["query", ["sug1", "sug2", ...]]
+    if isinstance(data, list) and len(data) > 1 and isinstance(data[1], list):
+      suggestions = [s for s in data[1] if isinstance(s, str)]
+      print(f"[Suggestions] '{q}' → {len(suggestions)} results")
+      return {"suggestions": suggestions[:10]}
+
+    # Fallback: try JSONP chrome client, strip wrapper
+    url2 = (
+      f"https://suggestqueries.google.com/complete/search"
+      f"?client=youtube&ds=yt&q={query_encoded}&hl={lang}"
+    )
+    h2 = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept-Language": f"{lang},en;q=0.9",
+    }
+    req2 = urllib.request.Request(url2, headers=h2)
+    with urllib.request.urlopen(req2, timeout=5) as resp2:
+      raw2 = resp2.read().decode("utf-8")
+    match = _re.search(r'\((\[.*\])\)\s*$', raw2, _re.DOTALL)
+    if match:
+      data2 = _json.loads(match.group(1))
+      raw_items = data2[1] if len(data2) > 1 else []
+      suggestions = [item[0] for item in raw_items if isinstance(item, list) and item]
+      print(f"[Suggestions JSONP fallback] '{q}' → {len(suggestions)} results")
+      return {"suggestions": suggestions[:10]}
+
+    return {"suggestions": []}
+  except Exception as e:
+    print(f"[Suggestions] Error for '{q}': {e}")
+    return {"suggestions": []}
+
 # Endpoint: Get video details (by URL)
 @app.get("/api/video")
 def get_video_details(url: str):

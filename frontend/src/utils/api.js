@@ -283,6 +283,18 @@ class YTDeluxeAPI {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  // Get real-time YouTube search suggestions (autocomplete)
+  static async getSuggestions(query) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/suggestions?q=${encodeURIComponent(query)}`);
+      const data = await handleResponse(response);
+      return data.suggestions || [];
+    } catch (error) {
+      console.warn('Suggestions API error:', error);
+      return [];
+    }
+  }
+
   // Helper function to detect YouTube URL
   static isYouTubeUrl(query) {
     return (

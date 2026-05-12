@@ -116,6 +116,14 @@
   transform: scale(0.95);
 }
 
+.search-action-btn.clear-btn {
+  color: var(--color-error, #ef4444);
+}
+
+.search-action-btn.clear-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .search-action-btn.primary-btn {
   background: var(--color-primary);
   color: var(--color-primary-foreground);
@@ -201,12 +209,12 @@
 
 /* Suggestion Box Styles matching the new theme */
 .search-suggestions-container {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.774);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   overflow: hidden;
   margin-top: 12px;
   padding: 8px;
@@ -218,9 +226,9 @@
 }
 
 .dark .search-suggestions-container {
-  background: rgba(30, 30, 30, 0.65);
+  background: rgba(30, 30, 30, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .search-suggestion-item {
@@ -233,9 +241,15 @@
   color: var(--color-foreground);
 }
 
-.search-suggestion-item:hover {
+.search-suggestion-item:hover,
+.search-suggestion-item.suggestion-active {
   background: var(--color-accent);
   color: var(--color-primary);
+}
+
+.search-suggestion-item:hover .suggestion-fill-icon,
+.search-suggestion-item.suggestion-active .suggestion-fill-icon {
+  opacity: 1 !important;
 }
 
 .search-suggestion-item .suggestion-icon {

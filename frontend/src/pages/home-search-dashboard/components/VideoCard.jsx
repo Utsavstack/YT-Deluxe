@@ -256,23 +256,27 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
             />
             <div className="absolute inset-0 cursor-pointer z-10" onClick={(e) => { e.stopPropagation(); handleCardClick(); }} />
             
-            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-md border border-white/20 rounded-[10px] flex flex-col z-20 pointer-events-auto shadow-glass-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between text-white px-3 py-1.5">
-                <button onClick={togglePlayState} className="hover:text-primary transition-colors focus:outline-none flex items-center justify-center active:scale-90 opacity-90 hover:opacity-100">
-                  <Icon name={isPlaying ? "Pause" : "Play"} size={16} fill={isPlaying ? "none" : "currentColor"} className={isPlaying ? "" : "ml-0.5"} />
-                </button>
+            <div className="absolute bottom-2 left-2 right-2 flex flex-col z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+              {/* Progress Bar (Floating) */}
+              <div className="w-full relative h-1.5 group/slider hover:h-2 transition-all bg-white/20 cursor-pointer flex items-center rounded-full overflow-hidden mb-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)] backdrop-blur-sm border border-white/10">
+                <div className="absolute top-0 left-0 h-full bg-primary pointer-events-none transition-all duration-200 ease-linear" style={{ width: `${Math.max(0, Math.min(100, (currentTime || 0) / (duration || video?.duration || 1) * 100))}%` }} />
+                <input type="range" min="0" max={duration || video?.duration || 100} value={currentTime || 0} onChange={handleSeekChange} onClick={(e) => e.stopPropagation()} className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 group-hover/slider:[&::-webkit-slider-thumb]:w-3 group-hover/slider:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_5px_rgba(0,0,0,0.5)] [&::-webkit-slider-thumb]:transition-all" />
+              </div>
+              
+              {/* Controls Pill */}
+              <div className="flex items-center justify-between bg-black/60 backdrop-blur-xl border border-white/20 rounded-full px-3 py-1.5 shadow-glass-xl">
                 <div className="flex items-center space-x-3">
-                  <span className="text-[11px] select-none font-bold text-white/95 text-right tracking-[0.1em]" style={{ fontFamily: '"Roboto Mono", ui-monospace, monospace' }}>
-                    {formatDuration(Math.floor(currentTime))} / {formatDuration(Math.floor(duration || video?.duration || 0))}
-                  </span>
-                  <button onClick={toggleMuteState} className="hover:text-primary transition-colors focus:outline-none active:scale-90 opacity-90 hover:opacity-100">
-                    <Icon name={isMuted ? "VolumeX" : "Volume2"} size={16} />
+                  <button onClick={togglePlayState} className="w-7 h-7 flex items-center justify-center bg-white/10 hover:bg-primary rounded-full text-white transition-all active:scale-90 border border-white/10 hover:border-primary/50">
+                    <Icon name={isPlaying ? "Pause" : "Play"} size={14} fill={isPlaying ? "none" : "currentColor"} className={isPlaying ? "" : "ml-0.5"} />
+                  </button>
+                  <button onClick={toggleMuteState} className="text-white/80 hover:text-white transition-colors active:scale-90 p-1 hover:bg-white/10 rounded-full">
+                    <Icon name={isMuted ? "VolumeX" : "Volume2"} size={14} />
                   </button>
                 </div>
-              </div>
-              <div className="w-full relative h-[3px] group/slider hover:h-[5px] transition-all bg-white/20 cursor-pointer flex items-center">
-                <div className="absolute top-0 left-0 h-full bg-primary pointer-events-none transition-all duration-200 ease-linear rounded-r-full" style={{ width: `${Math.max(0, Math.min(100, (currentTime || 0) / (duration || video?.duration || 1) * 100))}%` }} />
-                <input type="range" min="0" max={duration || video?.duration || 100} value={currentTime || 0} onChange={handleSeekChange} onClick={(e) => e.stopPropagation()} className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_10px_2px_rgba(0,0,0,0.3)] group-hover/slider:[&::-webkit-slider-thumb]:w-3.5 group-hover/slider:[&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:transition-all" />
+                
+                <span className="text-[10px] font-bold text-white/90 tracking-widest font-mono drop-shadow-sm">
+                  {formatDuration(Math.floor(currentTime))} <span className="text-white/40 mx-0.5">/</span> {formatDuration(Math.floor(duration || video?.duration || 0))}
+                </span>
               </div>
             </div>
           </div>

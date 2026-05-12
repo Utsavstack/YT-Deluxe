@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Icon from '../../../components/AppIcon';
+import YTDeluxeAPI from '../../../utils/api';
 import './SearchBar.css';
 
 const isYouTubeUrl = (url) => {
@@ -14,28 +15,35 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [clipboardLink, setClipboardLink] = useState('');
 
   const searchRef = useRef(null);
   const suggestionsRef = useRef(null);
   const recognitionRef = useRef(null);
+  const debounceRef = useRef(null);
 
   // Sync searchQuery with initialValue if it changes externally
   useEffect(() => {
     setSearchQuery(initialValue);
   }, [initialValue]);
 
-  // Mock auto-suggestions
-  const mockSuggestions = [
-    "React tutorial for beginners",
-    "JavaScript ES6 features",
-    "CSS Grid layout guide",
-    "Node.js crash course",
-    "Python data science",
-    "Machine learning basics",
-    "Web development 2024",
-    "TypeScript fundamentals"
-  ];
+  // Fetch real YouTube suggestions with debounce
+  const fetchSuggestions = useCallback(async (value) => {
+    if (!value?.trim() || value.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setIsSuggestionsLoading(false);
+      return;
+    }
+    setIsSuggestionsLoading(true);
+    setShowSuggestions(true);
+    const results = await YTDeluxeAPI.getSuggestions(value.trim());
+    setSuggestions(results.slice(0, 8));
+    setActiveIndex(-1);
+    setIsSuggestionsLoading(false);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -97,16 +105,18 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
   const handleInputChange = (e) => {
     const value = e?.target?.value;
     setSearchQuery(value);
+    setActiveIndex(-1);
 
-    if (value?.trim()) {
-      const filtered = mockSuggestions?.filter((suggestion) =>
-        suggestion?.toLowerCase()?.includes(value?.toLowerCase())
-      );
-      setSuggestions(filtered?.slice(0, 5));
+    // Debounce: clear previous timer, fire after 280ms idle
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value?.trim()?.length >= 2) {
+      setIsSuggestionsLoading(true);
       setShowSuggestions(true);
+      debounceRef.current = setTimeout(() => fetchSuggestions(value), 280);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
+      setIsSuggestionsLoading(false);
     }
   };
 
@@ -123,7 +133,22 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
 
   const handleKeyPress = (e) => {
     if (e?.key === 'Enter') {
-      handleSearch();
+      if (activeIndex >= 0 && suggestions[activeIndex]) {
+        // Select highlighted suggestion
+        setSearchQuery(suggestions[activeIndex]);
+        handleSearch(suggestions[activeIndex]);
+      } else {
+        handleSearch();
+      }
+    } else if (e?.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+    } else if (e?.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => Math.max(prev - 1, -1));
+    } else if (e?.key === 'Escape') {
+      setShowSuggestions(false);
+      setActiveIndex(-1);
     }
   };
 
@@ -186,16 +211,23 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
               type="text"
               value={searchQuery}
               onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder={t("homeSearchDashboard.searchVideosOrPaste")}
               className="search-input-field"
             />
 
             <div className="flex items-center">
+              {/* Loading Spinner */}
+              {isSuggestionsLoading && (
+                <div className="search-action-btn pointer-events-none">
+                  <Icon name="Loader2" size={18} className="animate-spin text-primary/60" />
+                </div>
+              )}
+
               {/* Clear Button */}
-              {searchQuery && (
+              {searchQuery && !isSuggestionsLoading && (
                 <button
-                  className="search-action-btn"
+                  className="search-action-btn clear-btn"
                   title="Clear"
                   onClick={() => {
                     setSearchQuery('');
@@ -244,19 +276,33 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
           </div>
         </div>
 
-        {/* Auto-suggestions Dropdown — hidden for now, will implement later */}
-        {false && showSuggestions && suggestions?.length > 0 && (
+        {/* Real-time YouTube Suggestions Dropdown */}
+        {showSuggestions && suggestions?.length > 0 && !isSuggestionsLoading && (
           <div ref={suggestionsRef} className="search-suggestions-container animate-slide-down">
-            <div className="text-xs text-muted-foreground px-3 py-2 font-medium uppercase tracking-wider">
-              {t("homeSearchDashboard.suggestions")}
-            </div>
+            {/* Suggestion items */}
             {suggestions?.map((suggestion, index) => (
               <div
                 key={index}
-                onClick={() => handleSearch(suggestion)}
-                className="search-suggestion-item">
-                <Icon name="Search" size={16} className="suggestion-icon" />
-                <span className="truncate">{suggestion}</span>
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(-1)}
+                onClick={() => {
+                  setSearchQuery(suggestion);
+                  handleSearch(suggestion);
+                }}
+                className={`search-suggestion-item ${activeIndex === index ? 'suggestion-active' : ''}`}>
+                <Icon name="Search" size={15} className="suggestion-icon" />
+                <span className="truncate flex-1">
+                  {/* Bold the typed portion inside suggestion */}
+                  {suggestion.toLowerCase().startsWith(searchQuery.toLowerCase()) ? (
+                    <>
+                      <b className="text-foreground">{suggestion.slice(0, searchQuery.length)}</b>
+                      <span className="text-muted-foreground">{suggestion.slice(searchQuery.length)}</span>
+                    </>
+                  ) : (
+                    suggestion
+                  )}
+                </span>
+                <Icon name="ArrowUpLeft" size={13} className="suggestion-fill-icon opacity-0 group-hover:opacity-100 text-muted-foreground/40 ml-auto shrink-0" />
               </div>
             ))}
           </div>
