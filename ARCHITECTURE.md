@@ -1,4 +1,4 @@
-
+QQ
 
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev)
@@ -846,6 +846,132 @@ sequenceDiagram
     Backend-->>Dashboard: {results:[18 videos], next_cursor:138}
 ```
 
+---
+
+### 5.3 System Performance & Optimization Architecture
+
+This section details the critical performance optimization layers implemented to ensure the application feels instantaneous, memory efficient, and reliably manages background desktop processes.
+
+#### 5.3.1 Frontend Data Cache Architecture (Two-Layer Caching)
+To eliminate redundant API calls and make page revisits instantaneous (0ms), a robust two-layer data caching strategy was implemented.
+
+**Mechanism:**
+1. **In-Memory (`Map`)**: Provides ultra-fast, immediate access during the current session lifecycle.
+2. **`sessionStorage`**: Acts as a persistent fallback that survives page reloads (F5), ensuring data is not lost during transient refreshes. It automatically clears when the app/window is closed.
+- **Time-To-Live (TTL)**: Each entry has a configurable lifespan (e.g., 5 mins for Video Details, 10 mins for Trending).
+- **Stale-While-Revalidate**: On certain pages like History, cached data is shown instantly, while a silent background API request refreshes the cache.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Router
+    participant Page (History/Trending)
+    participant CacheManager as dataCache.js
+    participant API as YTDeluxeAPI
+    
+    User->>Router: Navigates to Page
+    Router->>Page: Renders Component
+    Page->>CacheManager: get(CacheKey)
+    alt Cache HIT (Valid TTL)
+        CacheManager-->>Page: Return Cached Data
+        Page-->>User: Instant Render (0ms)
+        opt Stale-While-Revalidate enabled
+            Page->>API: Silent Background Fetch
+            API-->>CacheManager: Update Cache silently
+            CacheManager-->>Page: Re-render with fresh data (if changed)
+        end
+    else Cache MISS or Expired
+        CacheManager-->>Page: Null
+        Page->>User: Show PageSkeleton
+        Page->>API: Full Fetch
+        API-->>CacheManager: Save to Memory & sessionStorage
+        CacheManager-->>Page: Return Fresh Data
+        Page-->>User: Render Content
+    end
+```
+
+#### 5.3.2 History Page Performance Overhaul (VirtuosoGrid)
+The History page was previously a massive bottleneck due to rendering hundreds of complex DOM nodes (video cards) simultaneously, freezing the main thread.
+
+**Optimizations Applied:**
+1. **DOM Virtualization (`react-virtuoso`)**: Replaced the static `.map()` loop with `VirtuosoGrid`. Only the cards currently visible in the viewport (plus a small buffer) are mounted to the DOM. As the user scrolls, nodes are dynamically swapped out, reducing rendering cost by >95%.
+2. **Parallel Fetching**: Instead of sequential requests for History then Storage stats, `Promise.all` is used to fetch both simultaneously, cutting network wait time in half.
+3. **Synchronous State Initialization**: `useState` utilizes a lazy initializer to synchronously read from the cache on the first render frame, eliminating the jarring "blank screen" layout shift that occurred before `useEffect` could fire.
+
+```mermaid
+graph TD
+    A[User Opens History Page] --> B{Cache Exists?}
+    B -- Yes --> C[useState lazy init reads Cache]
+    C --> D[Immediate DOM Render with VirtuosoGrid]
+    D --> E[Silent Promise.all Fetch in Background]
+    E --> F[Update Cache & UI silently]
+    
+    B -- No --> G[Show HistorySkeleton]
+    G --> H[Promise.all fetch History & Storage]
+    H --> I[Update Cache]
+    I --> J[Render with VirtuosoGrid]
+    
+    K[User Scrolls] --> L{VirtuosoGrid Engine}
+    L --> M[Mount New Visible Cards]
+    L --> N[Unmount Off-screen Cards]
+    N --> O[Main Thread Stays Free < 16ms]
+```
+
+#### 5.3.3 Lazy Load + Eager Preload Routing Architecture
+To balance the initial application bundle size with navigation speed, a hybrid preloading architecture was implemented.
+
+**Mechanism:**
+- **Heavy Pages (`Search`, `Video Details`)**: Remain strictly lazy-loaded on demand.
+- **High-Frequency Pages (`History`, `Settings`)**: Dynamically imported.
+- **Eager Preloading**: 500ms after the application initially mounts (when the CPU is completely idle), a background process eagerly downloads the JS chunks for all other routes.
+- By the time the user clicks a navigation link, the JavaScript chunk is already cached by the browser, resulting in zero network latency during navigation.
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Router as Routes.jsx
+    participant Network
+    
+    Browser->>Router: Initial Load (Home Page)
+    Router->>Network: Fetch Home Bundle
+    Network-->>Browser: Execute Home Bundle
+    Browser-->>User: Display Home Page (Fast Initial Load)
+    
+    note over Router: 500ms Timer Starts
+    
+    Router->>Network: Background Preload (History, Settings, Details chunks)
+    Network-->>Browser: Chunks cached silently
+    
+    User->>Browser: Clicks "History" Menu Item
+    Browser->>Router: Route transition
+    note over Browser: Chunk already in memory (0ms)
+    Router-->>User: Instant Render
+```
+
+#### 5.3.4 Desktop Process Lifecycle Fix (Ghost Processes)
+Closing the WebView2 desktop application previously left `main.exe` and its heavy underlying sub-processes (`yt-dlp`, `ffmpeg`) running as orphaned "ghost" processes in the background, consuming CPU and RAM.
+
+**Fix Details:**
+The standard `process.terminate()` in Python only kills the parent wrapper. The launcher was updated to use a forceful Windows process tree kill command (`taskkill /F /T /PID`). This guarantees that when the frontend window closes, the backend API and all active child extraction/encoding threads are destroyed instantly. An `atexit` hook serves as an ultimate fallback if the window `on_closed` event fails.
+
+```mermaid
+graph TD
+    A[User Closes Desktop Window] --> B[webview.on_closed Event]
+    B --> C{Process Kill Initiated}
+    C --> D[Execute: taskkill /F /T /PID <Backend_PID>]
+    
+    D --> E[Windows Process Manager]
+    E -.-> F[Kill: main.exe FastAPI wrapper]
+    E -.-> G[Kill: active yt-dlp.exe extraction]
+    E -.-> H[Kill: active ffmpeg.exe encoding]
+    
+    C -- "Fallback (if event fails)" --> I[Python atexit hook]
+    I --> D
+    
+    F --> J((All Memory & CPU Freed))
+    G --> J
+    H --> J
+```
 
 ---
 

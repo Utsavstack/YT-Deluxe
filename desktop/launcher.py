@@ -4,6 +4,7 @@ import sys
 import os
 import time
 import http.client
+import atexit
 
 
 def resource(relative_path):
@@ -28,6 +29,30 @@ def show_error(title, message):
         ctypes.windll.user32.MessageBoxW(0, message, title, 0x10)
     except Exception:
         print(f"[ERROR] {title}: {message}")
+
+
+def kill_process_tree(pid):
+    """Kill a process AND ALL its children on Windows.
+    
+    Uses taskkill /F /T which recursively terminates all child processes.
+    This is the only reliable way to kill frozen PyInstaller exes and their
+    spawned children (yt-dlp, ffmpeg, bgutil PO token server).
+    """
+    try:
+        subprocess.run(
+            ['taskkill', '/F', '/T', '/PID', str(pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            timeout=5
+        )
+    except Exception:
+        # Last resort: use Python's kill()
+        try:
+            import signal
+            os.kill(pid, signal.SIGTERM)
+        except Exception:
+            pass
 
 
 def start_backend():
@@ -172,7 +197,7 @@ def main():
     print("[YT Deluxe] Waiting for backend to be ready...")
     if not wait_for_backend(timeout=30):
         print("[YT Deluxe] ERROR: Backend did not respond within 30s. Exiting.")
-        backend_proc.terminate()
+        kill_process_tree(backend_proc.pid)
         show_error(
             "YT Deluxe - Error",
             "YT Deluxe backend failed to start.\n\n"
@@ -223,10 +248,14 @@ def main():
     api._window = window
 
     def on_closed():
-        print("[YT Deluxe] Window closed. Terminating backend...")
-        backend_proc.terminate()
+        print("[YT Deluxe] Window closed. Killing backend process tree...")
+        kill_process_tree(backend_proc.pid)
 
     window.events.closed += on_closed
+
+    # Safety net: atexit fires even if on_closed is somehow skipped
+    # (e.g., process killed externally or exception in webview)
+    atexit.register(lambda: kill_process_tree(backend_proc.pid))
 
     # ── Step 4: Start WebView (blocking) ──────────────────────────────────
     # Try EdgeChromium first (best rendering), then fallback to default

@@ -6,6 +6,7 @@ import QuickPreviewModal from '../home-search-dashboard/components/QuickPreviewM
 import SearchResultsComponent from '../home-search-dashboard/components/SearchResults';
 import SearchBar from '../home-search-dashboard/components/SearchBar';
 import YTDeluxeAPI from '../../utils/api';
+import dataCache, { CacheKey, TTL } from '../../utils/dataCache';
 import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
 import { useDownloadContext } from '../../context/DownloadContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,6 +77,21 @@ const SearchResultsPage = () => {
 
   // ── Core fetch ─────────────────────────────────────────────────────────────
   const performSearch = async (searchQuery, page = 1, isInitial = false) => {
+    // Cache-first: check if we already have this query+page result
+    const cacheKey = CacheKey.search(searchQuery, page);
+    if (isInitial) {
+      const cached = dataCache.get(cacheKey);
+      if (cached) {
+        setSearchResults(cached.results);
+        setTotalResults(cached.totalResults);
+        setTotalPages(cached.totalPages);
+        setCurrentPage(cached.currentPage);
+        setHasMore(cached.hasMore);
+        setIsSearching(false);
+        return;
+      }
+    }
+
     if (isInitial) {
       setIsSearching(true);
     } else {
@@ -132,6 +148,15 @@ const SearchResultsPage = () => {
         setTotalPages(serverTotalPages);
         setCurrentPage(serverPage);
         setHasMore(serverPage < serverTotalPages);
+
+        // Save to cache for instant back-navigation
+        dataCache.set(cacheKey, {
+          results: transformedResults,
+          totalResults: serverTotalResults,
+          totalPages: serverTotalPages,
+          currentPage: serverPage,
+          hasMore: serverPage < serverTotalPages,
+        }, TTL.SEARCH);
 
       } else {
         if (isInitial) {

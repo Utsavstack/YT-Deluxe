@@ -8,6 +8,7 @@ import DownloadTabs from './components/DownloadTabs';
 import VideoTrimmer from './components/VideoTrimmer';
 import DownloadProgress from './components/DownloadProgress';
 import YTDeluxeAPI from '../../utils/api';
+import dataCache, { CacheKey, TTL } from '../../utils/dataCache';
 import Button from '../../components/ui/Button';
 import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
@@ -48,6 +49,24 @@ const VideoDetailsDownload = () => {
       let videoInfo = null;
 
       if (initialVideo?.url) {
+        // Cache-first: check if we already fetched this video's details
+        const cacheKey = CacheKey.videoDetails(initialVideo.url);
+        const cached = dataCache.get(cacheKey);
+        if (cached) {
+          setVideoData(cached);
+          setIsLoadingVideo(false);
+          if (location.state?.autoDownload) {
+            handleDownload({
+              url: cached.url,
+              type: 'video',
+              quality: cached.max_quality || '1080p',
+              format: 'mp4',
+              filename: cached.title
+            });
+          }
+          return;
+        }
+
         // Get video details from API
         const response = await YTDeluxeAPI.getVideoDetails(initialVideo.url);
         if (response.video) {
@@ -85,6 +104,9 @@ const VideoDetailsDownload = () => {
             url: fallbackUrl,
             videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(fallbackUrl)}&quality=720p`
           };
+
+          // Cache the video details (5 min TTL — safe for download links)
+          dataCache.set(cacheKey, videoInfo, TTL.VIDEO_DETAILS);
         }
       }
 
@@ -214,7 +236,7 @@ const VideoDetailsDownload = () => {
             
             {/* Back Navigation Skeleton */}
             <div className="pt-4 mb-4">
-              <div className="w-36 h-10 bg-muted rounded-full relative overflow-hidden">
+              <div className="w-36 h-10 bg-black/10 dark:bg-white/10 rounded-full relative overflow-hidden">
                  {shimmerSweep}
               </div>
             </div>
@@ -223,30 +245,30 @@ const VideoDetailsDownload = () => {
               {/* Main Content Skeleton */}
               <div className="xl:col-span-2 space-y-8">
                 {/* Video Player Skeleton */}
-                <div className="w-full aspect-video bg-muted rounded-2xl relative overflow-hidden shadow-sm">
+                <div className="w-full aspect-video bg-black/10 dark:bg-white/10 rounded-2xl relative overflow-hidden shadow-sm">
                    {shimmerSweep}
                 </div>
 
                 {/* Metadata Skeleton */}
                 <div className="space-y-5">
-                  <div className="h-8 bg-muted rounded-lg w-3/4 relative overflow-hidden">
+                  <div className="h-8 bg-black/10 dark:bg-white/10 rounded-lg w-3/4 relative overflow-hidden">
                      {shimmerSweep}
                   </div>
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-muted rounded-full shrink-0 relative overflow-hidden">
+                    <div className="w-12 h-12 bg-black/10 dark:bg-white/10 rounded-full shrink-0 relative overflow-hidden">
                        {shimmerSweep}
                     </div>
                     <div className="flex flex-col gap-2.5">
-                      <div className="h-4 bg-muted rounded w-32 relative overflow-hidden">
+                      <div className="h-4 bg-black/10 dark:bg-white/10 rounded w-32 relative overflow-hidden">
                          {shimmerSweep}
                       </div>
-                      <div className="h-3 bg-muted rounded w-24 relative overflow-hidden">
+                      <div className="h-3 bg-black/10 dark:bg-white/10 rounded w-24 relative overflow-hidden">
                          {shimmerSweep}
                       </div>
                     </div>
                   </div>
                   {/* Description Box Skeleton */}
-                  <div className="h-24 bg-muted rounded-xl w-full relative overflow-hidden mt-4">
+                  <div className="h-24 bg-black/10 dark:bg-white/10 rounded-xl w-full relative overflow-hidden mt-4">
                      {shimmerSweep}
                   </div>
                 </div>
@@ -259,15 +281,15 @@ const VideoDetailsDownload = () => {
                   
                   {/* Quick Actions Header */}
                   <div className="flex items-center gap-3 mb-6 relative z-0">
-                     <div className="w-10 h-10 bg-muted rounded-xl shrink-0" />
-                     <div className="h-6 bg-muted rounded-lg w-32" />
+                     <div className="w-10 h-10 bg-black/10 dark:bg-white/10 rounded-xl shrink-0" />
+                     <div className="h-6 bg-black/10 dark:bg-white/10 rounded-lg w-32" />
                   </div>
 
                   {/* Action Buttons Skeleton */}
                   <div className="space-y-3 relative z-0">
-                    <div className="w-full h-[72px] bg-muted rounded-xl" />
-                    <div className="w-full h-[72px] bg-muted rounded-xl" />
-                    <div className="w-full h-[72px] bg-muted rounded-xl" />
+                    <div className="w-full h-[72px] bg-black/10 dark:bg-white/10 rounded-xl" />
+                    <div className="w-full h-[72px] bg-black/10 dark:bg-white/10 rounded-xl" />
+                    <div className="w-full h-[72px] bg-black/10 dark:bg-white/10 rounded-xl" />
                   </div>
                 </div>
               </div>

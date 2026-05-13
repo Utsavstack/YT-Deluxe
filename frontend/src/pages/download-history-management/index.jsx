@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, forwardRef } from 'react';
+import { VirtuosoGrid } from 'react-virtuoso';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
@@ -11,6 +12,7 @@ import TabNavigation from './components/TabNavigation';
 import EmptyState from './components/EmptyState';
 import ConfirmationModal from './components/ConfirmationModal';
 import YTDeluxeAPI from '../../utils/api';
+import dataCache, { CacheKey, TTL } from '../../utils/dataCache';
 import ShareModal from '../../components/ui/ShareModal';
 import UndoToast from '../../components/ui/UndoToast';
 import { useDownloadContext } from '../../context/DownloadContext';
@@ -31,10 +33,18 @@ const DownloadHistoryManagement = () => {
   });
   const [selectedItems, setSelectedItems] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', data: null, title: '', message: '' });
-  const [isLoading, setIsLoading] = useState(false);
-  const [downloadHistory, setDownloadHistory] = useState([]);
+
+  // ── Lazy initializers: read cache synchronously so first render is never blank ──
+  const [isLoading, setIsLoading] = useState(() => !dataCache.has(CacheKey.history()));
+  const [downloadHistory, setDownloadHistory] = useState(() => {
+    const cached = dataCache.get(CacheKey.history());
+    return cached ? cached.history : [];
+  });
+  const [storageStats, setStorageStats] = useState(() => {
+    const cached = dataCache.get(CacheKey.history());
+    return cached ? cached.storageStats : { totalSize: 0, availableSpace: 0, itemCount: 0 };
+  });
   const [error, setError] = useState(null);
-  const [storageStats, setStorageStats] = useState({ totalSize: 0, availableSpace: 0, itemCount: 0 });
   
   // Share & Undo State
   const [shareData, setShareData] = useState({ isOpen: false, url: '', title: '' });
@@ -48,21 +58,33 @@ const DownloadHistoryManagement = () => {
   const { addDownload } = useDownloadContext();
 
   useEffect(() => {
-    loadDownloadHistory();
+    const cached = dataCache.has(CacheKey.history());
+    if (cached) {
+      // Cache available: silently refresh in background, no loading state
+      fetchAndCacheHistory({ silent: true });
+    } else {
+      // First ever visit: fetch with loading spinner
+      fetchAndCacheHistory({ silent: false });
+    }
     return () => {
-      // Clear any pending undo deletions on unmount
       if (undoRef.current) clearTimeout(undoRef.current);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadDownloadHistory = async () => {
-    setIsLoading(true);
+  // ── Core fetch helper: fetches both APIs in parallel, transforms, caches ──
+  const fetchAndCacheHistory = async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true);
     setError(null);
     try {
-      const response = await YTDeluxeAPI.getDownloadHistory();
+      const dlPath = localStorage.getItem('ytdeluxe_download_path');
+
+      // Parallel fetch: history + storage in one round-trip
+      const [response, storageData] = await Promise.all([
+        YTDeluxeAPI.getDownloadHistory(),
+        YTDeluxeAPI.getStorageInfo(dlPath).catch(() => null),
+      ]);
 
       if (response.history && response.history.length > 0) {
-        // Transform backend data to match UI expectations
         const transformed = response.history.map((item, idx) => ({
           id: item.id || `hist_${idx}`,
           title: item.title,
@@ -83,40 +105,38 @@ const DownloadHistoryManagement = () => {
           format_id: item.format_id || null,
           audio_format_id: item.audio_format_id || null,
         }));
-        setDownloadHistory(transformed);
 
-        // Fetch Storage Space
-        const dlPath = localStorage.getItem('ytdeluxe_download_path');
-        try {
-          const storageData = await YTDeluxeAPI.getStorageInfo(dlPath);
-          if (storageData) {
-            const totalSize = transformed.reduce((sum, item) => sum + item.fileSize, 0);
-            setStorageStats({
-              totalSize: totalSize,
-              availableSpace: storageData.free,
-              itemCount: transformed.length
-            });
-          }
-        } catch {}
+        const totalSize = transformed.reduce((sum, item) => sum + item.fileSize, 0);
+        const newStorageStats = storageData
+          ? { totalSize, availableSpace: storageData.free, itemCount: transformed.length }
+          : { totalSize, availableSpace: 0, itemCount: transformed.length };
+
+        // Update UI
+        setDownloadHistory(transformed);
+        setStorageStats(newStorageStats);
+
+        // Save to cache (no TTL = lives until explicitly invalidated)
+        dataCache.set(CacheKey.history(), { history: transformed, storageStats: newStorageStats }, TTL.HISTORY);
+
       } else {
-        // Web Mode fallback: Use local storage when no backend history
+        // Web Mode fallback: localStorage history
         const localHistory = JSON.parse(localStorage.getItem('ytdeluxe_web_history') || '[]');
         const transformed = localHistory.map((item) => ({
           ...item,
           downloadDate: new Date(item.downloadDate || Date.now())
         }));
         setDownloadHistory(transformed);
-
         const totalSize = transformed.reduce((sum, item) => sum + (item.fileSize || 0), 0);
-        setStorageStats({ totalSize: totalSize, availableSpace: 10 * 1024 * 1024 * 1024, itemCount: transformed.length });
+        setStorageStats({ totalSize, availableSpace: 10 * 1024 * 1024 * 1024, itemCount: transformed.length });
       }
     } catch (error) {
       console.error(error);
-      setError('Failed to load download history.');
+      if (!silent) setError('Failed to load download history.');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
+
 
   const filteredAndSortedData = useMemo(() => {
     if (activeTab === 'saved') {
@@ -335,7 +355,6 @@ const DownloadHistoryManagement = () => {
         }
       } else {
         const type = itemsToDelete[0]?.type;
-        
         if (type === 'saved') {
           const current = JSON.parse(localStorage.getItem('ytdeluxe_saved') || '[]');
           const updated = current.filter(h => !ids.includes(h.id));
@@ -346,7 +365,9 @@ const DownloadHistoryManagement = () => {
           localStorage.setItem('ytdeluxe_web_history', JSON.stringify(updated));
         }
       }
-      await loadDownloadHistory();
+      // Invalidate stale cache, then hard-refresh from server
+      dataCache.invalidate(CacheKey.history());
+      await fetchAndCacheHistory({ silent: false });
     } catch (err) {
       console.error("Deletion failed:", err);
       setError("Failed to delete records from permanent storage.");
@@ -473,10 +494,26 @@ const DownloadHistoryManagement = () => {
                     onClearFilters={handleClearFilters}
                   />
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4">
-                    {filteredAndSortedData.map((item) => (
+                  <VirtuosoGrid
+                    useWindowScroll
+                    data={filteredAndSortedData}
+                    components={{
+                      List: forwardRef(({ style, children, ...props }, ref) => (
+                        <div
+                          ref={ref}
+                          {...props}
+                          style={style}
+                          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4"
+                        >
+                          {children}
+                        </div>
+                      )),
+                      Item: ({ children, ...props }) => (
+                        <div {...props}>{children}</div>
+                      )
+                    }}
+                    itemContent={(index, item) => (
                       <HistoryCard
-                        key={item.id}
                         item={item}
                         onRedownload={handleRedownload}
                         onDelete={handleDelete}
@@ -485,8 +522,8 @@ const DownloadHistoryManagement = () => {
                         isSelected={selectedItems.some((selected) => selected.id === item.id)}
                         onSelect={handleItemSelect}
                       />
-                    ))}
-                  </div>
+                    )}
+                  />
                 )}
               </div>
             </div>

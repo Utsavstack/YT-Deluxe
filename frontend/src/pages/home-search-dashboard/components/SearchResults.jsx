@@ -13,17 +13,17 @@ const SkeletonCard = () => (
     {/* Shimmer sweep effect */}
     <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/50 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s' }} />
     
-    <div className="w-full h-48 bg-muted" />
+    <div className="w-full h-48 bg-black/10 dark:bg-white/10" />
     <div className="p-4 space-y-3">
-      <div className="h-4 bg-muted rounded-lg w-3/4" />
-      <div className="h-3 bg-muted rounded-lg w-1/2" />
+      <div className="h-4 bg-black/10 dark:bg-white/10 rounded-lg w-3/4" />
+      <div className="h-3 bg-black/10 dark:bg-white/10 rounded-lg w-1/2" />
       <div className="flex items-center gap-2 mt-2">
-        <div className="w-8 h-8 bg-muted rounded-full shrink-0" />
-        <div className="h-3 bg-muted rounded-lg w-1/3" />
+        <div className="w-8 h-8 bg-black/10 dark:bg-white/10 rounded-full shrink-0" />
+        <div className="h-3 bg-black/10 dark:bg-white/10 rounded-lg w-1/3" />
       </div>
       <div className="flex justify-between mt-1">
-        <div className="h-3 bg-muted rounded-lg w-1/4" />
-        <div className="h-3 bg-muted rounded-lg w-1/4" />
+        <div className="h-3 bg-black/10 dark:bg-white/10 rounded-lg w-1/4" />
+        <div className="h-3 bg-black/10 dark:bg-white/10 rounded-lg w-1/4" />
       </div>
     </div>
   </div>
@@ -72,10 +72,10 @@ const SearchResults = ({
           <div className="glass-card flex flex-col justify-center px-6 py-4 rounded-[20px] shadow-glass-sm border border-primary/10 bg-card/40 backdrop-blur-md relative overflow-hidden w-[280px] h-[72px]">
             <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/50 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s' }} />
             <div className="relative flex items-center gap-4 z-0">
-              <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
+              <div className="w-10 h-10 rounded-xl bg-black/10 dark:bg-white/10 shrink-0" />
               <div className="flex flex-col gap-2.5 w-full">
-                <div className="h-4 bg-muted rounded-md w-3/4" />
-                <div className="h-2.5 bg-muted rounded-md w-1/2" />
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded-md w-3/4" />
+                <div className="h-2.5 bg-black/10 dark:bg-white/10 rounded-md w-1/2" />
               </div>
             </div>
           </div>

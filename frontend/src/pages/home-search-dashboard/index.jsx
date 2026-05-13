@@ -10,6 +10,7 @@ import SearchResults from './components/SearchResults';
 import QuickPreviewModal from './components/QuickPreviewModal';
 
 import YTDeluxeAPI from '../../utils/api';
+import dataCache, { CacheKey, TTL } from '../../utils/dataCache';
 import { TheInfiniteGrid } from '../../components/ui/the-infinite-grid';
 import { useDownloadContext } from '../../context/DownloadContext';
 
@@ -67,32 +68,53 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   useEffect(() => {
     const savedSearches = JSON.parse(localStorage.getItem('ytdeluxe_recent_searches') || '[]');
     setRecentSearches(savedSearches);
-    loadTrendingVideos('0');
-    const refreshInterval = setInterval(() => loadTrendingVideos(activeCategory), 10 * 60 * 1000);
+
+    // Cache-first: show instant data if available, else fetch from API
+    const cached = dataCache.get(CacheKey.trending('0'));
+    if (cached) {
+      setTrendingVideos(cached.videos);
+      setTrendingCursor(cached.nextCursor);
+      setHasMoreTrending(cached.nextCursor !== -1);
+      setLastUpdated(cached.fetchedAt);
+      setIsTrendingLoading(false);
+    } else {
+      loadTrendingVideos('0');
+    }
+
+    // Background refresh every 10 min (matches backend cache interval)
+    const refreshInterval = setInterval(() => loadTrendingVideos(activeCategory, false, true), 10 * 60 * 1000);
     return () => clearInterval(refreshInterval);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadTrendingVideos = async (categoryId = activeCategory, isLoadMore = false) => {
+  // isBackgroundRefresh=true means: fetch silently, don't show loading spinner
+  const loadTrendingVideos = async (categoryId = activeCategory, isLoadMore = false, isBackgroundRefresh = false) => {
     try {
       if (isLoadMore) {
         setIsTrendingLoadingMore(true);
-      } else {
+      } else if (!isBackgroundRefresh) {
         setIsTrendingLoading(true);
       }
-      
+
       const currentCursor = isLoadMore ? trendingCursor : 0;
       const response = await YTDeluxeAPI.getTrending(categoryId, 'IN', currentCursor, 18);
-      
+
       if (response.results && response.results.length > 0) {
         if (isLoadMore) {
           setTrendingVideos(prev => {
-            // Filter out potential duplicates based on ID
             const existingIds = new Set(prev.map(v => v.id));
             const newUniqueVideos = response.results.filter(v => !existingIds.has(v.id));
             return [...prev, ...newUniqueVideos];
           });
         } else {
           setTrendingVideos(response.results);
+          // Save first page to cache (for instant re-render on next visit)
+          if (!isLoadMore) {
+            dataCache.set(CacheKey.trending(categoryId), {
+              videos: response.results,
+              nextCursor: response.next_cursor,
+              fetchedAt: new Date().toISOString(),
+            }, TTL.TRENDING);
+          }
         }
         setTrendingCursor(response.next_cursor);
         setHasMoreTrending(response.next_cursor !== -1);
@@ -113,10 +135,20 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   const handleCategorySelect = (categoryId) => {
     if (categoryId === activeCategory) return;
     setActiveCategory(categoryId);
-    setTrendingVideos([]);
     setTrendingCursor(0);
     setHasMoreTrending(true);
-    loadTrendingVideos(categoryId, false);
+
+    // Cache-first for category switching too
+    const cached = dataCache.get(CacheKey.trending(categoryId));
+    if (cached) {
+      setTrendingVideos(cached.videos);
+      setTrendingCursor(cached.nextCursor);
+      setHasMoreTrending(cached.nextCursor !== -1);
+      setLastUpdated(cached.fetchedAt);
+    } else {
+      setTrendingVideos([]);
+      loadTrendingVideos(categoryId, false);
+    }
   };
 
   const handleLoadMoreTrending = () => {

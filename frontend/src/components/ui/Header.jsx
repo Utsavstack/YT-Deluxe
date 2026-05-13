@@ -292,6 +292,25 @@ const Header = ({ isScrolled: isScrolledProp }) => {
           >
             {/* Stable flex row — items here never re-animate */}
             <div className="flex items-center">
+              {/* History Navigation Arrows */}
+              <div className="menu-glass-card flex items-center mr-3 p-1 h-[44px] gap-1 shrink-0">
+                <button 
+                  onClick={() => navigate(-1)}
+                  className="w-9 h-full rounded-[12px] flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                  title="Go Back"
+                >
+                  <Icon name="ChevronLeft" size={20} />
+                </button>
+                <div className="w-[1px] h-4 bg-border/50 rounded-full" />
+                <button 
+                  onClick={() => navigate(1)}
+                  className="w-9 h-full rounded-[12px] flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                  title="Go Forward"
+                >
+                  <Icon name="ChevronRight" size={20} />
+                </button>
+              </div>
+
               <ThemeToggle />
 
               {/* ── Notification Bell ── */}
