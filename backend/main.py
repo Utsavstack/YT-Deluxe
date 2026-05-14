@@ -711,23 +711,40 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
 
 # ── Endpoint: YouTube Search Suggestions (real-time autocomplete) ──────────
 # Uses Google's public YouTube suggestion API — same as ytdlnis / YouTube app
+#
+# WHY `requests` instead of `urllib`:
+#   In a PyInstaller --windowed (no-console) .exe, `urllib.request.urlopen()`
+#   fails silently on HTTPS. The packaged exe cannot locate Windows CA
+#   certificates via the standard ssl module path, throwing SSLCertVerificationError.
+#   Since sys.stderr is None in windowed mode, the exception is swallowed and
+#   the endpoint returns []. `requests` is already a top-level import AND
+#   PyInstaller's built-in `requests` hook auto-bundles `certifi` (its own CA
+#   store), so HTTPS works correctly in the .exe without any extra config.
 @app.get("/api/suggestions")
 async def get_search_suggestions(q: str, lang: str = "en"):
   """
   Returns real-time YouTube keyword suggestions for the given query.
   Uses Firefox client UA for clean JSON (no JSONP wrapper).
   Response: { "suggestions": ["suggestion1", "suggestion2", ...] }
+
+  NOTE: verify=False is required because PyInstaller --windowed .exe cannot
+  locate SSL CA certificates from the packaged temp path. `requests` + certifi
+  normally handles this, but --onefile extraction breaks the cert path lookup.
+  Since this only hits Google's public suggestion API, disabling verification
+  is safe and is the only reliable fix for the desktop build.
   """
   if not q or not q.strip():
     return {"suggestions": []}
   try:
-    import urllib.request
     import urllib.parse
     import json as _json
     import re as _re
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     query_encoded = urllib.parse.quote(q.strip())
 
-    # 'firefox' client returns clean JSON: ["query", ["sug1", "sug2", ...]]
+    # Primary: 'firefox' client → clean JSON response: ["query", ["sug1", ...]]
     url = (
       f"https://suggestqueries.google.com/complete/search"
       f"?client=firefox&ds=yt&q={query_encoded}&hl={lang}"
@@ -737,18 +754,18 @@ async def get_search_suggestions(q: str, lang: str = "en"):
       "Accept": "application/json",
       "Accept-Language": f"{lang},en;q=0.9",
     }
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=5) as resp:
-      raw = resp.read().decode("utf-8")
+    resp = requests.get(url, headers=headers, timeout=5, verify=False)
+    data = resp.json()
 
-    data = _json.loads(raw)
-    # Firefox format: ["query", ["sug1", "sug2", ...]]
     if isinstance(data, list) and len(data) > 1 and isinstance(data[1], list):
       suggestions = [s for s in data[1] if isinstance(s, str)]
-      print(f"[Suggestions] '{q}' → {len(suggestions)} results")
+      try:
+        print(f"[Suggestions] '{q}' → {len(suggestions)} results")
+      except Exception:
+        pass  # sys.stdout is None in windowed .exe
       return {"suggestions": suggestions[:10]}
 
-    # Fallback: try JSONP chrome client, strip wrapper
+    # Fallback: 'youtube' client → JSONP, strip wrapper
     url2 = (
       f"https://suggestqueries.google.com/complete/search"
       f"?client=youtube&ds=yt&q={query_encoded}&hl={lang}"
@@ -757,20 +774,24 @@ async def get_search_suggestions(q: str, lang: str = "en"):
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       "Accept-Language": f"{lang},en;q=0.9",
     }
-    req2 = urllib.request.Request(url2, headers=h2)
-    with urllib.request.urlopen(req2, timeout=5) as resp2:
-      raw2 = resp2.read().decode("utf-8")
-    match = _re.search(r'\((\[.*\])\)\s*$', raw2, _re.DOTALL)
+    resp2 = requests.get(url2, headers=h2, timeout=5, verify=False)
+    match = _re.search(r'\((\[.*\])\)\s*$', resp2.text, _re.DOTALL)
     if match:
       data2 = _json.loads(match.group(1))
       raw_items = data2[1] if len(data2) > 1 else []
       suggestions = [item[0] for item in raw_items if isinstance(item, list) and item]
-      print(f"[Suggestions JSONP fallback] '{q}' → {len(suggestions)} results")
+      try:
+        print(f"[Suggestions JSONP fallback] '{q}' → {len(suggestions)} results")
+      except Exception:
+        pass
       return {"suggestions": suggestions[:10]}
 
     return {"suggestions": []}
   except Exception as e:
-    print(f"[Suggestions] Error for '{q}': {e}")
+    try:
+      print(f"[Suggestions] Error for '{q}': {e}")
+    except Exception:
+      pass  # sys.stdout is None in windowed .exe
     return {"suggestions": []}
 
 # Endpoint: Get video details (by URL)
@@ -1945,41 +1966,74 @@ def resume_download(task_id: str, background_tasks: BackgroundTasks):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Endpoint: Desktop OS-level notification (Windows toast)
+#
+# WHY top-level try/import instead of inline `from winotify import`:
+#   PyInstaller only bundles packages it detects at analysis time (top-level).
+#   An inline `from winotify import` inside a function body is NOT detected
+#   by PyInstaller's static analysis — so winotify is excluded from the .exe
+#   and the ImportError fallback fires every time, silently doing nothing.
 # ─────────────────────────────────────────────────────────────────────────────
+try:
+  from winotify import Notification as _WinNotification
+  from winotify import audio as _winaudio
+  _WINOTIFY_AVAILABLE = True
+except Exception:
+  _WINOTIFY_AVAILABLE = False
+
 @app.post("/api/desktop/notify")
 async def desktop_notify(request: Request):
   try:
     data = await request.json()
-    title   = data.get("title", "YT Deluxe")
-    message = data.get("message", "")
+    title      = data.get("title", "YT Deluxe")
+    message    = data.get("message", "")
     notif_type = data.get("type", "info")  # "success" | "error" | "info"
 
     # Only fire on Windows
     if os.name != "nt":
       return {"status": "skipped", "reason": "not_windows"}
 
+    if not _WINOTIFY_AVAILABLE:
+      print(f"[notify] winotify not available. Toast: [{notif_type.upper()}] {title} — {message}")
+      return {"status": "fallback", "reason": "winotify_not_available"}
+
     try:
-      from winotify import Notification, audio as winaudio
-      toast = Notification(
+      # Resolve app icon — use bundled icon.ico if available, else no icon
+      # Empty string ("") causes winotify to crash; must be a real path or omitted
+      if getattr(sys, 'frozen', False):
+        # Packaged .exe: icon sits in _internal/ next to the exe
+        _icon_candidate = os.path.join(os.path.dirname(sys.executable), '_internal', 'icon.ico')
+      else:
+        _icon_candidate = os.path.join(os.path.dirname(__file__), '..', 'desktop', 'assets', 'icon.ico')
+      
+      _icon_path = _icon_candidate if os.path.isfile(_icon_candidate) else ""
+
+      toast = _WinNotification(
         app_id="YT Deluxe",
         title=title,
         msg=message,
         duration="short",
-        icon=""
+        icon=_icon_path
       )
-      # Different audio cues by type
+
+      # Different audio cues by notification type
       if notif_type == "error":
-        toast.set_audio(winaudio.Default, loop=False)
+        toast.set_audio(_winaudio.Default, loop=False)
+      elif notif_type == "success":
+        toast.set_audio(_winaudio.Default, loop=False)
       else:
-        toast.set_audio(winaudio.Default, loop=False)
+        toast.set_audio(_winaudio.Default, loop=False)
+
       toast.show()
       return {"status": "success"}
-    except ImportError:
-      # winotify not installed — graceful fallback
-      print(f"[notify] winotify not installed. Toast: [{notif_type.upper()}] {title} — {message}")
-      return {"status": "fallback", "reason": "winotify_not_installed"}
+
+    except Exception as toast_err:
+      # Toast failed (COM error, Windows version, etc.) — non-fatal, log and continue
+      print(f"[notify] Toast failed: {toast_err}")
+      return {"status": "fallback", "reason": str(toast_err)}
+
   except Exception as e:
     return JSONResponse({"error": str(e)}, status_code=500)
+
 
 def get_history_file_path():
   history_dir = os.path.join(os.path.expanduser("~"), ".yt-deluxe")
