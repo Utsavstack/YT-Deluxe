@@ -79,7 +79,7 @@ const ConfirmationModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-background/60 dark:bg-black/70 backdrop-blur-md"
+        className="absolute inset-0 bg-white/80 dark:bg-black/80"
         onClick={onClose}
       />
 
@@ -88,24 +88,31 @@ const ConfirmationModal = ({
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="relative w-full max-w-md glass-card shadow-glass-2xl overflow-hidden border border-border/50 bg-card/90 dark:bg-card/30"
+        className="relative w-full max-w-[340px] rounded-[2rem] border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.37)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] overflow-hidden bg-white/40 dark:bg-black/40 backdrop-blur-xl backdrop-saturate-[180%]"
       >
-        <div className="p-8">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors z-10"
+        >
+          <Icon name="X" size={16} className="text-foreground/70" />
+        </button>
+
+        <div className="p-6">
           {/* Header */}
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className={`w-16 h-16 rounded-3xl ${bg} flex items-center justify-center ${color} mb-4 shadow-xl border border-border/20`}>
-              <Icon name={icon} size={32} />
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className={`w-12 h-12 rounded-[1.25rem] ${bg} flex items-center justify-center ${color} mb-3 shadow-[0_4px_16px_0_rgba(31,38,135,0.1)] dark:shadow-none border border-white/30 dark:border-white/10 backdrop-blur-md`}>
+              <Icon name={icon} size={24} className="opacity-90" />
             </div>
-            <h2 className="text-2xl font-black text-foreground tracking-tight mb-2">
+            <h2 className="text-lg font-bold text-foreground tracking-tight mb-1">
               {title}
             </h2>
-            <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${accent} bg-muted px-3 py-1 rounded-full border border-border/10`}>
+            <div className={`text-[9px] font-bold uppercase tracking-widest ${accent} bg-white/30 dark:bg-black/30 px-2.5 py-0.5 rounded-full border border-white/40 dark:border-white/10 shadow-sm backdrop-blur-md`}>
               {type} Action
             </div>
           </div>
 
-          <div className="text-center mb-8">
-            <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+          <div className="text-center mb-6">
+            <p className="text-xs text-foreground/90 font-medium leading-relaxed px-2">
               {message}
             </p>
           </div>
@@ -113,40 +120,40 @@ const ConfirmationModal = ({
           {/* Item Previews - Theme Sync */}
           {items && items.length > 0 && (
             <div className="mb-8 space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <span className="text-[9px] font-bold text-foreground/50 uppercase tracking-widest">
                   Affected Items ({items.length})
                 </span>
-                <div className="h-px bg-border/40 flex-1 ml-4" />
+                <div className="h-px bg-foreground/10 flex-1 ml-3" />
               </div>
 
-              <div className="max-h-52 overflow-y-auto pr-2 space-y-3 thin-scrollbar">
+              <div className="max-h-40 overflow-y-auto pr-1 space-y-2 thin-scrollbar">
                 {items.map((item, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="flex items-center gap-4 p-3 rounded-2xl bg-muted/30 border border-border/20 group hover:bg-muted/50 transition-all duration-300"
+                    className="flex items-center gap-3 p-2 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 group hover:border-black/20 dark:hover:border-white/20 transition-all duration-300 backdrop-blur-md shadow-inner"
                   >
-                    <div className="w-16 h-12 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/5 shadow-inner">
+                    <div className="w-14 h-10 rounded-xl overflow-hidden bg-black/40 flex-shrink-0 border border-white/10 shadow-inner">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Icon name="Play" size={18} className="text-white/20" />
+                          <Icon name="Play" size={16} className="text-white/20" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                      <p className="text-[11px] font-bold text-foreground truncate transition-colors">
                         {item.title}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-background/50 text-muted-foreground font-black uppercase tracking-widest border border-border/40">
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[8px] px-1.5 py-0.5 rounded-md bg-white/20 dark:bg-black/20 text-foreground/70 font-bold uppercase tracking-widest border border-white/20 dark:border-white/5">
                           {item.format || 'MP4'}
                         </span>
-                        <span className="text-[10px] text-primary font-bold">{item.quality || 'HD'}</span>
+                        <span className="text-[9px] text-primary font-bold">{item.quality || 'HD'}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -157,21 +164,21 @@ const ConfirmationModal = ({
 
           {/* Physical Delete Option (Desktop Only) */}
           {typeof window !== 'undefined' && window.pywebview && type === 'danger' && (
-            <div className="mb-6 flex items-center justify-center bg-destructive/5 rounded-2xl p-4 border border-destructive/20 cursor-pointer hover:bg-destructive/10 transition-colors" onClick={() => setDeleteFromDevice(!deleteFromDevice)}>
-              <div className={`w-5 h-5 rounded flex items-center justify-center mr-3 border transition-colors ${deleteFromDevice ? 'bg-destructive border-destructive text-white' : 'border-border/50 bg-background'}`}>
-                {deleteFromDevice && <Icon name="Check" size={14} />}
+            <div className="mb-5 flex items-center justify-center bg-red-500/10 dark:bg-red-500/20 rounded-xl p-3 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors backdrop-blur-md" onClick={() => setDeleteFromDevice(!deleteFromDevice)}>
+              <div className={`w-4 h-4 rounded-[4px] flex items-center justify-center mr-2 border transition-colors ${deleteFromDevice ? 'bg-red-500 border-red-500 text-white' : 'border-red-500/30 bg-transparent'}`}>
+                {deleteFromDevice && <Icon name="Check" size={10} strokeWidth={3} />}
               </div>
-              <span className="text-sm font-bold text-foreground">Delete file from device storage too</span>
+              <span className="text-[11px] font-bold text-red-600 dark:text-red-400">Delete file from device storage too</span>
             </div>
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 mt-2">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 h-12 rounded-2xl font-bold transition-all border-border/60 hover:bg-muted"
+              className="flex-1 h-10 rounded-xl text-[11px] font-bold transition-all bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/10 text-foreground shadow-sm"
             >
               {cancelText}
             </Button>
@@ -179,9 +186,9 @@ const ConfirmationModal = ({
               variant={getButtonVariant()}
               onClick={() => onConfirm(deleteFromDevice)}
               loading={isLoading}
-              className="flex-[1.5] h-12 rounded-2xl font-black shadow-lg shadow-black/20"
+              className="flex-1 h-10 rounded-xl text-[11px] font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-all"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-1.5 w-full">
                 <span>{confirmText}</span>
               </div>
             </Button>

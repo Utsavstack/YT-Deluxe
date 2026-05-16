@@ -42,12 +42,34 @@ const TrendingSection = ({
   return (
     <div className="space-y-6">
       {videos?.length === 0 && !isLoading ? (
-        <div className="glass-card shadow-glass-md p-12 text-center">
-          <Icon name="Video" size={48} className="text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">{t("homeSearchDashboard.noTrendingVideos")}</h3>
-          <p className="text-muted-foreground"> 
-            {t("homeSearchDashboard.unableToLoadTrending")} 
+        <div className="glass-card shadow-glass-xl p-12 text-center min-h-[60vh] flex flex-col justify-center items-center relative overflow-hidden border border-red-500/10">
+          <div className="absolute inset-0 bg-gradient-to-b from-red-500/5 to-transparent pointer-events-none"></div>
+          <div className="bg-red-500/10 p-5 rounded-full mb-6 relative">
+            <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full"></div>
+            <Icon name="WifiOff" size={48} className="text-red-500 relative z-10" />
+          </div>
+          <h3 className="text-2xl font-bold text-foreground mb-3 tracking-tight">Connection Issue</h3>
+          <p className="text-muted-foreground max-w-md text-center mb-8 leading-relaxed"> 
+            It seems you're offline or the backend service is temporarily unresponsive. Please check your internet connection and try again.
           </p>
+          <div className="flex flex-wrap justify-center gap-4 relative z-10">
+            <button 
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full transition-all text-sm font-medium"
+            >
+              <Icon name="RefreshCcw" size={16} />
+              Refresh Page
+            </button>
+            <a 
+              href="https://github.com/Utsavstack/YT-Deluxe/issues" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 py-2.5 bg-card/60 hover:bg-red-500/10 hover:text-red-500 border border-border/50 hover:border-red-500/30 rounded-full transition-all text-sm font-medium text-foreground/80"
+            >
+              <Icon name="AlertCircle" size={16} />
+              Report Issue
+            </a>
+          </div>
         </div>
       ) : (
         <VirtuosoGrid

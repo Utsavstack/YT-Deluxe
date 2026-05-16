@@ -118,9 +118,9 @@ const Select = React.forwardRef(({
           id={selectId}
           type="button"
           className={cn(
-            "flex h-10 w-full items-center justify-between rounded-md border border-input bg-card text-foreground px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-10 w-full items-center justify-between rounded-xl border border-border/50 bg-white/50 dark:bg-black/20 backdrop-blur-md text-foreground px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all shadow-sm hover:bg-white/80 dark:hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50",
             error && "border-destructive focus:ring-destructive",
-            !hasValue && "text-muted-foreground"
+            !hasValue && "text-muted-foreground/70"
           )}
           onClick={handleToggle}
           disabled={disabled}
@@ -172,9 +172,9 @@ const Select = React.forwardRef(({
         </select>
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border border-border rounded-md shadow-md">
+          <div className="absolute z-50 w-full mt-2 bg-white dark:bg-[#111111] text-foreground border border-black/5 dark:border-white/10 rounded-2xl shadow-[0_16px_40px_0_rgba(0,0,0,0.2)] dark:shadow-[0_16px_40px_0_rgba(0,0,0,0.6)] overflow-hidden">
             {searchable && (
-              <div className="p-2 border-b">
+              <div className="p-2 border-b border-border/40">
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -197,8 +197,8 @@ const Select = React.forwardRef(({
                   <div
                     key={option?.value}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                      isSelected(option?.value) && "bg-primary text-primary-foreground",
+                      "relative flex cursor-pointer select-none items-center rounded-xl mx-1 my-0.5 px-3 py-2.5 text-sm font-medium outline-none transition-colors hover:bg-black/5 dark:hover:bg-white/10",
+                      isSelected(option?.value) && "bg-primary/10 text-primary dark:text-primary font-bold shadow-sm",
                       option?.disabled && "pointer-events-none opacity-50"
                     )}
                     onClick={() => !option?.disabled && handleOptionSelect(option)}

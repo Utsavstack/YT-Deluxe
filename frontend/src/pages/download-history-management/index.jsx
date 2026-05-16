@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
-import React, { useState, useEffect, useMemo, useRef, forwardRef } from 'react';
-import { VirtuosoGrid } from 'react-virtuoso';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
@@ -17,6 +16,8 @@ import ShareModal from '../../components/ui/ShareModal';
 import UndoToast from '../../components/ui/UndoToast';
 import { useDownloadContext } from '../../context/DownloadContext';
 import Icon from '../../components/AppIcon';
+
+const CHUNK_SIZE = 20; // Items to render per batch
 
 const DownloadHistoryManagement = () => {
   const { t } = useTranslation();
@@ -53,6 +54,9 @@ const DownloadHistoryManagement = () => {
 
   // Re-download progress tracking
   const [activeDownloads, setActiveDownloads] = useState([]);
+
+  // ── Incremental rendering: avoids blocking the main thread on page open ──
+  const [visibleCount, setVisibleCount] = useState(CHUNK_SIZE);
 
   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
   const { addDownload } = useDownloadContext();
@@ -223,6 +227,20 @@ const DownloadHistoryManagement = () => {
     return filtered;
   }, [downloadHistory, activeTab, searchQuery, filters, sortBy, sortOrder]);
 
+  // ── Reset visible count whenever filters/sort/tab change ──
+  useEffect(() => {
+    setVisibleCount(CHUNK_SIZE);
+  }, [activeTab, searchQuery, filters, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Incrementally render remaining items in background frames ──
+  useEffect(() => {
+    if (visibleCount >= filteredAndSortedData.length) return;
+    const raf = requestAnimationFrame(() => {
+      setVisibleCount((prev) => Math.min(prev + CHUNK_SIZE, filteredAndSortedData.length));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [visibleCount, filteredAndSortedData.length]);
+
   const tabCounts = useMemo(() => {
     let savedCount = 0;
     try {
@@ -234,7 +252,7 @@ const DownloadHistoryManagement = () => {
     };
   }, [downloadHistory]);
 
-  const handleItemSelect = (itemId) => {
+  const handleItemSelect = useCallback((itemId) => {
     setSelectedItems((prev) => {
       const isSelected = prev.some((item) => item.id === itemId);
       if (isSelected) {
@@ -244,12 +262,12 @@ const DownloadHistoryManagement = () => {
         return item ? [...prev, item] : prev;
       }
     });
-  };
+  }, [downloadHistory]);
 
   const handleSelectAll = () => setSelectedItems(filteredAndSortedData);
   const handleDeselectAll = () => setSelectedItems([]);
 
-  const handleRedownload = (item) => {
+  const handleRedownload = useCallback((item) => {
     let videoUrl = item.url;
     
     if (!videoUrl && item.id) {
@@ -298,17 +316,17 @@ const DownloadHistoryManagement = () => {
       channel: { name: item.channel },
       thumbnail: item.thumbnail,
     });
-  };
+  }, [navigate, addDownload]);
 
-  const handleDelete = (item) => {
+  const handleDelete = useCallback((item) => {
     setConfirmModal({
       isOpen: true,
       type: 'danger',
       data: [item],
       title: 'Delete Download',
-      message: `Are you sure you want to delete "${item.title}"? Records will be removed from your download history profile.`
+      message: `Are you sure you want to delete this download? Records will be removed from your download history profile.`
     });
-  };
+  }, []);
 
   const handleBulkDelete = () => {
     setConfirmModal({
@@ -320,7 +338,7 @@ const DownloadHistoryManagement = () => {
     });
   };
 
-  const handleOpenLocation = async (item) => {
+  const handleOpenLocation = useCallback(async (item) => {
     if (!isDesktop) {
       alert("Browser based downloads are stored in your default downloads folder.");
       return;
@@ -334,15 +352,15 @@ const DownloadHistoryManagement = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [isDesktop]);
 
-  const handleShare = (item) => {
+  const handleShare = useCallback((item) => {
     setShareData({
       isOpen: true,
       url: item.url || `https://youtube.com/watch?v=${item.id}`,
       title: item.title
     });
-  };
+  }, []);
 
   const executeActualDeletion = async (itemsToDelete, deleteFile = false) => {
     try {
@@ -426,46 +444,58 @@ const DownloadHistoryManagement = () => {
         <Header />
 
         
-        <main className="pt-24 pb-12">
-          <div className="container mx-auto px-4 max-w-7xl">
-            {/* Page Header */}
-            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div>
-                <h1 className="text-4xl font-black text-foreground mb-2 tracking-tight">
-                  {t("downloadHistoryManagement.downloadHistoryManagement")}
-                </h1>
-                <p className="text-muted-foreground font-medium">
-                  {t("downloadHistoryManagement.trackOrganizeAndManage")}
-                </p>
+        <main className="pt-24 pb-32">
+          <div className="container mx-auto px-4 max-w-[1600px]">
+            {/* Modern Hero Section */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-8 md:p-12 mb-8">
+              <div className="relative z-10 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
+                <div className="max-w-xl">
+                  <h1 className="text-3xl md:text-4xl font-black text-foreground mb-2 tracking-tight leading-tight">
+                    {t("downloadHistoryManagement.downloadHistoryManagement")}
+                  </h1>
+                  <p className="text-muted-foreground text-base md:text-lg font-medium">
+                    {t("downloadHistoryManagement.trackOrganizeAndManage")}
+                  </p>
+                </div>
+                <div className="w-full xl:w-[450px] shrink-0 transform md:scale-[1.08] origin-left xl:origin-right">
+                  <StorageUsage
+                    totalSize={storageStats.totalSize}
+                    availableSpace={storageStats.availableSpace}
+                    itemCount={storageStats.itemCount}
+                  />
+                </div>
               </div>
-              <StorageUsage
-                totalSize={storageStats.totalSize}
-                availableSpace={storageStats.availableSpace}
-                itemCount={storageStats.itemCount}
-              />
             </div>
 
-            {/* Main Interface */}
-            <div className="grid grid-cols-1 gap-8">
+            {/* Sticky Navigation & Filters */}
+            <div className="sticky top-20 z-[60] py-4 -mx-4 px-4 md:mx-0 md:px-0 mb-8 transition-all">
+              <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
+                <div className="w-full xl:w-auto shrink-0">
+                  <TabNavigation
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    counts={tabCounts}
+                  />
+                </div>
+                <div className="w-full xl:w-auto xl:ml-auto flex xl:justify-end">
+                  <FilterBar
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                    sortOrder={sortOrder}
+                    onSortOrderChange={setSortOrder}
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    onClearFilters={handleClearFilters}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8">
               <div className="space-y-6">
-                <TabNavigation
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  counts={tabCounts}
-                />
-
-                <FilterBar
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  sortBy={sortBy}
-                  onSortChange={setSortBy}
-                  sortOrder={sortOrder}
-                  onSortOrderChange={setSortOrder}
-                  filters={filters}
-                  onFiltersChange={setFilters}
-                  onClearFilters={handleClearFilters}
-                />
-
                 <BulkActions
                   selectedItems={selectedItems}
                   onSelectAll={handleSelectAll}
@@ -494,36 +524,31 @@ const DownloadHistoryManagement = () => {
                     onClearFilters={handleClearFilters}
                   />
                 ) : (
-                  <VirtuosoGrid
-                    useWindowScroll
-                    data={filteredAndSortedData}
-                    components={{
-                      List: forwardRef(({ style, children, ...props }, ref) => (
-                        <div
-                          ref={ref}
-                          {...props}
-                          style={style}
-                          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4"
-                        >
-                          {children}
-                        </div>
-                      )),
-                      Item: ({ children, ...props }) => (
-                        <div {...props}>{children}</div>
-                      )
-                    }}
-                    itemContent={(index, item) => (
-                      <HistoryCard
-                        item={item}
-                        onRedownload={handleRedownload}
-                        onDelete={handleDelete}
-                        onOpenLocation={handleOpenLocation}
-                        onShare={handleShare}
-                        isSelected={selectedItems.some((selected) => selected.id === item.id)}
-                        onSelect={handleItemSelect}
-                      />
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                      {filteredAndSortedData.slice(0, visibleCount).map((item) => (
+                        <HistoryCard
+                          key={item.id}
+                          item={item}
+                          onRedownload={handleRedownload}
+                          onDelete={handleDelete}
+                          onOpenLocation={handleOpenLocation}
+                          onShare={handleShare}
+                          isSelected={selectedItems.some((selected) => selected.id === item.id)}
+                          onSelect={handleItemSelect}
+                        />
+                      ))}
+                    </div>
+                    {/* Subtle loader while remaining items stream in */}
+                    {visibleCount < filteredAndSortedData.length && (
+                      <div className="flex items-center justify-center gap-2 pt-6 pb-2 text-muted-foreground/50">
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs font-bold tracking-widest uppercase">
+                          {filteredAndSortedData.length - visibleCount} more loading…
+                        </span>
+                      </div>
                     )}
-                  />
+                  </>
                 )}
               </div>
             </div>

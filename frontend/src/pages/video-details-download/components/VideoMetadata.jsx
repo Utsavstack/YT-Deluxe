@@ -194,7 +194,7 @@ const VideoMetadata = ({ videoData }) => {
       </div>
 
       {/* Channel Info & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-border/50 shadow-glass-sm transition-all hover:border-primary/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-border/50 shadow-glass-sm transition-all hover:border-primary/20">
         <div className="flex items-center space-x-4">
           <div className="relative">
             {videoData?.channel?.avatar ? (
@@ -244,7 +244,7 @@ const VideoMetadata = ({ videoData }) => {
       </div>
 
       {/* Description */}
-      <div className="relative group rounded-2xl border border-border/50 bg-black/[0.02] dark:bg-white/[0.02] overflow-hidden transition-all duration-300 hover:border-primary/20">
+      <div className="relative group rounded-2xl border border-border/50 bg-white dark:bg-white/[0.02] overflow-hidden transition-all duration-300 hover:border-primary/20">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/40 via-secondary/40 to-primary/40 opacity-50" />
         
         <div className="p-5 space-y-5">

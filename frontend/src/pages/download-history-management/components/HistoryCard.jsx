@@ -2,9 +2,8 @@ import { useTranslation } from "react-i18next";
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
-import Button from '../../../components/ui/Button';
 import { formatDate } from '../../../utils/dateFormat';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, isSelected, onSelect }) => {
   const { t } = useTranslation();
@@ -73,40 +72,40 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
   const isThumbnail = mediaType === 'Thumbnail';
 
   return (
-    <motion.div
-      layout
-      className={`glass-card hover:shadow-glass-lg transition-all duration-300 spring-smooth group relative overflow-hidden ${isSelected ? 'ring-2 ring-primary border-primary/50' : 'border-border/40'
+    <div
+      onClick={() => item.type !== 'saved' && onOpenLocation(item)}
+      className={`bg-white/90 dark:bg-[#1e1e1e]/80 backdrop-blur-xl hover:shadow-glass-xl rounded-[24px] transition-all duration-500 spring-smooth group relative overflow-hidden cursor-pointer ${isSelected ? 'ring-2 ring-primary border-primary/50 shadow-primary/20' : 'border border-black/10 dark:border-white/10'
         }`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       <div className="p-4 relative z-10">
         <div className="flex items-start gap-0">
-          {/* Selection Checkbox - Animated to remove gap by default */}
-          <AnimatePresence initial={false}>
-            {(showActions || isSelected) && (
-              <motion.div
-                initial={{ width: 0, opacity: 0, marginRight: 0 }}
-                animate={{ width: 32, opacity: 1, marginRight: 16 }}
-                exit={{ width: 0, opacity: 0, marginRight: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="flex-shrink-0 pt-1.5 overflow-hidden"
-              >
-                <button
-                  onClick={() => onSelect(item?.id)}
-                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shadow-sm ${isSelected
-                    ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-primary/30'
-                    : 'border-border/60 bg-muted/50 hover:border-primary/50 dark:border-white/20 dark:bg-white/5'
-                    }`}
-                >
-                  {isSelected && <Icon name="Check" size={12} strokeWidth={3} />}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
 
           {/* Thumbnail */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 relative">
+            <AnimatePresence>
+              {(showActions || isSelected) && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute top-1.5 left-1.5 z-20"
+                >
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onSelect(item?.id); }}
+                    className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all backdrop-blur-md shadow-sm ${isSelected
+                      ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-primary/30'
+                      : 'border-white/60 bg-black/40 hover:border-white text-white'
+                      }`}
+                  >
+                    {isSelected && <Icon name="Check" size={10} strokeWidth={4} />}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div className="relative w-32 h-20 rounded-2xl overflow-hidden bg-black/40 group-hover:shadow-glass-md transition-all border border-white/5">
               <Image
                 src={item?.thumbnail}
@@ -143,16 +142,16 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
               <div className={`flex items-center p-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md transition-all duration-300 shadow-glass-sm ${showActions ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
                 }`}>
                 <button
-                  onClick={() => onRedownload(item)}
+                  onClick={(e) => { e.stopPropagation(); onRedownload(item); }}
                   className="p-1.5 rounded-full transition-all hover:bg-white/10 text-muted-foreground hover:text-foreground"
                   title={t("downloadHistoryManagement.redownload")}
                 >
-                  <Icon name="Download" size={14} />
+                  <Icon name="RefreshCcw" size={14} />
                 </button>
 
                 {item.type !== 'saved' && (
                   <button
-                    onClick={() => onOpenLocation(item)}
+                    onClick={(e) => { e.stopPropagation(); onOpenLocation(item); }}
                     className="p-1.5 rounded-full transition-all hover:bg-white/10 text-muted-foreground hover:text-foreground"
                     title="Open File Location"
                   >
@@ -161,7 +160,7 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                 )}
 
                 <button
-                  onClick={() => onShare(item)}
+                  onClick={(e) => { e.stopPropagation(); onShare(item); }}
                   className="p-1.5 rounded-full transition-all hover:bg-white/10 text-muted-foreground hover:text-foreground"
                   title={t("homeSearchDashboard.shareVideo")}
                 >
@@ -171,7 +170,7 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                 <div className="w-px h-3 bg-white/10 mx-0.5" />
 
                 <button
-                  onClick={() => onDelete(item)}
+                  onClick={(e) => { e.stopPropagation(); onDelete(item); }}
                   className="p-1.5 rounded-full transition-all hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
                   title={t("downloadHistoryManagement.delete1")}
                 >
@@ -257,8 +256,19 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
 
       {/* Background Subtle Accent */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/2 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-    </motion.div>
+    </div>
   );
 };
 
-export default HistoryCard;
+// ── Memoized: only re-renders if item data, selection, or handlers change ──
+export default React.memo(HistoryCard, (prev, next) => {
+  return (
+    prev.isSelected === next.isSelected &&
+    prev.item === next.item &&
+    prev.onRedownload === next.onRedownload &&
+    prev.onDelete === next.onDelete &&
+    prev.onOpenLocation === next.onOpenLocation &&
+    prev.onShare === next.onShare &&
+    prev.onSelect === next.onSelect
+  );
+});

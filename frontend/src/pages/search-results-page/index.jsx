@@ -241,7 +241,7 @@ const SearchResultsPage = () => {
       <Header isScrolled={isSearchSticky} />
 
       {/* Search Bar Container */}
-      <div className="relative z-[90] w-full pt-[110px] pb-4 px-4 lg:px-6 max-w-7xl mx-auto">
+      <div className="relative z-[90] w-full pt-[110px] pb-4 px-4 lg:px-6 max-w-[1600px] mx-auto">
         {/* Back Navigation */}
         <div className="mb-6">
           <button
@@ -284,7 +284,7 @@ const SearchResultsPage = () => {
 
       {/* Main Content */}
       <main className="pb-32 lg:pb-8 px-4 lg:px-6 pt-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8 mt-4">
           {error && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 rounded-xl">
               <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>

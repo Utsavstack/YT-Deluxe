@@ -383,7 +383,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
       </motion.div>
 
       {/* Recent Downloads Premium List */}
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 relative overflow-hidden border border-border/50 bg-card/90 dark:bg-card/30 shadow-glass-xl">
+      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 relative overflow-hidden border border-border/50 bg-slate-50/50 dark:bg-white/5 shadow-glass-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-5 gap-4">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner border border-primary/20">
@@ -457,7 +457,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 onClick={() => navigate('/download-history-management')}
-                className="flex items-center p-3.5 bg-muted/30 dark:bg-black/20 rounded-2xl border border-border/30 hover:bg-muted/60 dark:hover:bg-black/40 hover:border-border/60 transition-all duration-300 group/item cursor-pointer relative"
+                className="flex items-center p-3.5 bg-white dark:bg-black/40 rounded-2xl border border-border/30 hover:bg-slate-50 dark:hover:bg-black/60 hover:border-border/60 shadow-sm transition-all duration-300 group/item cursor-pointer relative"
               >
                 {/* Individual Delete Button */}
                 <button

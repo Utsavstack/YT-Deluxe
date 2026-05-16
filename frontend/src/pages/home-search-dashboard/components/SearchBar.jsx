@@ -309,55 +309,15 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
         )}
       </div>
 
-      {/* Recent Searches — hidden when sticky */}
-      <div
-        className="recent-searches-section"
-        style={{
-          maxHeight: isSticky ? '0px' : '200px',
-          opacity: isSticky ? 0 : 1,
-          pointerEvents: isSticky ? 'none' : 'auto',
-          overflow: 'hidden',
-          transition: 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease',
-        }}
-      >
-        {recentSearches?.length > 0 && !showSuggestions && !searchQuery && (
-          <div className="mt-8 flex flex-col items-center">
-            <div className="text-sm text-foreground/70 mb-3 font-medium bg-card/40 backdrop-blur-md px-4 py-1 rounded-full border border-border/50 animate-stagger-item">
-              {t("homeSearchDashboard.recentSearches")}
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center max-w-xl mx-auto">
-              {recentSearches?.slice(0, 6)?.map((search, index) => (
-                <div
-                  key={index}
-                  className="glass-card shadow-glass-md px-4 py-2 text-sm text-foreground flex items-center space-x-1 group recent-search-hover rounded-full cursor-pointer animate-stagger-item border border-transparent"
-                  style={{ animationDelay: `${index * 50 + 100}ms` }}
-                  onClick={(e) => {
-                    if (e.target.closest('button')) return;
-                    handleSearch(search);
-                  }}>
-                  <Icon name="Clock" size={12} className="text-muted-foreground/50 mr-1" />
-                  <span className="truncate max-w-32 hover:text-primary transition-colors">
-                    {search}
-                  </span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onClearRecentSearch(search); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 bg-muted/40 rounded-full p-1 hover:bg-destructive/10 hover:text-destructive">
-                    <Icon name="X" size={12} className="text-muted-foreground hover:text-destructive transition-colors" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Voice Search Indicator */}
-        {isListening && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 mt-12 glass-card shadow-glass-xl p-4 rounded-xl text-center animate-slide-down flex flex-col items-center min-w-[250px] border border-primary/20">
+      {/* Voice Search Indicator - Moved outside to persist during scroll */}
+      {isListening && (
+        <div className="absolute top-[calc(100%+16px)] left-1/2 -translate-x-1/2 z-[200]">
+          <div className="bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-2xl shadow-glass-xl p-4 rounded-2xl text-center animate-slide-down flex flex-col items-center min-w-[250px] border border-red-500/20">
             <div className="flex items-center space-x-2 text-error mb-2">
               <div className="w-3 h-3 bg-error rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.7)]" />
-              <span className="font-semibold">{t("homeSearchDashboard.listening")}</span>
+              <span className="font-semibold">{t("homeSearchDashboard.listening", "Listening...")}</span>
             </div>
-            <p className="text-sm text-muted-foreground">{t("homeSearchDashboard.speakNowToSearch")}</p>
+            <p className="text-sm text-muted-foreground">{t("homeSearchDashboard.speakNowToSearch", "Speak now to search")}</p>
             <div className="flex gap-1 mt-3">
               {[0, 150, 300, 450, 600].map((delay, i) => (
                 <div
@@ -368,7 +328,52 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Recent Searches — hidden when sticky */}
+      <div
+        className="recent-searches-section"
+        style={{
+          maxHeight: isSticky ? '0px' : '400px',
+          opacity: isSticky ? 0 : 1,
+          pointerEvents: isSticky ? 'none' : 'auto',
+          overflow: 'hidden',
+          transition: 'max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease',
+        }}
+      >
+        {recentSearches?.length > 0 && !showSuggestions && !searchQuery && (
+          <div className="mt-10 pb-6 flex flex-col items-center animate-fade-in">
+            <div className="text-[14px] font-medium text-muted-foreground/60 mb-4 animate-stagger-item flex items-center gap-2">
+              <span className="w-8 h-[1px] bg-gradient-to-r from-transparent to-muted-foreground/30"></span>
+              {t("homeSearchDashboard.recentSearches", "RECENT SEARCHES")}
+              <span className="w-8 h-[1px] bg-gradient-to-l from-transparent to-muted-foreground/30"></span>
+            </div>
+            <div className="flex flex-wrap gap-2.5 justify-center max-w-2xl mx-auto px-4">
+              {recentSearches?.slice(0, 6)?.map((search, index) => (
+                <div
+                  key={index}
+                  className="bg-white/60 dark:bg-[#1a1a1a]/60 backdrop-blur-xl border border-black/5 dark:border-white/5 hover:border-primary/40 hover:bg-white/95 dark:hover:bg-[#222]/80 shadow-glass-sm hover:shadow-glass-md px-4 py-2.5 text-[13px] text-foreground flex items-center space-x-2 group rounded-2xl cursor-pointer transition-all duration-300 transform-gpu hover:-translate-y-0.5 animate-stagger-item"
+                  style={{ animationDelay: `${index * 40 + 100}ms` }}
+                  onClick={(e) => {
+                    if (e.target.closest('button')) return;
+                    handleSearch(search);
+                  }}>
+                  <Icon name="History" size={14} className="text-primary/60 group-hover:text-primary transition-colors shrink-0" />
+                  <span className="truncate max-w-[140px] sm:max-w-[180px] font-medium tracking-tight">
+                    {search}
+                  </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onClearRecentSearch(search); }}
+                    className="opacity-0 group-hover:opacity-100 transition-all duration-200 ml-1 bg-black/5 dark:bg-white/10 rounded-full p-1 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 scale-90 group-hover:scale-100 shrink-0">
+                    <Icon name="X" size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
+
       </div>
     </div>
   );

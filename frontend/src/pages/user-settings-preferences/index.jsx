@@ -153,7 +153,7 @@ const UserSettingsPreferences = () => {
 
 
         <div className="pt-24 pb-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Page Header */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
@@ -171,7 +171,7 @@ const UserSettingsPreferences = () => {
               </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8 mt-4">
               {/* Desktop Sidebar */}
               <motion.div
                 initial="hidden"
@@ -179,8 +179,8 @@ const UserSettingsPreferences = () => {
                 variants={sidebarVariants}
                 className="hidden lg:block lg:col-span-1"
               >
-                <div className="glass-card p-3 sticky top-28 space-y-4">
-                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground opacity-70">
+                <div className="glass-card p-6 sticky top-28 space-y-6 bg-slate-50/50 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                  <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
                     {t('settings.configMap')}
                   </div>
                   <nav className="space-y-1">
@@ -315,8 +315,9 @@ const UserSettingsPreferences = () => {
           </div>
         </div>
 
-        <footer className="bg-card/30 backdrop-blur-xl border-t border-border mt-16 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+          <footer className="bg-card/30 bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background backdrop-blur-xl border border-black/5 dark:border-white/5 py-12 rounded-[2.5rem] mb-12">
+            <div className="px-6 md:px-10">
             <div className="flex flex-col lg:flex-row justify-between items-start gap-12">
               {/* Brand Signal */}
               <div className="space-y-6 max-w-sm">
@@ -425,6 +426,7 @@ const UserSettingsPreferences = () => {
           </div>
         </footer>
       </div>
+    </div>
     </>
   );
 };

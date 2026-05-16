@@ -248,7 +248,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
 
 
             <main className="pt-20 pb-32 lg:pb-8 px-4 lg:px-6">
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-[1600px] mx-auto">
                     {/* Search Section */}
                     <div className="mb-8">
                         <motion.div 
@@ -287,7 +287,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                           className={`
                             ${isSearchSticky
                               ? 'fixed top-[26px] left-0 right-0 z-[105] pointer-events-none flex justify-center'
-                              : 'relative'
+                              : 'relative z-[110]'
                             }
                           `}
                         >
@@ -319,11 +319,11 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                       className={`
                         ${isTrendingSticky
                           ? 'fixed top-[84px] left-0 right-0 z-[104] flex justify-center px-4 lg:px-6 pointer-events-none mb-6'
-                          : 'relative overflow-hidden mt-6 mb-8'
+                          : 'relative overflow-hidden mt-6 mb-8 max-w-7xl mx-auto'
                         }
                       `}
                     >
-                      <div className={`w-full pointer-events-auto transition-all ${isTrendingSticky ? 'max-w-7xl flex justify-center' : ''}`}>
+                      <div className={`w-full pointer-events-auto transition-all ${isTrendingSticky ? 'max-w-7xl mx-auto flex justify-center' : ''}`}>
                           <TrendingHeader
                             onRefresh={() => loadTrendingVideos(activeCategory)}
                             lastUpdated={lastUpdated}
@@ -342,7 +342,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                       </div>
 
                     {/* Video Cards Grid — this is the only scrolling content */}
-                    <div className="space-y-12">
+                    <div className="space-y-12 relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8 mt-4">
                         <TrendingSection
               videos={trendingVideos}
               onQuickDownload={handleQuickDownload}

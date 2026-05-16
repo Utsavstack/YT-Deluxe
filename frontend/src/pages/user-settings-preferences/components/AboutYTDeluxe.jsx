@@ -85,8 +85,8 @@ const AboutYTDeluxe = () => {
       className="space-y-8"
     >
       {/* Hero & About Section */}
-      <motion.div variants={itemVariants} className="glass-card overflow-hidden relative group">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-50 group-hover:opacity-70 transition-opacity duration-500" />
+      <motion.div variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl overflow-hidden relative group">
+        <div className="absolute inset-0 bg-white dark:bg-card" />
         <div className="relative p-8 md:p-10 flex flex-col items-center space-y-10">
           
           {/* Logo and Title */}
@@ -160,7 +160,7 @@ const AboutYTDeluxe = () => {
       </motion.div>
 
       {/* Features Full Width */}
-      <motion.div id="features-section" variants={itemVariants} className="glass-card p-6 md:p-8 flex flex-col">
+      <motion.div id="features-section" variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-6 md:p-8 flex flex-col relative">
         <h2 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2"> 
           <Icon name="Feature" size={20} className="text-amber-500" />
           {t('aboutUs.premiumEdge')}
@@ -185,7 +185,7 @@ const AboutYTDeluxe = () => {
       </motion.div>
 
       {/* Developer Context */}
-      <motion.div variants={itemVariants} className="glass-card p-8 border-t-4 border-primary/20 relative overflow-hidden group/card">
+      <motion.div variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-8 border-t-4 border-primary/20 relative overflow-hidden group/card">
         <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover/card:scale-110 transition-transform duration-1000">
           <Icon name="Cpu" size={180} />
         </div>

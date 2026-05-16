@@ -533,7 +533,7 @@ const DownloadTabs = ({ videoData, onDownload, onSelect, selectedConfig }) => {
               <div
                 key={`${activeTab}-${option.quality}`}
                 style={{ animationDelay: `${idx * 40}ms`, animationFillMode: 'both' }}
-                className={`animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out hover:-translate-y-1 hover:scale-[1.02] glass-card p-5 transition-all relative z-10 hover:z-50 group border border-white/5 flex flex-col h-full bg-gradient-to-br from-background/40 to-background/10 rounded-2xl transform-gpu will-change-transform ${activeStyle.hover}`}
+                className={`animate-in fade-in slide-in-from-bottom-8 duration-500 ease-out hover:-translate-y-1 hover:scale-[1.02] bg-white/85 dark:bg-[#121212]/60 backdrop-blur-xl p-5 transition-all relative z-10 hover:z-50 group border border-border/50 dark:border-white/5 flex flex-col h-full rounded-2xl transform-gpu will-change-transform shadow-glass-sm ${activeStyle.hover}`}
               >
                 {/* Header */}
                 <div className="flex flex-col mb-4 gap-1.5">
@@ -620,7 +620,7 @@ const DownloadTabs = ({ videoData, onDownload, onSelect, selectedConfig }) => {
           <Icon name="Cog" size={20} className="text-primary" />
           <h3 className="text-xl font-bold text-foreground tracking-tight">{t("videoDetailsDownload.advancedOptions")}</h3>
         </div>
-        <div className="glass-card p-6 md:p-8 space-y-8 relative z-10 group border border-white/5 hover:border-primary/20 transition-colors duration-500 flex flex-col bg-gradient-to-br from-background/40 to-background/10 rounded-3xl shadow-glass-lg">
+        <div className="bg-white/85 dark:bg-[#121212]/60 backdrop-blur-xl p-6 md:p-8 space-y-8 relative z-10 group border border-border/50 dark:border-white/5 hover:border-primary/20 transition-colors duration-500 flex flex-col rounded-3xl shadow-glass-lg">
 
 
 

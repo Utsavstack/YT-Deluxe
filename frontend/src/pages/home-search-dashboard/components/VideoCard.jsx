@@ -214,19 +214,19 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
 
   return (
     <div
-      className="bg-background/95 dark:bg-card/95 backdrop-blur-xl border border-border/40 hover:border-primary/30 p-2.5 sm:p-3 rounded-[24px] sm:rounded-[32px] shadow-glass-sm hover:shadow-glass-xl transition-all duration-500 spring-smooth cursor-pointer group relative flex flex-col gap-3"
+      className="bg-white dark:bg-[#1e1e1e]/80 backdrop-blur-xl border border-border/40 hover:border-primary/30 p-2.5 sm:p-3 rounded-[24px] sm:rounded-[32px] shadow-glass-sm hover:shadow-glass-xl transition-all duration-500 spring-smooth cursor-pointer group relative flex flex-col gap-3"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
     >
       {showSavedToast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-spring-up" style={{ animationDuration: '0.4s' }}>
-          <div className="bg-background/95 backdrop-blur-xl border border-border/50 px-4 py-2.5 rounded-full shadow-glass-xl flex items-center space-x-2 w-max">
-            <div className={`p-1 rounded-full ${showSavedToast === 'saved' ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'}`}>
-              <Icon name={showSavedToast === 'saved' ? 'Check' : 'Trash2'} size={14} />
+        <div className="absolute bottom-[60px] right-3 z-[100] animate-spring-up pointer-events-none" style={{ animationDuration: '0.4s' }}>
+          <div className="bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-black/5 dark:border-white/10 px-2.5 py-1.5 rounded-[14px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center space-x-1.5 w-max">
+            <div className={`p-1 rounded-[10px] flex items-center justify-center ${showSavedToast === 'saved' ? 'bg-[#25D366]/20 text-[#25D366]' : 'bg-red-500/20 text-red-500'}`}>
+              <Icon name={showSavedToast === 'saved' ? 'BookmarkCheck' : 'BookmarkMinus'} size={12} strokeWidth={2.5} />
             </div>
-            <span className="text-sm font-medium text-foreground">
-              {showSavedToast === 'saved' ? 'Added to Saved' : 'Removed from Saved'}
+            <span className="text-[9px] font-bold text-foreground/80 tracking-widest uppercase pr-1">
+              {showSavedToast === 'saved' ? 'Saved' : 'Removed'}
             </span>
           </div>
         </div>

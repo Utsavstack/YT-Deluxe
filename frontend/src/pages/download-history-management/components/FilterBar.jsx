@@ -68,19 +68,19 @@ const FilterBar = ({
   };
 
   return (
-    <div className="glass-card mb-6" style={{ position: "relative", zIndex: 100 }}>
-   <div className="p-4">
+    <div className="bg-white/90 dark:bg-[#1e1e1e]/80 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-[2rem] shadow-glass-sm hover:shadow-glass-md transition-all inline-block w-full lg:w-auto" style={{ position: "relative", zIndex: 100 }}>
+   <div className="p-[0.800rem]">
     {/* Search and Sort Row */}
-    <div className="flex flex-col lg:flex-row gap-4 mb-4">
+    <div className={`flex flex-col lg:flex-row items-center gap-2 ${showAdvancedFilters ? 'mb-4' : ''}`}>
      {/* Search */}
-     <div className="flex-1">
+     <div className="w-full lg:w-72 xl:w-80">
       <div className="relative">
        <Input
                 type="search"
                 placeholder={t("downloadHistoryManagement.searchByTitleChannel")}
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e?.target?.value)}
-                className="pl-10" />
+                className="pl-10 border-transparent bg-[#f0f2f5] dark:bg-[#202020] shadow-none hover:bg-[#e4e6eb] dark:hover:bg-[#2a2a2a] transition-colors" />
               
        <Icon
                 name="Search"
@@ -103,7 +103,8 @@ const FilterBar = ({
               variant="outline"
               size="icon"
               onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-              title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}>
+              title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+              className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#252525] shadow-none">
               
        <Icon name={sortOrder === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={16} />
       </Button>
@@ -111,12 +112,12 @@ const FilterBar = ({
 
      {/* Advanced Filters Toggle */}
      <Button
-            variant="outline"
+            variant={showAdvancedFilters ? "default" : "outline"}
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             iconName="Filter"
             iconPosition="left"
-            className="relative"> {t("downloadHistoryManagement.filters")} 
-
+            className={`relative shadow-none ${!showAdvancedFilters ? 'bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#252525]' : ''}`}> 
+            {t("downloadHistoryManagement.filters")} 
 
             {getActiveFiltersCount() > 0 &&
             <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
@@ -124,12 +125,25 @@ const FilterBar = ({
        </span>
             }
      </Button>
+
+     {/* Close Advanced Filters Red Cross */}
+     {showAdvancedFilters && (
+        <Button
+            variant="destructive"
+            size="icon"
+            onClick={() => setShowAdvancedFilters(false)}
+            title="Close Filters"
+            className="ml-[192px]"
+        >
+            <Icon name="X" size={16} />
+        </Button>
+     )}
     </div>
 
     {/* Advanced Filters */}
     {showAdvancedFilters &&
-        <div className="border-t border-border pt-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="border-t border-border/50 pt-5 mt-2 relative px-2 pb-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pl-2 sm:pl-4 pr-8">
        <Select
               label={t("downloadHistoryManagement.format")}
               options={formatOptions}
@@ -170,13 +184,11 @@ const FilterBar = ({
        
        {getActiveFiltersCount() > 0 &&
             <Button
-              variant="ghost"
+              variant="destructive"
               size="sm"
               onClick={onClearFilters}
               iconName="X"
               iconPosition="left"> {t("downloadHistoryManagement.clearFilters")} 
-
-
             </Button>
             }
       </div>
