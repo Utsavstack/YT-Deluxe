@@ -1,46 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Select from '../../../components/ui/Select';
 import Input from '../../../components/ui/Input';
 import { Checkbox } from '../../../components/ui/Checkbox';
-import Button from '../../../components/ui/Button';
 
 const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
   const { t } = useTranslation();
-  const [downloadPrefs, setDownloadPrefs] = useState(() => {
-    const savedPath = localStorage.getItem('ytdeluxe_download_path');
-    if (savedPath && (!preferences || !preferences.downloadPath)) {
-      return { ...preferences, downloadPath: savedPath };
+  const [downloadPrefs, setDownloadPrefs] = useState(preferences || {});
+
+  useEffect(() => {
+    if (preferences) {
+      setDownloadPrefs(preferences);
     }
-    return preferences || {};
-  });
+  }, [preferences]);
 
   const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
-
-  const qualityOptions = [
-    { value: '2160p', label: '4K (2160p)', description: 'Ultra HD quality' },
-    { value: '1440p', label: '2K (1440p)', description: 'Quad HD quality' },
-    { value: '1080p', label: 'Full HD (1080p)', description: 'High definition' },
-    { value: '720p', label: 'HD (720p)', description: 'Standard HD' },
-    { value: '480p', label: 'SD (480p)', description: 'Standard definition' },
-    { value: '360p', label: 'Low (360p)', description: 'Low quality' },
-    { value: '144p', label: 'Minimum (144p)', description: 'Lowest quality' }
-  ];
-
-  const formatOptions = [
-    { value: 'mp4', label: 'MP4', description: 'Most compatible video format' },
-    { value: 'webm', label: 'WebM', description: 'Web optimized format' },
-    { value: 'mkv', label: 'MKV', description: 'High quality container' },
-    { value: 'avi', label: 'AVI', description: 'Legacy video format' }
-  ];
-
-  const audioFormatOptions = [
-    { value: 'mp3', label: 'MP3', description: 'Most compatible audio format' },
-    { value: 'aac', label: 'AAC', description: 'High quality audio' },
-    { value: 'ogg', label: 'OGG', description: 'Open source format' },
-    { value: 'wav', label: 'WAV', description: 'Uncompressed audio' }
-  ];
 
   const namingConventionOptions = [
     { value: 'title', label: 'Video Title', description: 'Use original video title' },
@@ -90,51 +65,8 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
       variants={containerVariants}
       className="space-y-6"
     >
-      {/* Default Quality Settings */}
-      <motion.div variants={itemVariants} className="glass-card p-6 group hover:shadow-glass transition-all duration-300">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-foreground">{t('downloads.defaultQuality')}</h3>
-          <p className="text-sm text-muted-foreground">{t('downloads.defaultQualityDesc')}</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select
-            label={t('downloads.vidQuality')}
-            description={t('downloads.vidQualityDesc')}
-            options={qualityOptions}
-            value={downloadPrefs?.defaultVideoQuality}
-            onChange={(value) => handlePreferenceChange('defaultVideoQuality', value)}
-          />
-
-          <Select
-            label={t('downloads.vidFormat')}
-            description={t('downloads.vidFormatDesc')}
-            options={formatOptions}
-            value={downloadPrefs?.defaultVideoFormat}
-            onChange={(value) => handlePreferenceChange('defaultVideoFormat', value)}
-          />
-
-          <Select
-            label={t('downloads.audioFormat')}
-            description={t('downloads.audioFormatDesc')}
-            options={audioFormatOptions}
-            value={downloadPrefs?.defaultAudioFormat}
-            onChange={(value) => handlePreferenceChange('defaultAudioFormat', value)}
-          />
-
-          <div className="flex items-center space-x-4 pt-6">
-            <Checkbox
-              label={t('downloads.autoBest')}
-              description={t('downloads.autoBestDesc')}
-              checked={downloadPrefs?.autoSelectBestQuality}
-              onChange={(e) => handlePreferenceChange('autoSelectBestQuality', e?.target?.checked)}
-            />
-          </div>
-        </div>
-      </motion.div>
-
       {/* File Naming */}
-      <motion.div variants={itemVariants} className="glass-card p-6 group hover:shadow-glass transition-all duration-300">
+      <motion.div variants={itemVariants} className="glass-card p-6 group hover:shadow-glass transition-all duration-300 relative z-20">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-foreground">{t('downloads.fileNaming')}</h3>
           <p className="text-sm text-muted-foreground">{t('downloads.fileNamingDesc')}</p>
@@ -145,23 +77,25 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
             label={t('downloads.namingConv')}
             description={t('downloads.namingConvDesc')}
             options={namingConventionOptions}
-            value={downloadPrefs?.namingConvention}
+            value={downloadPrefs?.namingConvention || 'title'}
             onChange={(value) => handlePreferenceChange('namingConvention', value)}
           />
 
           <AnimatePresence>
             {downloadPrefs?.namingConvention === 'custom' && (
               <motion.div
+                key="custom-template"
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
+                animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
                 className="overflow-hidden"
               >
                 <Input
                   label={t('downloads.customTemplate')}
                   description={t('downloads.customTemplateDesc')}
                   placeholder="{channel} - {title} [{quality}]"
-                  value={downloadPrefs?.customTemplate}
+                  value={downloadPrefs?.customTemplate || ''}
                   onChange={(e) => handlePreferenceChange('customTemplate', e?.target?.value)}
                 />
               </motion.div>
@@ -172,63 +106,109 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
             <Checkbox
               label={t('downloads.removeSpecial')}
               description={t('downloads.removeSpecialDesc')}
-              checked={downloadPrefs?.removeSpecialChars}
-              onChange={(e) => handlePreferenceChange('removeSpecialChars', e?.target?.checked)}
+              checked={!!downloadPrefs?.removeSpecialChars}
+              onChange={(e) => handlePreferenceChange('removeSpecialChars', e?.target?.checked ?? e)}
             />
 
             <Checkbox
               label={t('downloads.addDate')}
               description={t('downloads.addDateDesc')}
-              checked={downloadPrefs?.addDownloadDate}
-              onChange={(e) => handlePreferenceChange('addDownloadDate', e?.target?.checked)}
+              checked={!!downloadPrefs?.addDownloadDate}
+              onChange={(e) => handlePreferenceChange('addDownloadDate', e?.target?.checked ?? e)}
             />
           </div>
         </div>
       </motion.div>
 
-      {/* Storage Location - Desktop Only */}
+      {/* Storage Location & Folder Organization - Desktop Only */}
       {isDesktop && (
-        <motion.div variants={itemVariants} className="glass-card p-6 group hover:shadow-glass transition-all duration-300">
-          <div className="mb-4">
+        <motion.div variants={itemVariants} className="glass-card p-6 group hover:shadow-glass transition-all duration-300 relative z-10">
+          <div className="mb-5">
             <h3 className="text-lg font-semibold text-foreground">{t('downloads.storageLocation')}</h3>
             <p className="text-sm text-muted-foreground">{t('downloads.storageLocationDesc')}</p>
           </div>
 
           <div className="space-y-6">
-            <div className="flex items-end space-x-4">
-              <div className="flex-1">
-                <Input
-                  label={t('downloads.downloadFolder')}
-                  value={downloadPrefs?.downloadPath || ''}
-                  onChange={(e) => handlePreferenceChange('downloadPath', e?.target?.value)}
-                  placeholder="/Users/username/Downloads"
-                />
-              </div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant="outline"
-                  iconName="FolderOpen"
-                  onClick={() => console.log('Open folder picker')}
+            {/* Download Path */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                {t('downloads.downloadFolder')}
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={downloadPrefs?.downloadPath || ''}
+                    onChange={(e) => handlePreferenceChange('downloadPath', e?.target?.value)}
+                    placeholder="C:\Users\...\Downloads"
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                  />
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={async () => {
+                    if (window.pywebview?.api?.pick_folder) {
+                      try {
+                        const picked = await window.pywebview.api.pick_folder();
+                        if (picked) handlePreferenceChange('downloadPath', picked);
+                      } catch { /* ignore */ }
+                    } else {
+                      const path = window.prompt('Enter the download folder path:', downloadPrefs?.downloadPath || '');
+                      if (path) handlePreferenceChange('downloadPath', path);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-accent/30 text-sm font-medium text-foreground hover:bg-accent/60 hover:border-primary/30 transition-all shrink-0"
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                   {t('downloads.browse')}
-                </Button>
-              </motion.div>
+                </motion.button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Files will be saved to this folder. Leave blank to use your system Downloads folder.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Checkbox
-                label={t('downloads.channelFolders')}
-                description={t('downloads.channelFoldersDesc')}
-                checked={downloadPrefs?.createChannelFolders}
-                onChange={(e) => handlePreferenceChange('createChannelFolders', e?.target?.checked)}
-              />
+            {/* Folder Organization */}
+            <div className="pt-2 border-t border-border/40">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5">
+                  <input
+                    type="checkbox"
+                    id="organize-folders-toggle"
+                    checked={!!downloadPrefs?.organizeFolders}
+                    onChange={(e) => handlePreferenceChange('organizeFolders', e.target.checked)}
+                    className="w-4 h-4 rounded accent-primary cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="organize-folders-toggle" className="text-sm font-medium text-foreground cursor-pointer select-none">
+                    Separate files by type
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    When enabled, files are sorted into <span className="font-medium text-foreground/70">Videos/</span>, <span className="font-medium text-foreground/70">Music/</span> and <span className="font-medium text-foreground/70">Thumbnails/</span> subfolders.
+                  </p>
+                </div>
+              </div>
 
-              <Checkbox
-                label={t('downloads.dateFolders')}
-                description={t('downloads.dateFoldersDesc')}
-                checked={downloadPrefs?.createDateFolders}
-                onChange={(e) => handlePreferenceChange('createDateFolders', e?.target?.checked)}
-              />
+              {/* Live preview */}
+              <div className="mt-3 ml-7 px-3 py-2.5 rounded-lg bg-muted/30 border border-border/40 font-mono text-[11px] text-muted-foreground leading-5">
+                {downloadPrefs?.organizeFolders ? (
+                  <>
+                    <div>📁 <span className="text-foreground/70">{downloadPrefs?.downloadPath || 'Downloads'}/</span></div>
+                    <div className="ml-4">📂 Videos/</div>
+                    <div className="ml-4">📂 Music/</div>
+                    <div className="ml-4">📂 Thumbnails/</div>
+                  </>
+                ) : (
+                  <>
+                    <div>📁 <span className="text-foreground/70">{downloadPrefs?.downloadPath || 'Downloads'}/</span></div>
+                    <div className="ml-4 text-foreground/50">video.mp4</div>
+                    <div className="ml-4 text-foreground/50">song.mp3</div>
+                    <div className="ml-4 text-foreground/50">thumbnail.jpg</div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -238,5 +218,4 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
   );
 };
 
-import { AnimatePresence } from 'framer-motion';
-export default DownloadPreferences;
+export default DownloadPreferences;

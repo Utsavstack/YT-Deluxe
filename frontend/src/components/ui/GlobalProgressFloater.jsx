@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../AppIcon';
 import { useDownloadContext, formatSpeed, formatETA } from '../../context/DownloadContext';
+import { formatTime } from '../../utils/dateFormat';
 
 // ─── Mini format helpers ────────────────────────────────────────────────────
 const getStatusColor = (status) => {
@@ -69,7 +70,7 @@ const DownloadCard = ({ download, onCancel, onPause, onResume, onDismiss, onOpen
       initial={{ opacity: 0, y: -8, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
-      className="relative rounded-[22px] overflow-hidden border border-black/5 dark:border-white/10 bg-white/95 dark:bg-zinc-900 shadow-sm"
+      className="relative rounded-[22px] overflow-hidden border border-black/5 dark:border-white/10 bg-slate-100 dark:bg-zinc-800 shadow-sm"
     >
 
 
@@ -164,7 +165,7 @@ const DownloadCard = ({ download, onCancel, onPause, onResume, onDismiss, onOpen
                 <div className="flex items-center gap-1.5 px-2 py-[3px] rounded-[6px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
                   <Icon name="Clock" size={11} className="text-slate-400" />
                   <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-widest">
-                    {new Date(download.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatTime(download.completedAt)}
                   </span>
                 </div>
               )}
@@ -411,14 +412,14 @@ const GlobalProgressFloater = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-            className="w-[340px] max-w-[calc(100vw-2rem)] rounded-[24px] shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-slate-200 dark:border-white/10 overflow-hidden cursor-auto bg-white dark:bg-zinc-900"
+            className="w-[340px] max-w-[calc(100vw-2rem)] rounded-[24px] shadow-[0_12px_40px_rgba(0,0,0,0.12)] border border-slate-200 dark:border-white/10 overflow-hidden cursor-auto bg-[#FAF9F4] dark:bg-zinc-900"
             // Prevent drag from triggering when clicking inside the panel (unless dragging from header)
             onPointerDown={(e) => e.stopPropagation()}
           >
             {/* Header - Make THIS the drag handle for the expanded panel */}
             <div
               onPointerDown={(e) => { e.stopPropagation(); }}
-              className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-white/10 cursor-grab active:cursor-grabbing bg-white dark:bg-zinc-900"
+              className="flex items-center justify-between px-5 py-4 border-b border-slate-200/60 dark:border-white/10 cursor-grab active:cursor-grabbing bg-transparent"
             >
               <div className="flex items-center gap-2.5">
                 <Icon name="Download" size={16} className="text-blue-600 dark:text-blue-400" />

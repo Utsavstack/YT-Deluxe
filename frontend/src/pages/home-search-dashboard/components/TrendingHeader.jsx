@@ -16,14 +16,6 @@ const TrendingHeader = ({
   onToggleCollapse
 }) => {
   const { t } = useTranslation();
-  const [spinning, setSpinning] = useState(false);
-
-  const handleRefresh = async () => {
-    if (spinning || isLoading) return;
-    setSpinning(true);
-    await onRefresh?.();
-    setTimeout(() => setSpinning(false), 800);
-  };
 
   const getTimeAgo = (date) => {
     if (!date) return 'Just now';
@@ -53,19 +45,6 @@ const TrendingHeader = ({
               {getTimeAgo(lastUpdated)}
             </span>
           </div>
-
-          <button
-            onClick={handleRefresh}
-            disabled={spinning || isLoading}
-            className="p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors group cursor-pointer disabled:opacity-50"
-            title={t("homeSearchDashboard.refreshTrendingVideos")}
-          >
-            <Icon
-              name="RefreshCw"
-              size={13}
-              className={`text-foreground group-hover:text-primary transition-colors ${spinning ? 'animate-spin text-primary' : ''}`}
-            />
-          </button>
         </div>
 
         {/* Right Capsule: Categories & Filter */}

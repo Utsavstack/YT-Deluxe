@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../../components/AppIcon';
@@ -8,7 +8,13 @@ import { YTDeluxeStorage, STORAGE_KEYS } from '../../../utils/storage';
 
 const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSettingsChange }) => {
   const { t, i18n } = useTranslation();
-  const [languageSettings, setLanguageSettings] = useState(settings);
+  const [languageSettings, setLanguageSettings] = useState(settings || {});
+
+  useEffect(() => {
+    if (settings) {
+      setLanguageSettings(settings);
+    }
+  }, [settings]);
 
   const languages = [
     { value: 'en', label: 'English', nativeName: 'English', flag: 'gb' },
@@ -37,7 +43,6 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
   const handleLanguageChange = async (languageCode) => {
     onLanguageChange(languageCode);
     i18n.changeLanguage(languageCode);
-    // Platform-aware sync
     await YTDeluxeStorage.setItem(STORAGE_KEYS.LANGUAGE, languageCode);
   };
 
@@ -55,7 +60,6 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
     const updated = { ...languageSettings, [key]: value };
     setLanguageSettings(updated);
     onSettingsChange(updated);
-    // Platform-aware sync
     await YTDeluxeStorage.setItem(STORAGE_KEYS.LANGUAGE_SETTINGS, updated);
   };
 
@@ -220,7 +224,10 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
       </motion.div>
 
       {/* Regional Settings */}
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass-sm transition-all duration-500 border-primary/5">
+      <motion.div
+        variants={itemVariants}
+        className="glass-card p-6 md:p-8 group hover:shadow-glass-sm transition-all duration-500 border-primary/5 relative z-20"
+      >
         <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
           <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shadow-inner">
             <Icon name="MapPin" size={18} />
@@ -235,71 +242,79 @@ const LanguageSettings = ({ currentLanguage, onLanguageChange, settings, onSetti
           <Select
             label={t('language.dateFormat')}
             options={dateFormatOptions}
-            value={languageSettings?.dateFormat}
+            value={languageSettings?.dateFormat || 'DD/MM/YYYY'}
             onChange={(value) => handleSettingChange('dateFormat', value)}
           />
           <Select
             label={t('language.timeFormat')}
             options={timeFormatOptions}
-            value={languageSettings?.timeFormat}
+            value={languageSettings?.timeFormat || '12h'}
             onChange={(value) => handleSettingChange('timeFormat', value)}
           />
           <Select
             label={t('language.numberFormat')}
             options={numberFormatOptions}
-            value={languageSettings?.numberFormat}
+            value={languageSettings?.numberFormat || 'en-US'}
             onChange={(value) => handleSettingChange('numberFormat', value)}
           />
           <div className="flex items-center space-x-4 pt-4">
             <Checkbox
               label={t('language.useSystemLocale')}
               description={t('language.syncOS')}
-              checked={languageSettings?.useSystemLocale}
-              onChange={(e) => handleSettingChange('useSystemLocale', e?.target?.checked)}
+              checked={!!languageSettings?.useSystemLocale}
+              onChange={(e) => handleSettingChange('useSystemLocale', e?.target?.checked ?? e)}
             />
           </div>
         </div>
-      </motion.div>
 
-      {/* Translation Settings */}
-      <motion.div variants={itemVariants} className="glass-card p-6 md:p-8 group hover:shadow-glass-sm transition-all duration-500 border-primary/5">
-        <div className="flex items-center space-x-3 mb-6 border-b border-border/40 pb-4">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-            <Icon name="Languages" size={18} />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-foreground tracking-tight">{t('language.translation')}</h3>
-            <p className="text-[11px] text-muted-foreground font-medium">{t('language.translationDesc')}</p>
+        {/* Live Preview */}
+        <div className="mt-8 pt-6 border-t border-border/40">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Live Preview</p>
+          <div className="flex flex-wrap gap-3">
+            {[
+              {
+                label: 'Date',
+                value: (() => {
+                  const now = new Date();
+                  const fmt = languageSettings?.dateFormat || 'DD/MM/YYYY';
+                  const d = String(now.getDate()).padStart(2, '0');
+                  const m = String(now.getMonth() + 1).padStart(2, '0');
+                  const y = now.getFullYear();
+                  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                  if (fmt === 'MM/DD/YYYY') return `${m}/${d}/${y}`;
+                  if (fmt === 'DD/MM/YYYY') return `${d}/${m}/${y}`;
+                  if (fmt === 'YYYY-MM-DD') return `${y}-${m}-${d}`;
+                  if (fmt === 'DD MMM YYYY') return `${d} ${months[now.getMonth()]} ${y}`;
+                  return `${m}/${d}/${y}`;
+                })()
+              },
+              {
+                label: 'Time',
+                value: (() => {
+                  const now = new Date();
+                  if ((languageSettings?.timeFormat || '12h') === '24h') {
+                    return `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                  }
+                  const h = now.getHours();
+                  const ampm = h >= 12 ? 'PM' : 'AM';
+                  const h12 = h % 12 || 12;
+                  return `${h12}:${String(now.getMinutes()).padStart(2,'0')} ${ampm}`;
+                })()
+              },
+              {
+                label: 'Number',
+                value: (1234567.89).toLocaleString(languageSettings?.numberFormat || 'en-US')
+              }
+            ].map(({ label, value }) => (
+              <div key={label} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-muted/30 border border-border/40">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</span>
+                <span className="text-sm font-bold text-foreground font-mono">{value}</span>
+              </div>
+            ))}
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-          <Checkbox
-            label={t('language.autoTranslateTitles')}
-            description={t('language.autoTranslateTitlesDesc')}
-            checked={languageSettings?.autoTranslateTitles}
-            onChange={(e) => handleSettingChange('autoTranslateTitles', e?.target?.checked)}
-          />
-          <Checkbox
-            label={t('language.autoTranslateDesc')}
-            description={t('language.autoTranslateDescDesc')}
-            checked={languageSettings?.autoTranslateDescriptions}
-            onChange={(e) => handleSettingChange('autoTranslateDescriptions', e?.target?.checked)}
-          />
-          <Checkbox
-            label={t('language.showOriginal')}
-            description={t('language.showOriginalDesc')}
-            checked={languageSettings?.showOriginalText}
-            onChange={(e) => handleSettingChange('showOriginalText', e?.target?.checked)}
-          />
-          <Checkbox
-            label={t('language.preferSubs')}
-            description={t('language.preferSubsDesc')}
-            checked={languageSettings?.preferSubtitlesInLanguage}
-            onChange={(e) => handleSettingChange('preferSubtitlesInLanguage', e?.target?.checked)}
-          />
-        </div>
       </motion.div>
+
     </motion.div>
   );
 };

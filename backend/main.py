@@ -68,6 +68,33 @@ def get_downloads_folder():
     from pathlib import Path
     return os.path.join(str(Path.home()), "Downloads")
 
+def get_desktop_registry_settings():
+    """
+    Reads installer-written preferences from the Windows registry.
+    Returns a dict with 'download_path' and 'auto_organize' (bool).
+    Fallback: system Downloads folder, no folder organization.
+    """
+    result = {'download_path': get_downloads_folder(), 'auto_organize': False}
+    if os.name != 'nt':
+        return result
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\YTDeluxe\Settings') as key:
+            try:
+                path_val = winreg.QueryValueEx(key, 'DownloadPath')[0]
+                if path_val and os.path.isdir(path_val):
+                    result['download_path'] = path_val
+            except Exception:
+                pass
+            try:
+                org_val = winreg.QueryValueEx(key, 'AutoOrganize')[0]
+                result['auto_organize'] = str(org_val).strip() == '1'
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return result
+
 bgutil_process = None
 
 app = FastAPI(title="YT Deluxe Backend")
@@ -454,14 +481,22 @@ SEARCH_QUICK_FETCH = 21         # Quick first batch for search (serves page 1 in
 
 # Endpoint: Trending videos — cursor-based, cache-backed infinite scroll
 @app.get("/api/trending")
-def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, limit: int = TRENDING_PAGE_SIZE):
+def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, limit: int = TRENDING_PAGE_SIZE, refresh: bool = False):
   """
   Returns `limit` trending videos starting from `cursor` index.
   On cursor=0 (first load or category change), fetches a fresh batch and caches it.
+  Pass refresh=true to force-clear the cache and fetch genuinely new data.
   Returns next_cursor=-1 when no more items are available.
   """
   cache_key = f"{category_id}_{region}"
   now = time.time()
+
+  # --- Force-clear cache if refresh=true is requested ---
+  if refresh:
+    with _trending_cache_lock:
+      if cache_key in _trending_cache:
+        del _trending_cache[cache_key]
+        print(f"[Trending] Cache CLEARED for '{cache_key}' (force refresh requested)")
 
   # --- Check cache ---
   with _trending_cache_lock:
@@ -1256,6 +1291,7 @@ def download_video(
   rename: Optional[str] = Form(None),
   is_desktop: bool = Form(False),
   download_path: Optional[str] = Form(None),
+  organize_folders: Optional[bool] = Form(None),  # None → read from registry; True/False → explicit override
   type: Optional[str] = Form(None),
   channel: Optional[str] = Form(None),
   thumbnail: Optional[str] = Form(None),
@@ -1279,7 +1315,7 @@ def download_video(
       download_worker,
       task_id, url, quality, format,
       trim_start, trim_end, rename, format_id, is_desktop, download_path, type,
-      audio_format_id, container, convert_to_mp3
+      audio_format_id, container, convert_to_mp3, organize_folders
     )
 
     return {"task_id": task_id, "message": "Download started successfully."}
@@ -1307,22 +1343,42 @@ def download_worker(task_id: str, url: str, quality: str = None,
           download_path: str = None, type: str = None,
           audio_format_id: str = None,   # Change D: specific audio stream
           container: str = None,          # Change D: output container
-          convert_to_mp3: bool = False):  # Change D: MP3 transcode toggle
+          convert_to_mp3: bool = False,   # Change D: MP3 transcode toggle
+          organize_folders: bool = None): # None → fall back to registry AutoOrganize setting
   try:
     if is_desktop:
-      if download_path and os.path.exists(download_path):
-        base_dir = os.path.join(download_path, "YT Deluxe Downloads")
+      # ── Resolve desktop download path ────────────────────────────────────
+      # Priority: (1) path passed from frontend settings, (2) registry DownloadPath,
+      # (3) system Downloads folder.
+      reg_settings = get_desktop_registry_settings()
+
+      if download_path and os.path.isdir(download_path):
+        base_dir = download_path
+      elif reg_settings['download_path'] and os.path.isdir(reg_settings['download_path']):
+        base_dir = reg_settings['download_path']
       else:
-        base_dir = os.path.join(get_downloads_folder(), "YT Deluxe Downloads")
-        
-      if format == "mp3" or quality == "audio" or "audio" in str(quality).lower() or type == "audio":
-        subfolder = "Music"
-      elif type == "thumbnail" or format == "jpg":
-        subfolder = "Thumbnails"
+        base_dir = get_downloads_folder()
+
+      # ── Resolve folder organization ───────────────────────────────────────
+      # Priority: (1) explicit frontend override, (2) installer registry value.
+      if organize_folders is None:
+        use_subfolders = reg_settings['auto_organize']
       else:
-        subfolder = "Videos"
-        
-      TARGET_DIR = os.path.join(base_dir, subfolder)
+        use_subfolders = bool(organize_folders)
+
+      if use_subfolders:
+        # Organized mode: type subfolders inside base_dir
+        if format == "mp3" or quality == "audio" or "audio" in str(quality).lower() or type == "audio":
+          subfolder = "Music"
+        elif type == "thumbnail" or format == "jpg":
+          subfolder = "Thumbnails"
+        else:
+          subfolder = "Videos"
+        TARGET_DIR = os.path.join(base_dir, subfolder)
+      else:
+        # Flat mode (default): files go directly into base_dir
+        TARGET_DIR = base_dir
+
       os.makedirs(TARGET_DIR, exist_ok=True)
     else:
       TARGET_DIR = TEMPFILES_DIR
@@ -1336,7 +1392,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
       "format_id": format_id, "is_desktop": is_desktop,
       "download_path": download_path, "type": type,
       "audio_format_id": audio_format_id, "container": container,
-      "convert_to_mp3": convert_to_mp3
+      "convert_to_mp3": convert_to_mp3, "organize_folders": organize_folders
     }
     _save_tasks()
     
@@ -2067,7 +2123,35 @@ def load_history():
 # Endpoint: Download history
 @app.get("/api/history")
 def get_history():
-  return {"history": download_history}
+  global download_history
+
+  # Filter out entries where the file has been manually deleted from disk.
+  # We only check entries that have a filepath (desktop downloads).
+  # Web entries (no filepath, or filepath in temp dir) are kept as-is.
+  valid_history = []
+  orphaned = False
+
+  for item in download_history:
+    filepath = item.get("filepath")
+    if filepath:
+      exists = os.path.exists(filepath)
+      if not exists:
+        # File was manually deleted — remove from history entirely
+        orphaned = True
+        print(f"[History] Purging orphaned entry: {item.get('title', 'Unknown')} ({filepath})")
+        continue
+      # File exists: include it with the flag
+      valid_history.append({ **item, "file_exists": True })
+    else:
+      # Web mode or no path — keep entry, mark as N/A
+      valid_history.append({ **item, "file_exists": None })
+
+  # Persist the cleaned-up list if any orphaned entries were removed
+  if orphaned:
+    download_history = valid_history
+    save_history()
+
+  return {"history": valid_history}
 
 @app.delete("/api/history/{task_id}")
 def delete_history_item(task_id: str, delete_file: bool = False):
@@ -2278,14 +2362,16 @@ async def open_desktop_file(request: Request):
     if not filename:
       return JSONResponse({"error": "File path or name required"}, status_code=400)
     
-    # Fallback to recursively searching the YT Deluxe Downloads folder
-    TARGET_DIR = os.path.join(get_downloads_folder(), "YT Deluxe Downloads")
-    filepath = os.path.join(TARGET_DIR, filename)
+    # Search in configured download base dir (registry or system Downloads)
+    reg = get_desktop_registry_settings()
+    download_path = data.get("download_path")
+    BASE_DIR = download_path if (download_path and os.path.isdir(download_path)) else reg['download_path']
+    filepath = os.path.join(BASE_DIR, filename)
     
     if not os.path.exists(filepath):
-      # Try searching in subfolders (Videos, Music, Thumbnails)
+      # Recursive search (covers organized subfolders Videos/Music/Thumbnails)
       found = False
-      for root, dirs, files in os.walk(TARGET_DIR):
+      for root, dirs, files in os.walk(BASE_DIR):
         if filename in files:
           filepath = os.path.join(root, filename)
           found = True
@@ -2305,11 +2391,12 @@ async def open_desktop_file(request: Request):
 @app.post("/api/desktop/open-folder")
 async def open_desktop_folder(request: Request):
   data = await request.json()
+  reg = get_desktop_registry_settings()
   download_path = data.get("download_path")
-  if download_path and os.path.exists(download_path):
-    TARGET_DIR = os.path.join(download_path, "YT Deluxe Downloads")
+  if download_path and os.path.isdir(download_path):
+    TARGET_DIR = download_path
   else:
-    TARGET_DIR = os.path.join(get_downloads_folder(), "YT Deluxe Downloads")
+    TARGET_DIR = reg['download_path']
     
   os.makedirs(TARGET_DIR, exist_ok=True)
   if os.path.exists(TARGET_DIR):

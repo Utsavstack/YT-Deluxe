@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"; import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import { formatTime } from '../../../utils/dateFormat';
 
 const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete, onClearCompleted }) => {
   const { t } = useTranslation();
@@ -261,7 +262,7 @@ const DownloadProgress = ({ downloads, onCancel, onRetry, onComplete, onClearCom
                       <span className="text-success tracking-wide uppercase">{t("videoDetailsDownload.downloadCompleted")}</span>
                       <span className="text-muted-foreground flex items-center gap-1">
                         <Icon name="Clock" size={10} />
-                        {new Date(download.completedAt)?.toLocaleTimeString()}
+                        {formatTime(download.completedAt)}
                       </span>
                     </div>
                   )}

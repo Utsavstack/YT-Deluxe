@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../../../components/AppIcon';
 
 // ── Read from package.json via Vite — auto-updates when you bump package.json
@@ -10,6 +11,7 @@ const releaseType  = isPreRelease ? 'Beta' : 'Stable';
 
 const AboutYTDeluxe = () => {
   const { t } = useTranslation();
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const features = [
     {
@@ -159,31 +161,6 @@ const AboutYTDeluxe = () => {
         </div>
       </motion.div>
 
-      {/* Features Full Width */}
-      <motion.div id="features-section" variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-6 md:p-8 flex flex-col relative">
-        <h2 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2"> 
-          <Icon name="Feature" size={20} className="text-amber-500" />
-          {t('aboutUs.premiumEdge')}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ y: -3 }}
-              className="flex flex-col space-y-3 group cursor-default p-4 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/10 transition-all duration-300"
-            >
-              <div className="w-10 h-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-glass-sm transition-all duration-300">
-                <Icon name={feature.icon} size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors leading-tight mb-2">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
       {/* Developer Context */}
       <motion.div variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-8 border-t-4 border-primary/20 relative overflow-hidden group/card">
         <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover/card:scale-110 transition-transform duration-1000">
@@ -195,21 +172,23 @@ const AboutYTDeluxe = () => {
               <span className="w-1 h-1 rounded-full bg-primary animate-pulse" />
               <span>{t('aboutUs.devBadge')}</span>
             </div>
-            <div className="flex items-center space-x-4 justify-center md:justify-start">
+            <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 justify-center md:justify-start">
               <motion.div
                 whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsPreviewOpen(true)}
                 transition={{ type: "spring", stiffness: 300 }}
-                className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/20 shadow-glass flex items-center justify-center bg-primary/5"
+                className="w-32 h-32 rounded-full overflow-hidden border-4 border-background ring-2 ring-primary/40 shadow-xl flex items-center justify-center bg-primary/5 shrink-0 cursor-pointer"
               >
                 <img
                   src="/assets/images/utsav.webp"
                   alt="Utsav Parmar"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover scale-[1.3] transform origin-top"
                   onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Utsav+Parmar&background=0D8ABC&color=fff&size=128' }}
                 />
               </motion.div>
-              <div>
-                <h3 className="text-xl font-black text-foreground tracking-tight">Utsav Parmar</h3>
+              <div className="text-center md:text-left">
+                <h3 className="text-2xl font-black text-foreground tracking-tight">Utsav Parmar</h3>
                 <p className="text-sm font-medium text-primary/80">{t('aboutUs.devRole')}</p>
               </div>
             </div>
@@ -282,6 +261,31 @@ const AboutYTDeluxe = () => {
         </div>
       </motion.div>
 
+      {/* Features Full Width */}
+      <motion.div id="features-section" variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-6 md:p-8 flex flex-col relative">
+        <h2 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2"> 
+          <Icon name="Feature" size={20} className="text-amber-500" />
+          {t('aboutUs.premiumEdge')}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              whileHover={{ y: -3 }}
+              className="flex flex-col space-y-3 group cursor-default p-4 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/10 transition-all duration-300"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-glass-sm transition-all duration-300">
+                <Icon name={feature.icon} size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors leading-tight mb-2">{feature.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
       {/* Philosophy Footer */}
       <motion.div variants={itemVariants} className="text-center space-y-2 opacity-60 pb-8 group transition-opacity hover:opacity-100">
         <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10">
@@ -291,6 +295,44 @@ const AboutYTDeluxe = () => {
           <span>{t('aboutUs.footerText')}</span>
         </div>
       </motion.div>
+
+      {/* Developer Photo Preview Modal */}
+      {createPortal(
+        <AnimatePresence>
+          {isPreviewOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsPreviewOpen(false)}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-md cursor-zoom-out"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative max-w-md w-full aspect-square rounded-[2.5rem] overflow-hidden shadow-glass-2xl border border-white/10"
+              >
+                <button
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 backdrop-blur-sm transition-colors border border-white/10"
+                >
+                  <Icon name="X" size={20} />
+                </button>
+                <img
+                  src="/assets/images/utsav.webp"
+                  alt="Utsav Parmar"
+                  className="w-full h-full object-cover object-top"
+                  onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Utsav+Parmar&background=0D8ABC&color=fff&size=512' }}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 };

@@ -15,6 +15,8 @@ import TermsAndConditions from './components/TermsAndConditions';
 import LicenseAndDisclaimer from './components/LicenseAndDisclaimer';
 
 import { useTheme } from '../../utils/ThemeContext';
+import { YTDeluxeStorage, STORAGE_KEYS } from '../../utils/storage';
+import { getAllPermissions, resetPermission, resetAllPermissions, PERMISSION_META, PERMISSIONS } from '../../utils/permissions';
 
 // ── Auto-reads from package.json — just bump version there, no manual UI updates needed
 const APP_VERSION = `v${import.meta.env.VITE_APP_VERSION || import.meta.env.PACKAGE_VERSION || '1.0.0-beta'}`;
@@ -33,8 +35,7 @@ const UserSettingsPreferences = () => {
     caption: "Hey I'm using YT Deluxe",
   });
 
-  // Mock settings states
-  const [downloadPreferences, setDownloadPreferences] = useState({
+  const DEFAULT_DOWNLOAD_PREFS = {
     defaultVideoQuality: '1080p',
     defaultVideoFormat: 'mp4',
     defaultAudioFormat: 'mp3',
@@ -43,7 +44,8 @@ const UserSettingsPreferences = () => {
     customTemplate: '{channel} - {title} [{quality}]',
     removeSpecialChars: true,
     addDownloadDate: false,
-    downloadPath: '/Users/username/Downloads',
+    downloadPath: '',
+    organizeFolders: false,        // default: flat — files go directly into download folder
     createChannelFolders: true,
     createDateFolders: false,
     maxConcurrentDownloads: 3,
@@ -52,10 +54,10 @@ const UserSettingsPreferences = () => {
     verifyIntegrity: true,
     autoRetry: true,
     deleteAfterConversion: false
-  });
+  };
 
-  const [languageSettings, setLanguageSettings] = useState({
-    dateFormat: 'MM/DD/YYYY',
+  const DEFAULT_LANGUAGE_SETTINGS = {
+    dateFormat: 'DD/MM/YYYY',
     timeFormat: '12h',
     numberFormat: 'en-US',
     useSystemLocale: false,
@@ -66,7 +68,10 @@ const UserSettingsPreferences = () => {
     rtlLayout: false,
     localizedShortcuts: true,
     autoDetectInput: false
-  });
+  };
+
+  const [downloadPreferences, setDownloadPreferences] = useState(DEFAULT_DOWNLOAD_PREFS);
+  const [languageSettings, setLanguageSettings] = useState(DEFAULT_LANGUAGE_SETTINGS);
 
 
   const settingSections = [
@@ -74,6 +79,7 @@ const UserSettingsPreferences = () => {
     { id: 'theme', label: t('nav.theme'), icon: 'Palette', description: t('nav.themeDesc') },
     { id: 'downloads', label: t('nav.downloads'), icon: 'Download', description: t('nav.downloadsDesc') },
     { id: 'language', label: t('nav.language'), icon: 'Globe', description: t('nav.languageDesc') },
+    { id: 'permissions', label: 'App Permissions', icon: 'ShieldCheck', description: 'Manage permissions' },
     { id: 'updates', label: t('nav.updates', 'Updates & FAQ'), icon: 'Zap', description: t('nav.updatesDesc', 'Changelog and support') },
     { id: 'about', label: t('nav.about'), icon: 'Info', description: t('nav.aboutDesc') },
     { id: 'privacy', label: t('nav.privacy'), icon: 'Shield', description: t('nav.privacyDesc') },
@@ -81,19 +87,64 @@ const UserSettingsPreferences = () => {
     { id: 'license', label: t('nav.license', 'License & Disclaimer'), icon: 'Scale', description: t('nav.licenseDesc', 'Legal terms and licenses') }
   ];
 
+  // Load ALL persisted settings on mount
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('ytdeluxe_language');
-    if (savedLanguage) {
-      setCurrentLanguage(savedLanguage);
-      i18n.changeLanguage(savedLanguage);
-    }
+    const loadAllSettings = async () => {
+      // Language
+      const savedLanguage = await YTDeluxeStorage.getItem(STORAGE_KEYS.LANGUAGE, 'en');
+      if (savedLanguage) {
+        setCurrentLanguage(savedLanguage);
+        i18n.changeLanguage(savedLanguage);
+      }
+
+      // Download preferences (merged over defaults so new keys are always present)
+      const savedDownloadPrefs = await YTDeluxeStorage.getItem(STORAGE_KEYS.DOWNLOAD_PREFS, null);
+      if (savedDownloadPrefs && typeof savedDownloadPrefs === 'object') {
+        setDownloadPreferences(prev => ({ ...prev, ...savedDownloadPrefs }));
+      }
+
+      // Download path (stored separately for direct API use)
+      const savedPath = await YTDeluxeStorage.getItem(STORAGE_KEYS.DOWNLOAD_PATH, '');
+      if (savedPath) {
+        setDownloadPreferences(prev => ({ ...prev, downloadPath: savedPath }));
+      }
+
+      // Language settings
+      const savedLangSettings = await YTDeluxeStorage.getItem('ytdeluxe_language_settings', null);
+      if (savedLangSettings && typeof savedLangSettings === 'object') {
+        setLanguageSettings(prev => ({ ...prev, ...savedLangSettings }));
+      }
+    };
+    loadAllSettings();
   }, []);
 
   const handleThemeChange = (newTheme) => onThemeChange(newTheme);
 
   const handleLanguageChange = (language) => {
     setCurrentLanguage(language);
-    localStorage.setItem('ytdeluxe_language', language);
+    // Use YTDeluxeStorage so language persists in the backend settings file on desktop
+    YTDeluxeStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
+    i18n.changeLanguage(language);
+  };
+
+  // Persist ALL download preferences to storage on every change
+  const handleDownloadPreferencesChange = (updated) => {
+    setDownloadPreferences(updated);
+    YTDeluxeStorage.setItem(STORAGE_KEYS.DOWNLOAD_PREFS, updated);
+    // Also keep download path in its dedicated key (used by the download API)
+    if (updated.downloadPath !== undefined) {
+      YTDeluxeStorage.setItem(STORAGE_KEYS.DOWNLOAD_PATH, updated.downloadPath);
+    }
+    // Keep organize_folders in its dedicated key (read directly by api.js)
+    if (updated.organizeFolders !== undefined) {
+      localStorage.setItem('ytdeluxe_organize_folders', updated.organizeFolders ? 'true' : 'false');
+    }
+  };
+
+  // Persist language settings to storage on every change
+  const handleLanguageSettingsChange = (updated) => {
+    setLanguageSettings(updated);
+    YTDeluxeStorage.setItem('ytdeluxe_language_settings', updated);
   };
 
   const renderActiveSection = () => {
@@ -101,9 +152,11 @@ const UserSettingsPreferences = () => {
       case 'theme':
         return <ThemeCustomization currentTheme={currentTheme} onThemeChange={handleThemeChange} currentAccentColor={currentAccentColor} onAccentColorChange={handleAccentColorChange} />;
       case 'downloads':
-        return <DownloadPreferences preferences={downloadPreferences} onPreferencesChange={setDownloadPreferences} />;
+        return <DownloadPreferences preferences={downloadPreferences} onPreferencesChange={handleDownloadPreferencesChange} />;
       case 'language':
-        return <LanguageSettings currentLanguage={currentLanguage} onLanguageChange={handleLanguageChange} settings={languageSettings} onSettingsChange={setLanguageSettings} />;
+        return <LanguageSettings currentLanguage={currentLanguage} onLanguageChange={handleLanguageChange} settings={languageSettings} onSettingsChange={handleLanguageSettingsChange} />;
+      case 'permissions':
+        return <PermissionsPanel />;
       case 'updates':
         return <ChangelogAndFaq />;
       case 'account':
@@ -408,7 +461,7 @@ const UserSettingsPreferences = () => {
                 </div>
                   
                 <div className="flex items-center justify-center">
-                  <span className="px-2.5 py-1 rounded-lg bg-primary/5 border border-border/50 text-[10px] font-bold text-primary/70">
+                  <span className="px-3 py-1 rounded-xl bg-slate-200/70 dark:bg-zinc-800 border border-slate-300/80 dark:border-white/10 text-[10px] font-black tracking-widest text-slate-700 dark:text-slate-300 shadow-sm">
                     {APP_VERSION}
                   </span>
                 </div>
@@ -428,6 +481,133 @@ const UserSettingsPreferences = () => {
       </div>
     </div>
     </>
+  );
+};
+
+// ─── Permissions Panel ────────────────────────────────────────────────────────
+// Shown in Settings > App Permissions — lets users view and reset stored grants.
+const PermissionsPanel = () => {
+  const [grants, setGrants] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [resetting, setResetting] = useState(null);
+
+  const loadGrants = async () => {
+    setLoading(true);
+    const g = await getAllPermissions();
+    setGrants(g || {});
+    setLoading(false);
+  };
+
+  useEffect(() => { loadGrants(); }, []);
+
+  const handleReset = async (key) => {
+    setResetting(key);
+    await resetPermission(key);
+    await loadGrants();
+    setResetting(null);
+  };
+
+  const handleResetAll = async () => {
+    setResetting('all');
+    await resetAllPermissions();
+    await loadGrants();
+    setResetting(null);
+  };
+
+  const STATUS_STYLE = {
+    granted: { label: 'Allowed', bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+    denied:  { label: 'Denied',  bg: 'bg-red-500/10 text-red-500 border-red-500/20' },
+    prompt:  { label: 'Not asked', bg: 'bg-muted/60 text-muted-foreground border-border/40' },
+  };
+
+  const allPermKeys = Object.values(PERMISSIONS);
+  const hasAnyDecision = allPermKeys.some(k => grants[k] && grants[k] !== 'prompt');
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {/* Header card */}
+      <div className="glass-card p-6 border border-border/50 bg-card/90 dark:bg-card/30 shadow-glass-xl">
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
+              <Icon name="ShieldCheck" size={20} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-foreground tracking-tight">App Permissions</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                YT Deluxe never stores any access permition.
+              </p>
+            </div>
+          </div>
+          {hasAnyDecision && (
+            <button
+              onClick={handleResetAll}
+              disabled={resetting === 'all'}
+              className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50"
+            >
+              {resetting === 'all' ? 'Resetting...' : 'Reset All'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Permission rows */}
+      <div className="glass-card p-4 border border-border/50 bg-card/90 dark:bg-card/30 shadow-glass-xl space-y-2">
+        {loading ? (
+          <div className="py-10 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : (
+          allPermKeys.map((key) => {
+            const meta   = PERMISSION_META[key] || { icon: 'Shield', title: key, reason: '' };
+            const state  = grants[key] || 'prompt';
+            const status = STATUS_STYLE[state] || STATUS_STYLE.prompt;
+            const isResetting = resetting === key;
+
+            return (
+              <motion.div
+                key={key}
+                layout
+                className="flex items-center gap-4 p-4 rounded-2xl bg-muted/20 dark:bg-white/[0.02] border border-border/30 hover:border-border/60 transition-all"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                  <Icon name={meta.icon} size={18} className="text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground">{meta.title}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{meta.reason}</p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${status.bg}`}>
+                    {status.label}
+                  </span>
+                  {state !== 'prompt' && (
+                    <button
+                      onClick={() => handleReset(key)}
+                      disabled={isResetting}
+                      title="Reset — will ask again next time"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all disabled:opacity-40"
+                    >
+                      <Icon name={isResetting ? 'Loader2' : 'RotateCcw'} size={13} className={isResetting ? 'animate-spin' : ''} />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })
+        )}
+
+        {!loading && !hasAnyDecision && (
+          <div className="py-10 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-muted/40 border border-border/30 flex items-center justify-center mx-auto mb-3">
+              <Icon name="ShieldCheck" size={24} className="text-muted-foreground/40" />
+            </div>
+            <p className="text-sm font-bold text-muted-foreground">No permissions asked yet</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">When YT Deluxe requests access, it will appear here.</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 

@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   THEME: 'ytdeluxe_theme',
   ACCENT_COLOR: 'ytdeluxe_accent_color',
   LANGUAGE: 'ytdeluxe_language',
+  LANGUAGE_SETTINGS: 'ytdeluxe_language_settings',
   USER_PROFILE: 'ytdeluxe_user_profile',
   DOWNLOAD_PREFS: 'ytdeluxe_download_preferences',
   DOWNLOAD_PATH: 'ytdeluxe_download_path'
@@ -17,30 +18,44 @@ class YTDeluxeStorage {
   static async getItem(key, defaultValue = null) {
     if (isDesktop()) {
       try {
-        // For settings-related keys, we try to get from backend
-        // This keeps Desktop data in JSON files
+        // For settings-related keys, we try to get from backend.
+        // This keeps Desktop data in JSON files that survive app updates.
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/settings/${key}`);
         if (response.ok) {
           const data = await response.json();
-          return data.value !== undefined ? data.value : defaultValue;
+          // KEY FIX: Only use backend value if it is truly non-null.
+          // If the backend returns null (key never saved there), fall through
+          // to localStorage — which acts as our reliable secondary source.
+          if (data.value !== undefined && data.value !== null) {
+            return data.value;
+          }
         }
       } catch (error) {
         console.error(`Error loading ${key} from desktop settings:`, error);
       }
     }
-    
-    // Fallback to localStorage for web or if desktop API fails
+
+    // Fallback: localStorage for web mode, OR for desktop when the backend
+    // returned null/failed (e.g. first run, or previous save race-condition).
+    // This prevents settings from resetting on every app restart.
     const item = localStorage.getItem(key);
     try {
-      return item ? JSON.parse(item) : defaultValue;
+      return item !== null ? JSON.parse(item) : defaultValue;
     } catch {
       return item || defaultValue;
     }
   }
 
   static async setItem(key, value) {
+    // Write to localStorage FIRST so the UI is instantly responsive and a
+    // reliable fallback is always available (even if the backend call fails).
+    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    localStorage.setItem(key, stringValue);
+
     if (isDesktop()) {
       try {
+        // Then persist to the backend (~/.yt-deluxe/settings.json) so settings
+        // survive across WebView2 profile resets and app updates.
         await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/settings/${key}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -50,13 +65,11 @@ class YTDeluxeStorage {
         console.error(`Error saving ${key} to desktop settings:`, error);
       }
     }
-
-    // Always keep a local copy for immediate UI responsiveness and web support
-    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-    localStorage.setItem(key, stringValue);
   }
 
   static async removeItem(key) {
+    localStorage.removeItem(key);
+
     if (isDesktop()) {
       try {
         await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/settings/${key}`, {
@@ -66,7 +79,6 @@ class YTDeluxeStorage {
         console.error(`Error removing ${key} from desktop settings:`, error);
       }
     }
-    localStorage.removeItem(key);
   }
 
   // Helper for history which is handled specifically by the history API on desktop

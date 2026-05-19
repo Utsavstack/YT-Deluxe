@@ -33,10 +33,11 @@ class YTDeluxeAPI {
   }
 
   // Get real trending videos — cursor-based, cache-backed
-  static async getTrending(categoryId = '0', region = 'IN', cursor = 0, limit = 18) {
+  static async getTrending(categoryId = '0', region = 'IN', cursor = 0, limit = 18, forceRefresh = false) {
     try {
+      const refreshParam = forceRefresh ? '&refresh=true' : '';
       const response = await fetch(
-        `${API_BASE_URL}/api/trending?category_id=${categoryId}&region=${region}&cursor=${cursor}&limit=${limit}`
+        `${API_BASE_URL}/api/trending?category_id=${categoryId}&region=${region}&cursor=${cursor}&limit=${limit}${refreshParam}`
       );
       const data = await handleResponse(response);
       if (data.results) {
@@ -120,6 +121,12 @@ class YTDeluxeAPI {
       if (downloadPath) {
         formData.append('download_path', downloadPath);
       }
+
+      // Always send organize_folders in desktop mode so backend never falls back
+      // to stale registry values (e.g. old installer that defaulted AutoOrganize=1).
+      // Default = false (flat mode) if the user has never changed this setting.
+      const organizeFolders = localStorage.getItem('ytdeluxe_organize_folders');
+      formData.append('organize_folders', organizeFolders === 'true' ? 'true' : 'false');
 
       const response = await fetch(`${API_BASE_URL}/api/download`, {
         method: 'POST',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../AppIcon';
 import Button from './Button';
+import { formatTime } from '../../utils/dateFormat';
 
 const ProgressNotification = ({ downloads = [] }) => {
  const [notifications, setNotifications] = useState([]);
@@ -162,10 +163,7 @@ const ProgressNotification = ({ downloads = [] }) => {
 
         <div className="flex items-center justify-between mt-3">
          <span className="text-xs text-muted-foreground">
-          {notification?.timestamp?.toLocaleTimeString([], {
-           hour: '2-digit',
-           minute: '2-digit'
-          })}
+          {formatTime(notification?.timestamp)}
          </span>
 
 

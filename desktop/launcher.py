@@ -161,6 +161,21 @@ class AppApi:
         except Exception:
             return False
 
+    def pick_folder(self):
+        """Open native Windows folder picker dialog.
+        Returns the selected folder path, or None if cancelled.
+        """
+        try:
+            if self._window:
+                result = self._window.create_file_dialog(
+                    webview.FOLDER_DIALOG
+                )
+                if result and len(result) > 0:
+                    return result[0]
+        except Exception:
+            pass
+        return None
+
     def read_installer_config(self):
         """Read installer-set preferences from Windows registry.
         Returns dict with: download_path, auto_organize, update_notify,
@@ -246,6 +261,45 @@ def main():
         maximized=True,
     )
     api._window = window
+
+    # ── Auto-grant WebView2 permissions (suppress native "localhost" dialogs) ──
+    def on_loaded():
+        """Hook into WebView2's PermissionRequested to auto-grant all permissions.
+        This prevents the native 'http://localhost:8000 wants to...' popup.
+        Our JS-side PermissionDialog handles the branded user-facing flow instead.
+        """
+        try:
+            from webview.platforms.edgechromium import BrowserView
+            instance = BrowserView.instances.get(window.uid)
+            if not instance:
+                print("[YT Deluxe] No BrowserView instance found")
+                return
+
+            # Access the WinForms WebView2 control → CoreWebView2
+            web_view = getattr(instance, 'browser', None) or getattr(instance, 'web_view', None)
+            if not web_view:
+                print("[YT Deluxe] No WebView2 control found on instance")
+                return
+
+            core = web_view.CoreWebView2
+            if not core:
+                print("[YT Deluxe] CoreWebView2 not yet initialized")
+                return
+
+            def on_permission_requested(sender, args):
+                # CoreWebView2PermissionState: 0=Default, 1=Allow, 2=Deny
+                args.State = 1  # Allow — our JS dialog already handled user consent
+                kind = getattr(args, 'PermissionKind', 'unknown')
+                print(f"[YT Deluxe] Auto-granted WebView2 permission: {kind}")
+
+            core.PermissionRequested += on_permission_requested
+            print("[YT Deluxe] WebView2 permission auto-grant: ACTIVE")
+
+        except Exception as e:
+            print(f"[YT Deluxe] Permission auto-grant setup failed: {e}")
+            # Not fatal — JS-side dialog still works, user just sees native popup too
+
+    window.events.loaded += on_loaded
 
     def on_closed():
         print("[YT Deluxe] Window closed. Killing backend process tree...")

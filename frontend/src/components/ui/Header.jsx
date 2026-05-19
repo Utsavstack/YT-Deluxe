@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../AppIcon';
 import ThemeToggle from './ThemeToggle';
 import { useDownloadContext } from '../../context/DownloadContext';
+import { formatTime } from '../../utils/dateFormat';
 
 const Header = ({ isScrolled: isScrolledProp }) => {
   const location = useLocation();
@@ -456,7 +457,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                                         {dl.completedAt && (
                                           <span className="text-[9px] font-bold text-muted-foreground bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                                             <Icon name="Clock" size={8} />
-                                            {new Date(dl.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {formatTime(dl.completedAt)}
                                           </span>
                                         )}
                                         {dl.error && <span className="text-[9px] text-error truncate max-w-[120px]">{dl.error}</span>}

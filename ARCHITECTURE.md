@@ -973,6 +973,302 @@ graph TD
     H --> J
 ```
 
+#### 5.3.5 Download Architecture Refactoring (Flat vs Organized)
+
+Previously, all desktop downloads were funnelled into a rigid `YT Deluxe Downloads/` wrapper with mandatory type subfolders (`Videos/`, `Music/`, `Thumbnails/`). This felt unnatural compared to how browsers save files directly into the system Downloads folder.
+
+**New Behaviour:**
+- **Flat mode (default):** Files save directly into the user's native Downloads folder (or a custom path), exactly like a browser download. No wrapper folder, no subfolders.
+- **Organized mode (opt-in):** When the user enables "Separate files by type" in Settings (or checks it during installation), files are sorted into `Videos/`, `Music/`, and `Thumbnails/` subfolders.
+
+**Path Resolution Priority Chain:**
+
+The backend resolves the download destination through a layered priority system. The frontend always sends its current settings; the Windows registry is only consulted as a last resort (batch downloads, resume, or first run before the UI has been opened).
+
+```mermaid
+flowchart TD
+    A["User clicks Download"] --> B["Frontend api.js"]
+    B --> |"FormData"| C["POST /api/download"]
+    C --> D["download_worker()"]
+
+    D --> E{"download_path param sent?"}
+    E --> |"Yes (from Settings UI)"| F["base_dir = download_path"]
+    E --> |"No"| G{"Registry DownloadPath?"}
+    G --> |"Valid directory"| F
+    G --> |"Missing / invalid"| H["base_dir = System Downloads"]
+
+    D --> I{"organize_folders param sent?"}
+    I --> |"Yes (from Settings UI)"| J["use_subfolders = explicit value"]
+    I --> |"No / None"| K["use_subfolders = Registry AutoOrganize"]
+
+    J --> L{"use_subfolders?"}
+    K --> L
+    L --> |"true"| M["TARGET_DIR = base_dir / Videos or Music or Thumbnails"]
+    L --> |"false (default)"| N["TARGET_DIR = base_dir  (flat)"]
+```
+
+**Critical Bug Fix Stale Registry Fallback:**
+
+On first run after updating from an older installer (which set `AutoOrganize=1` in the registry), the frontend's `localStorage` key `ytdeluxe_organize_folders` didn't exist yet. The original code had:
+```javascript
+// BUG: if (organizeFolders !== null) key is null on first run → field omitted
+```
+This caused the backend to fall back to the registry → `AutoOrganize='1'` → subfolders were created despite the new flat default. The fix removes the null guard and **always** sends `organize_folders=false` as the default.
+
+```mermaid
+sequenceDiagram
+    participant UI as Settings UI
+    participant LS as localStorage
+    participant API as api.js
+    participant BE as download_worker
+    participant REG as Windows Registry
+    participant FS as File System
+
+    Note over UI: User toggles "Separate files" OFF (default)
+    UI->>LS: ytdeluxe_organize_folders = "false"
+    UI->>LS: ytdeluxe_download_path = "C:\Users\OM\Downloads"
+
+    Note over UI: User clicks Download
+    API->>LS: Read organize_folders → "false"
+    API->>LS: Read download_path → "C:\Users\OM\Downloads"
+    API->>BE: POST /api/download {organize_folders=false, download_path=...}
+
+    BE->>BE: organize_folders is not None → use explicit false
+    BE->>BE: download_path is valid dir → use as base_dir
+    BE->>BE: use_subfolders = false → TARGET_DIR = base_dir
+    BE->>FS: Save to C:\Users\OM\Downloads\video.mp4
+
+    Note over API: If organize_folders was NOT sent (resume/batch)
+    BE->>REG: Read AutoOrganize → "0"
+    BE->>BE: use_subfolders = false → flat mode
+```
+
+**Files involved:**
+| File | Change |
+|---|---|
+| `backend/main.py` | New `get_desktop_registry_settings()` helper; refactored `download_worker()`, `/api/desktop/open-file`, `/api/desktop/open-folder` |
+| `frontend/src/utils/api.js` | Always send `organize_folders=false` by default |
+| `frontend/src/pages/.../DownloadPreferences.jsx` | Download path input + Browse button + "Separate files" toggle + live preview |
+| `frontend/src/pages/.../index.jsx` | `organizeFolders: false` default; dual-write to `localStorage` and `YTDeluxeStorage` |
+| `desktop/launcher.py` | New `pick_folder()` method via `webview.FOLDER_DIALOG` |
+| `desktop/installer/setup.iss` | Unchecked by default; removed `YT Deluxe Downloads` wrapper from `GetDownloadFolder` |
+
+#### 5.3.6 Desktop Stability Settings Persistence & Permission Suppression
+
+Two critical desktop stability issues were resolved: settings resetting on every app restart, and intrusive native "localhost wants to..." WebView2 permission dialogs.
+
+##### Settings Persistence (Dual-Write Strategy)
+
+The `YTDeluxeStorage` utility implements a dual-write, dual-read strategy to ensure all user preferences (theme, accent color, language, download path, folder organization, regional settings) survive across WebView2 profile resets and app updates.
+
+```mermaid
+flowchart TD
+    subgraph Write["setItem(key, value)"]
+        W1["Write to localStorage FIRST"] --> W2["Async POST to backend /api/settings/:key"]
+        W2 --> W3["Backend writes to ~/.yt-deluxe/settings.json"]
+    end
+
+    subgraph Read["getItem(key, default)"]
+        R1{"Desktop mode?"} --> |"Yes"| R2["GET /api/settings/:key from backend"]
+        R2 --> R3{"Backend returned non-null?"}
+        R3 --> |"Yes"| R4["Return backend value"]
+        R3 --> |"No / Failed"| R5["Read from localStorage"]
+        R1 --> |"No (Web)"| R5
+        R5 --> R6{"localStorage has value?"}
+        R6 --> |"Yes"| R7["Return parsed value"]
+        R6 --> |"No"| R8["Return defaultValue"]
+    end
+
+    subgraph Mount["Settings Page Mount"]
+        M1["useEffect runs loadAllSettings()"] --> M2["getItem DOWNLOAD_PREFS"]
+        M1 --> M3["getItem DOWNLOAD_PATH"]
+        M1 --> M4["getItem LANGUAGE_SETTINGS"]
+        M1 --> M5["getItem LANGUAGE"]
+        M2 --> M6["Merge over defaults → setDownloadPreferences"]
+        M3 --> M7["Patch downloadPath into prefs"]
+        M4 --> M8["Merge over defaults → setLanguageSettings"]
+        M5 --> M9["setCurrentLanguage + i18n.changeLanguage"]
+    end
+```
+
+> **Key insight:** `localStorage` is written *first* (synchronous, instant) before the async backend call. This ensures the UI is immediately responsive and a reliable fallback is always available, even if the backend POST races or fails. On read, the backend is tried first (survives WebView2 resets), falling back to `localStorage` if the backend returns null (first run, network failure).
+
+##### WebView2 Permission Auto-Grant
+
+The desktop WebView2 runtime shows native OS-level "localhost:8000 wants to access your clipboard/microphone/notifications" popups. These were suppressed by hooking into `CoreWebView2.PermissionRequested` during the `on_loaded` event:
+
+```mermaid
+sequenceDiagram
+    participant App as Frontend JS
+    participant WV2 as WebView2 Runtime
+    participant Hook as launcher.py on_loaded
+    participant Dialog as PermissionDialog.jsx
+
+    Note over Hook: Window loaded → hook PermissionRequested
+    Hook->>WV2: core.PermissionRequested += on_permission_requested
+
+    App->>App: navigator.clipboard.readText() intercepted
+    App->>Dialog: requestPermission(CLIPBOARD_READ)
+    Dialog->>Dialog: Check YTDeluxeStorage cache
+    alt Previously granted
+        Dialog-->>App: true (no popup)
+    else First time
+        Dialog->>Dialog: Show branded "YT Deluxe" in-app dialog
+        Dialog-->>App: User clicks Allow → true
+        Dialog->>Dialog: Cache "granted" in YTDeluxeStorage
+    end
+
+    App->>WV2: Actual clipboard API call
+    WV2->>Hook: PermissionRequested event fires
+    Hook->>WV2: args.State = 1 (Allow)
+    Note over WV2: Native popup suppressed ✓
+```
+
+#### 5.3.7 Custom Permission System (Branded In-App Dialog)
+
+A complete permission management layer replaces all native browser/WebView2 permission prompts with a branded "YT Deluxe" in-app dialog.
+
+**Architecture:**
+
+Three new files form the permission system:
+
+| File | Role |
+|---|---|
+| `permissions.js` | Core utility grant/deny caching, dialog trigger registration, native API fallback |
+| `PermissionDialog.jsx` | Branded modal UI registered globally in `App.jsx` |
+| `index.jsx` (app entry) | Intercepts `navigator.clipboard`, `getUserMedia`, `Notification.requestPermission` |
+
+```mermaid
+flowchart TD
+    subgraph Intercept["index.jsx Browser API Intercepts"]
+        I1["navigator.clipboard.readText()"] --> I2["requestPermission CLIPBOARD_READ"]
+        I3["navigator.clipboard.writeText()"] --> I4["requestPermission CLIPBOARD_WRITE"]
+        I5["navigator.mediaDevices.getUserMedia()"] --> I6["requestPermission MICROPHONE"]
+        I7["Notification.requestPermission()"] --> I8["requestPermission NOTIFICATIONS"]
+    end
+
+    subgraph Core["permissions.js Decision Engine"]
+        I2 --> C1{"In-memory cache hit?"}
+        I4 --> C1
+        I6 --> C1
+        I8 --> C1
+        C1 --> |"Miss"| C2["Load from YTDeluxeStorage"]
+        C1 --> |"Hit"| C3{"State?"}
+        C2 --> C3
+        C3 --> |"granted"| C4["return true (instant)"]
+        C3 --> |"denied"| C5["return false (instant)"]
+        C3 --> |"prompt (never asked)"| C6["Trigger _showDialog callback"]
+    end
+
+    subgraph Dialog["PermissionDialog.jsx Branded UI"]
+        C6 --> D1["Render modal with permission icon, title, description"]
+        D1 --> D2{"User clicks"}
+        D2 --> |"Allow"| D3["Save 'granted' to cache + YTDeluxeStorage"]
+        D2 --> |"Deny"| D4["Save 'denied' to cache + YTDeluxeStorage"]
+    end
+
+    subgraph Settings["Settings > App Permissions"]
+        S1["PermissionsPanel"] --> S2["Show all permission states"]
+        S2 --> S3["Reset button → resetPermission()"]
+        S3 --> S4["Next request shows dialog again"]
+    end
+```
+
+**Permission Types & Metadata:**
+
+| Key | Icon | Used For |
+|---|---|---|
+| `clipboard-read` | ClipboardPaste | Auto-paste YouTube links from clipboard |
+| `clipboard-write` | Clipboard | Copy title, description, share link buttons |
+| `notifications` | Bell | Desktop notifications when downloads complete |
+| `microphone` | Mic | Voice search functionality |
+
+**Persistence:** All permission decisions are stored via `YTDeluxeStorage` under the key `ytdeluxe_permissions`, which means they persist across app restarts (localStorage + backend JSON) and survive WebView2 profile resets.
+
+#### 5.3.8 Regional Settings & File Naming Pipeline
+
+A settings-aware formatting system ensures dates, times, and filenames across the entire application respect the user's regional preferences.
+
+##### Regional Date/Time Formatting (`dateFormat.js`)
+
+All components that display dates or times use centralized utility functions that **synchronously** read the user's preferences from `localStorage`. This avoids async overhead in render paths while still reflecting the latest settings (written by `LanguageSettings` via `YTDeluxeStorage`, which writes to `localStorage` first).
+
+```mermaid
+flowchart LR
+    subgraph Settings["LanguageSettings Component"]
+        S1["User selects DD/MM/YYYY + 12h"]
+        S1 --> S2["YTDeluxeStorage.setItem"]
+        S2 --> S3["localStorage.setItem (sync, instant)"]
+        S2 --> S4["POST /api/settings/:key (async, persistent)"]
+    end
+
+    subgraph Utility["dateFormat.js"]
+        U1["getRegionalSettings()"] --> U2["localStorage.getItem (sync)"]
+        U2 --> U3["Parse JSON → {dateFormat, timeFormat, numberFormat}"]
+    end
+
+    subgraph Consumers["6 Components"]
+        C1["HistoryCard"] --> U1
+        C2["Header (clock)"] --> U1
+        C3["GlobalProgressFloater"] --> U1
+        C4["ProgressNotification"] --> U1
+        C5["DownloadProgress"] --> U1
+        C6["AccountManagement"] --> U1
+    end
+
+    U3 --> F1["formatDate(date) → DD/MM/YYYY"]
+    U3 --> F2["formatTime(date) → 3:45 PM"]
+    U3 --> F3["formatDateTime(date) → 19/05/2026, 3:45:00 PM"]
+    U3 --> F4["formatNumber(num) → locale-aware"]
+```
+
+**Supported Formats:**
+
+| Function | Formats | Default |
+|---|---|---|
+| `formatDate()` | `DD/MM/YYYY`, `MM/DD/YYYY`, `YYYY-MM-DD`, `DD MMM YYYY` | `DD/MM/YYYY` |
+| `formatTime()` | `12h` (3:45 PM), `24h` (15:45) | `12h` |
+| `formatNumber()` | Any `Intl.NumberFormat` locale | `en-US` |
+
+##### File Naming Pipeline (`fileNaming.js`)
+
+When the user triggers a download, the `DownloadContext.addDownload()` method calls `buildFilename()` to compute a processed filename before sending it to the backend as the `rename` parameter.
+
+```mermaid
+flowchart TD
+    A["User clicks Download"] --> B["DownloadContext.addDownload()"]
+    B --> C["buildFilename({title, channel, quality, format})"]
+
+    C --> D["Read prefs from localStorage"]
+    D --> E{"namingConvention?"}
+    E --> |"title"| F["filename = title"]
+    E --> |"title_channel"| G["filename = title - channel"]
+    E --> |"channel_title"| H["filename = channel - title"]
+    E --> |"custom"| I["filename = template with {title},{channel},{quality},{date} tokens"]
+
+    F --> J{"removeSpecialChars enabled?"}
+    G --> J
+    H --> J
+    I --> J
+
+    J --> |"Yes"| K["sanitizeFilename() remove \\ / : * ? < > | and control chars"]
+    J --> |"No"| L{"addDownloadDate enabled?"}
+    K --> L
+
+    L --> |"Yes"| M["Append [DD/MM/YYYY] suffix"]
+    L --> |"No"| N["Final filename"]
+    M --> N
+
+    N --> O["POST /api/download {rename: filename}"]
+    O --> P["Backend uses rename as output filename"]
+```
+
+**Sanitization rules** (`sanitizeFilename`):
+- Removes Windows-illegal characters: `\ / : * ? " < > |`
+- Strips control characters (`\x00`–`\x1F`)
+- Collapses multiple spaces into one
+- Trims leading/trailing dots and whitespace
+
 ---
 
 

@@ -87,7 +87,8 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // isBackgroundRefresh=true means: fetch silently, don't show loading spinner
-  const loadTrendingVideos = async (categoryId = activeCategory, isLoadMore = false, isBackgroundRefresh = false) => {
+  // isForceRefresh=true means: clear dataCache + pass refresh=true to backend
+  const loadTrendingVideos = async (categoryId = activeCategory, isLoadMore = false, isBackgroundRefresh = false, isForceRefresh = false) => {
     try {
       if (isLoadMore) {
         setIsTrendingLoadingMore(true);
@@ -95,8 +96,13 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
         setIsTrendingLoading(true);
       }
 
+      // On force refresh, purge the local in-memory cache so stale data isn't shown
+      if (isForceRefresh) {
+        dataCache.invalidate(CacheKey.trending(categoryId));
+      }
+
       const currentCursor = isLoadMore ? trendingCursor : 0;
-      const response = await YTDeluxeAPI.getTrending(categoryId, 'IN', currentCursor, 18);
+      const response = await YTDeluxeAPI.getTrending(categoryId, 'IN', currentCursor, 18, isForceRefresh);
 
       if (response.results && response.results.length > 0) {
         if (isLoadMore) {
@@ -325,7 +331,6 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                     >
                       <div className={`w-full pointer-events-auto transition-all ${isTrendingSticky ? 'max-w-7xl mx-auto flex justify-center' : ''}`}>
                           <TrendingHeader
-                            onRefresh={() => loadTrendingVideos(activeCategory)}
                             lastUpdated={lastUpdated}
                             isLoading={isTrendingLoading}
                             categories={categoryLabels}
@@ -342,7 +347,7 @@ const HomeSearchDashboard = () => {const { t } = useTranslation();
                       </div>
 
                     {/* Video Cards Grid — this is the only scrolling content */}
-                    <div className="space-y-12 relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8 mt-4">
+                    <div className="space-y-12 relative z-10 rounded-[2.5rem] bg-slate-100/80 dark:bg-zinc-900/50 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 md:p-8 mt-4">
                         <TrendingSection
               videos={trendingVideos}
               onQuickDownload={handleQuickDownload}

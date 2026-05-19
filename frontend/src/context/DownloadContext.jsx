@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useRef, useCallback } from 'react';
 import YTDeluxeAPI from '../utils/api';
+import { buildFilename } from '../utils/fileNaming';
 
 const DownloadContext = createContext(null);
 
@@ -231,11 +232,19 @@ export const DownloadProvider = ({ children }) => {
   const addDownload = useCallback((config, videoData = null) => {
     const id = Date.now() + Math.random();
 
+    // Apply file naming preferences to generate the display title & rename
+    const processedFilename = buildFilename({
+      title: config.filename || videoData?.title || 'Downloading…',
+      channel: videoData?.channel?.name || config.channel || '',
+      quality: config.quality || 'Auto',
+      format: config.format || 'mp4',
+    });
+
     const newDownload = {
       id,
       url: config.url,
-      filename: `${config.filename || 'file'}.${config.format || 'mp4'}`,
-      title: config.filename || videoData?.title || 'Downloading…',
+      filename: `${processedFilename}.${config.format || 'mp4'}`,
+      title: processedFilename,
       channel: videoData?.channel?.name || config.channel || '',
       thumbnail: videoData?.thumbnail || config.thumbnail || '',
       type: config.type || 'video',
@@ -310,7 +319,7 @@ export const DownloadProvider = ({ children }) => {
           audio_format_id: config.audio_format_id || null,  // Change H: specific audio stream
           container: config.container || null,               // Change H: output container
           convert_to_mp3: config.convert_to_mp3 || false,   // Change H: transcode toggle
-          rename: config.filename,
+          rename: processedFilename,
           trim_start: config.trim_start ?? config.trimSettings?.startTime,
           trim_end: config.trim_end ?? config.trimSettings?.endTime,
           type: config.type,

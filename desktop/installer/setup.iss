@@ -143,11 +143,11 @@ begin
   begin
     if DownloadFolderEdit.Text <> '' then
     begin
-      Result := DownloadFolderEdit.Text + '\YT Deluxe Downloads';
+      Result := DownloadFolderEdit.Text;
       Exit;
     end;
   end;
-  Result := GetSystemDownloadsFolder + '\YT Deluxe Downloads';
+  Result := GetSystemDownloadsFolder;
 end;
 
 // ── Helper: Load RTF file content as plain text ──────────────────────────────
@@ -417,18 +417,16 @@ begin
   AutoOrganizeCheck.Left := 10;
   AutoOrganizeCheck.Width := DownloadFolderPage.SurfaceWidth - 20;
   AutoOrganizeCheck.Height := 20;
-  AutoOrganizeCheck.Caption := ' Separate files by type (Recommended)';
-  AutoOrganizeCheck.Checked := True;
+  AutoOrganizeCheck.Caption := ' Separate files by type (Videos / Music / Thumbnails)';
+  AutoOrganizeCheck.Checked := False;
 
   DownloadPreviewLabel := TNewStaticText.Create(DownloadFolderPage);
   DownloadPreviewLabel.Parent := DownloadFolderPage.Surface;
   DownloadPreviewLabel.Top := 110;
   DownloadPreviewLabel.Left := 20;
   DownloadPreviewLabel.Caption :=
-    'YT Deluxe Downloads/' + #13#10 +
-    '  Videos/' + #13#10 +
-    '  Music/' + #13#10 +
-    '  Thumbnails/';
+    'Default: All files saved directly to your download folder.' + #13#10 +
+    'When checked: Videos/, Music/ and Thumbnails/ subfolders are created.';
   DownloadPreviewLabel.AutoSize := True;
 
   // ── Screen 7: Ready to Install (Summary) ──────────────────────────────────
@@ -488,13 +486,13 @@ begin
       '  Install Location' + #13#10 +
       '      ' + WizardDirValue + #13#10 + #13#10 +
       '  Download Folder' + #13#10 +
-      '      ' + DownloadFolderEdit.Text + '\YT Deluxe Downloads' + #13#10 + #13#10 +
+      '      ' + DownloadFolderEdit.Text + #13#10 + #13#10 +
       '  Folder Structure' + #13#10;
 
     if AutoOrganizeCheck.Checked then
-      SummaryMemo.Text := SummaryMemo.Text + '      Organized (Videos / Music / Thumbnails)' + #13#10
+      SummaryMemo.Text := SummaryMemo.Text + '      Organized (Videos / Music / Thumbnails subfolders)' + #13#10
     else
-      SummaryMemo.Text := SummaryMemo.Text + '      All files in one folder' + #13#10;
+      SummaryMemo.Text := SummaryMemo.Text + '      Flat — all files saved directly to the download folder' + #13#10;
 
     SummaryMemo.Text := SummaryMemo.Text + #13#10 +
       '  Update Notifications' + #13#10;
@@ -600,7 +598,9 @@ begin
         'AllowNetwork', '0');
 
     // Create download folder structure
-    DownloadBase := DownloadFolderEdit.Text + '\YT Deluxe Downloads';
+    // If organized: create type subfolders inside the chosen path.
+    // If flat (default): only ensure the base download folder exists.
+    DownloadBase := DownloadFolderEdit.Text;
     ForceDirectories(DownloadBase);
 
     if AutoOrganizeCheck.Checked then

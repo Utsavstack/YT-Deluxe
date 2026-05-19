@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
-import { formatDate } from '../../../utils/dateFormat';
+import { formatDate, formatTime } from '../../../utils/dateFormat';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, isSelected, onSelect }) => {
@@ -240,12 +240,7 @@ const HistoryCard = ({ item, onRedownload, onDelete, onOpenLocation, onShare, is
                   <span className="whitespace-nowrap">{formatDate(item?.downloadDate)}</span>
                   <span className="opacity-30"><Icon name="Clock" size={11} /></span>
                   <span className="whitespace-nowrap">
-                    {(() => {
-                      try {
-                        const d = new Date(item?.downloadDate);
-                        return isNaN(d.getTime()) ? '--:--' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                      } catch { return '--:--'; }
-                    })()}
+                    {formatTime(item?.downloadDate)}
                   </span>
                 </div>
               </div>

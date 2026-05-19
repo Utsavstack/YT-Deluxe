@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -6,8 +7,9 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import YTDeluxeAPI from '../../../utils/api';
-import { formatDate } from '../../../utils/dateFormat';
+import { formatDate, formatTime } from '../../../utils/dateFormat';
 import { YTDeluxeStorage, STORAGE_KEYS, isDesktop } from '../../../utils/storage';
+import dataCache, { CacheKey } from '../../../utils/dataCache';
 import Cropper from 'react-easy-crop';
 
 const AccountManagement = ({ user, onUserUpdate }) => {
@@ -36,6 +38,19 @@ const AccountManagement = ({ user, onUserUpdate }) => {
   const [isCropping, setIsCropping] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  // Prevent background scroll when cropping
+  useEffect(() => {
+    if (isCropping) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCropping]);
+
 
   // Load profile using platform-aware storage
   useEffect(() => {
@@ -199,11 +214,16 @@ const AccountManagement = ({ user, onUserUpdate }) => {
       try {
         if (isDesktop()) {
           await YTDeluxeAPI.clearAllHistory();
+        } else {
+          await YTDeluxeStorage.removeItem(STORAGE_KEYS.HISTORY_WEB);
         }
-        await YTDeluxeStorage.removeItem(STORAGE_KEYS.HISTORY_WEB);
+        // Invalidate cache so the history tab also updates
+        dataCache.invalidate(CacheKey.history());
         setDownloadHistory([]);
       } catch (err) {
         console.error("Clear history failed:", err);
+        // Fallback: still clear UI so user is not stuck
+        setDownloadHistory([]);
       }
     }
   };
@@ -213,13 +233,18 @@ const AccountManagement = ({ user, onUserUpdate }) => {
     try {
       if (isDesktop()) {
         await YTDeluxeAPI.deleteHistoryItem(id, false);
+      } else {
+        const historyItems = await YTDeluxeStorage.getItem(STORAGE_KEYS.HISTORY_WEB, []);
+        const updated = historyItems.filter(item => item.id !== id);
+        await YTDeluxeStorage.setItem(STORAGE_KEYS.HISTORY_WEB, updated);
       }
-      const historyItems = await YTDeluxeStorage.getItem(STORAGE_KEYS.HISTORY_WEB, []);
-      const updated = historyItems.filter(item => item.id !== id);
-      await YTDeluxeStorage.setItem(STORAGE_KEYS.HISTORY_WEB, updated);
+      // Invalidate cache so the history tab also updates
+      dataCache.invalidate(CacheKey.history());
       setDownloadHistory(prev => prev.filter(item => item.id !== id));
     } catch (err) {
       console.error("Failed to delete record:", err);
+      // Fallback: still clear from UI so user is not stuck
+      setDownloadHistory(prev => prev.filter(item => item.id !== id));
     }
   };
 
@@ -549,7 +574,7 @@ const AccountManagement = ({ user, onUserUpdate }) => {
                     <span className="opacity-20">•</span>
                     <div className="flex items-center gap-1">
                       <Icon name="Clock" size={11} className="opacity-30" />
-                      <span>{new Date(item.downloadDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{formatTime(item.downloadDate)}</span>
                     </div>
                   </div>
                 </div>
@@ -578,67 +603,70 @@ const AccountManagement = ({ user, onUserUpdate }) => {
       </motion.div>
 
       {/* Cropper Modal */}
-      <AnimatePresence>
-        {isCropping && imageToCrop && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
-          >
+      {createPortal(
+        <AnimatePresence>
+          {isCropping && imageToCrop && (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-card w-full max-w-md rounded-3xl shadow-glass-2xl overflow-hidden border border-border/50 flex flex-col"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
             >
-              <div className="p-4 border-b border-border/40 flex items-center justify-between">
-                <h3 className="font-bold text-foreground">Crop Profile Photo</h3>
-                <button onClick={handleCropCancel} className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors">
-                  <Icon name="X" size={16} />
-                </button>
-              </div>
-              <div className="relative w-full h-80 bg-black/10">
-                <Cropper
-                  image={imageToCrop}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={1}
-                  cropShape="round"
-                  showGrid={false}
-                  onCropChange={setCrop}
-                  onCropComplete={onCropComplete}
-                  onZoomChange={setZoom}
-                />
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center space-x-4">
-                  <Icon name="ZoomOut" size={16} className="text-muted-foreground" />
-                  <input
-                    type="range"
-                    value={zoom}
-                    min={1}
-                    max={3}
-                    step={0.1}
-                    aria-labelledby="Zoom"
-                    onChange={(e) => setZoom(e.target.value)}
-                    className="flex-1 accent-primary cursor-pointer h-2 bg-muted rounded-lg appearance-none"
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-card w-full max-w-md rounded-3xl shadow-glass-2xl overflow-hidden border border-border/50 flex flex-col"
+              >
+                <div className="p-4 border-b border-border/40 flex items-center justify-between">
+                  <h3 className="font-bold text-foreground">Crop Profile Photo</h3>
+                  <button onClick={handleCropCancel} className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors">
+                    <Icon name="X" size={16} />
+                  </button>
+                </div>
+                <div className="relative w-full h-80 bg-black/10">
+                  <Cropper
+                    image={imageToCrop}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    cropShape="round"
+                    showGrid={false}
+                    onCropChange={setCrop}
+                    onCropComplete={onCropComplete}
+                    onZoomChange={setZoom}
                   />
-                  <Icon name="ZoomIn" size={16} className="text-muted-foreground" />
                 </div>
-                <div className="flex space-x-3 pt-2">
-                  <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCropCancel}>
-                    Cancel
-                  </Button>
-                  <Button variant="default" className="flex-1 rounded-xl" onClick={handleCropSave}>
-                    Save Photo
-                  </Button>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <Icon name="ZoomOut" size={16} className="text-muted-foreground" />
+                    <input
+                      type="range"
+                      value={zoom}
+                      min={1}
+                      max={3}
+                      step={0.1}
+                      aria-labelledby="Zoom"
+                      onChange={(e) => setZoom(e.target.value)}
+                      className="flex-1 accent-primary cursor-pointer h-2 bg-muted rounded-lg appearance-none"
+                    />
+                    <Icon name="ZoomIn" size={16} className="text-muted-foreground" />
+                  </div>
+                  <div className="flex space-x-3 pt-2">
+                    <Button variant="outline" className="flex-1 rounded-xl" onClick={handleCropCancel}>
+                      Cancel
+                    </Button>
+                    <Button variant="default" className="flex-1 rounded-xl" onClick={handleCropSave}>
+                      Save Photo
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 };

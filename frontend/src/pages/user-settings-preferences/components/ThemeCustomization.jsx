@@ -240,10 +240,9 @@ const ThemeCustomization = ({ currentTheme, onThemeChange, currentAccentColor, o
                 type="text"
                 value={selectedAccentColor}
                 onChange={(e) => handleAccentColorSelect(e?.target?.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-card/50 border border-border/50 rounded-xl text-foreground font-mono focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-zinc-900/60 border border-slate-200 dark:border-white/10 rounded-xl text-foreground font-mono focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none shadow-inner"
                 placeholder="#2C5DA9"
               />
-              <Icon name="Hash" size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             </div>
           </div>
         </div>
