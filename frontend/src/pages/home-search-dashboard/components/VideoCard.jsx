@@ -8,12 +8,11 @@ import ShareModal from '../../../components/ui/ShareModal';
 import { YTDeluxeStorage, STORAGE_KEYS } from '../../../utils/storage';
 import { usePIP } from '../../../context/PIPContext';
 
-const VideoCard = ({ video, onQuickDownload, onPreview }) => {
+const VideoCard = ({ video, onPreview }) => {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [playVideo, setPlayVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [embedError, setEmbedError] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(null);
@@ -31,6 +30,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   const iframeRef    = useRef(null);
   const nativeRef    = useRef(null);
   const [nativeFallback, setNativeFallback] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Check saved status on mount
   useEffect(() => {
@@ -153,9 +153,28 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
   };
 
   const formatViews = (views) => {
-    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M views`;
-    if (views >= 1000) return `${(views / 1000).toFixed(1)}K views`;
-    return `${views} views`;
+    if (!views && views !== 0) return '0 views';
+    let numericNum = views;
+    if (typeof views === 'string') {
+      const match = views.replace(/\s*views\s*$/i, '').match(/^([\d.]+)\s*([KMBkmb])\+?$/);
+      if (match) {
+        const val = parseFloat(match[1]);
+        const suffix = match[2].toUpperCase();
+        let multiplier = 1;
+        if (suffix === 'K') multiplier = 1000;
+        else if (suffix === 'M') multiplier = 1000000;
+        else if (suffix === 'B') multiplier = 1000000000;
+        numericNum = val * multiplier;
+      } else {
+        numericNum = parseInt(views.replace(/[^0-9]/g, ''), 10);
+      }
+    }
+    if (isNaN(numericNum)) return `${views}`;
+
+    if (numericNum >= 1000000000) return `${(numericNum / 1000000000).toFixed(1).replace(/\.0$/, '')}B views`;
+    if (numericNum >= 1000000) return `${(numericNum / 1000000).toFixed(1).replace(/\.0$/, '')}M views`;
+    if (numericNum >= 1000) return `${(numericNum / 1000).toFixed(1).replace(/\.0$/, '')}K views`;
+    return `${numericNum} views`;
   };
 
   const handleCardClick = () => {
@@ -214,7 +233,7 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
 
   return (
     <div
-      className="bg-white dark:bg-[#1e1e1e]/80 backdrop-blur-xl border border-border/40 hover:border-primary/30 p-2.5 sm:p-3 rounded-[24px] sm:rounded-[32px] shadow-glass-sm hover:shadow-glass-xl transition-all duration-500 spring-smooth cursor-pointer group relative flex flex-col gap-3"
+      className="bg-white dark:bg-[#1e1e1e]/80 backdrop-blur-xl border border-border/40 hover:border-primary/30 p-3 pb-5 rounded-[24px] sm:rounded-[32px] shadow-glass-sm hover:shadow-glass-xl transition-all duration-500 spring-smooth cursor-pointer group relative flex flex-col gap-3"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleCardClick}
@@ -240,8 +259,6 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
           className={`w-full h-52 object-cover transition-transform duration-700 ease-out ${isHovered ? 'scale-105' : 'scale-100'}`}
         />
 
-
-
         {playVideo && !embedError && (
           <div className={`absolute inset-0 z-10 transition-opacity duration-500 ease-in bg-black overflow-hidden ${videoReady ? 'opacity-100' : 'opacity-0'}`}>
             <iframe
@@ -256,16 +273,12 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
             />
             <div className="absolute inset-0 cursor-pointer z-10" onClick={(e) => { e.stopPropagation(); handleCardClick(); }} />
             
-            <div className="absolute bottom-2 left-2 right-2 flex flex-col z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-              {/* Progress Bar (Floating) */}
-              <div className="w-full relative h-1.5 group/slider hover:h-2 transition-all bg-white/20 cursor-pointer flex items-center rounded-full overflow-hidden mb-2 shadow-[0_2px_8px_rgba(0,0,0,0.5)] backdrop-blur-sm border border-white/10">
-                <div className="absolute top-0 left-0 h-full bg-primary pointer-events-none transition-all duration-200 ease-linear" style={{ width: `${Math.max(0, Math.min(100, (currentTime || 0) / (duration || video?.duration || 1) * 100))}%` }} />
-                <input type="range" min="0" max={duration || video?.duration || 100} value={currentTime || 0} onChange={handleSeekChange} onClick={(e) => e.stopPropagation()} className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 group-hover/slider:[&::-webkit-slider-thumb]:w-3 group-hover/slider:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_5px_rgba(0,0,0,0.5)] [&::-webkit-slider-thumb]:transition-all" />
-              </div>
-              
-              {/* Controls Pill */}
-              <div className="flex items-center justify-between bg-black/60 backdrop-blur-xl border border-white/20 rounded-full px-3 py-1.5 shadow-glass-xl">
-                <div className="flex items-center space-x-3">
+            <div className="absolute bottom-2 left-2 right-2 z-20 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+              {/* Unified Controls Pill */}
+              <div className="flex items-center bg-black/60 backdrop-blur-xl border border-white/20 rounded-full px-3 py-1.5 shadow-glass-xl gap-3">
+                
+                {/* Left Controls (Play/Pause, Mute) */}
+                <div className="flex items-center space-x-2 shrink-0">
                   <button onClick={togglePlayState} className="w-7 h-7 flex items-center justify-center bg-white/10 hover:bg-primary rounded-full text-white transition-all active:scale-90 border border-white/10 hover:border-primary/50">
                     <Icon name={isPlaying ? "Pause" : "Play"} size={14} fill={isPlaying ? "none" : "currentColor"} className={isPlaying ? "" : "ml-0.5"} />
                   </button>
@@ -274,7 +287,14 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
                   </button>
                 </div>
                 
-                <span className="text-[10px] font-bold text-white/90 tracking-widest font-mono drop-shadow-sm">
+                {/* Progress Bar (Integrated) */}
+                <div className="flex-1 relative h-1.5 group/slider hover:h-2 transition-all bg-white/20 cursor-pointer flex items-center rounded-full overflow-hidden shadow-inner">
+                  <div className="absolute top-0 left-0 h-full bg-primary pointer-events-none transition-all duration-200 ease-linear" style={{ width: `${Math.max(0, Math.min(100, (currentTime || 0) / (duration || video?.duration || 1) * 100))}%` }} />
+                  <input type="range" min="0" max={duration || video?.duration || 100} value={currentTime || 0} onChange={handleSeekChange} onClick={(e) => e.stopPropagation()} className="w-full h-full absolute inset-0 appearance-none cursor-pointer bg-transparent z-10 outline-none m-0 p-0 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 group-hover/slider:[&::-webkit-slider-thumb]:w-3 group-hover/slider:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_5px_rgba(0,0,0,0.5)] [&::-webkit-slider-thumb]:transition-all" />
+                </div>
+                
+                {/* Right Time */}
+                <span className="text-[10px] font-bold text-white/90 tracking-widest font-mono drop-shadow-sm shrink-0">
                   {formatDuration(Math.floor(currentTime))} <span className="text-white/40 mx-0.5">/</span> {formatDuration(Math.floor(duration || video?.duration || 0))}
                 </span>
               </div>
@@ -315,14 +335,13 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
           </div>
         )}
 
-        {/* PIP Trigger Button */}
+        {/* PIP Trigger Button - Restored to original size and position */}
         <button 
           onClick={(e) => {
             e.stopPropagation();
             setPlayVideo(false);
             openPip(video);
           }}
-          // z-40 so it stays above the inline iframe player which uses z-10/z-20
           className={`absolute top-2 right-2 p-2 rounded-xl z-40 transition-all duration-300 shadow-lg active:scale-95 group/pip cursor-pointer flex items-center justify-center bg-black/70 hover:bg-primary text-white border border-white/20 hover:border-transparent backdrop-blur-md tooltip-trigger`}
           title="Play in Picture-in-Picture"
         >
@@ -338,22 +357,25 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
         )}
       </div>
 
-      {/* Content Section */}
-      <div className="px-2 pt-3 pb-1 flex flex-col gap-3">
-        <h3 className="text-[15px] font-bold text-foreground/90 line-clamp-2 transition-all duration-300 leading-snug group-hover:text-primary group-hover:drop-shadow-sm">
-          {video?.title}
-        </h3>
-        
-        <div className="flex items-center justify-between gap-3 mt-0.5">
+      {/* Content Section (Realigned to match YouTube Cards exactly) */}
+      <div className="flex gap-3 pt-1 px-1 flex-col">
+        <div className="flex gap-3 w-full">
+          {/* Left Side: standalone Channel Avatar */}
           <div 
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/search-results?q=${encodeURIComponent(video?.channel?.name || video?.uploader || '')}`);
             }}
-            className="flex items-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/5 dark:border-white/5 transition-all rounded-full pl-1 pr-3 py-1 shadow-sm cursor-pointer group/channel gap-2 overflow-hidden flex-shrink min-w-0 max-w-[60%]"
+            className="w-9 h-9 rounded-full overflow-hidden shrink-0 cursor-pointer border border-black/5 dark:border-white/10"
           >
-            {video?.channel?.avatar ? (
-              <Image src={video?.channel?.avatar} alt={video?.channel?.name || video?.uploader || 'Avatar'} className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm object-cover" />
+            {video?.channel?.avatar && !avatarError ? (
+              <img
+                src={video?.channel?.avatar}
+                alt={video?.channel?.name || video?.uploader || 'Avatar'}
+                className="w-full h-full object-cover"
+                onError={() => setAvatarError(true)}
+                loading="lazy"
+              />
             ) : (
               (() => {
                 const name = video?.channel?.name || video?.uploader || '?';
@@ -361,62 +383,78 @@ const VideoCard = ({ video, onQuickDownload, onPreview }) => {
                 for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
                 const hue = Math.abs(hash % 360);
                 return (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold uppercase flex-shrink-0 shadow-sm" style={{ backgroundColor: `hsl(${hue}, 70%, 85%)`, color: `hsl(${hue}, 80%, 30%)` }}>
+                  <div className="w-full h-full flex items-center justify-center text-[12px] font-bold uppercase" style={{ backgroundColor: `hsl(${hue}, 70%, 85%)`, color: `hsl(${hue}, 80%, 30%)` }}>
                     {name[0]}
                   </div>
                 );
               })()
             )}
-            <div className="flex items-center gap-1 min-w-0">
-               <span className="text-[11px] font-bold text-foreground/80 truncate group-hover/channel:text-primary transition-colors tracking-wide">{video?.channel?.name || video?.uploader || ''}</span>
-               {video?.channel?.verified && <Icon name="CheckCircle" size={10} className="text-primary flex-shrink-0" />}
+          </div>
+
+          {/* Right Side: Text details */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between">
+            <div>
+              <h3 className="text-[14px] sm:text-[15px] font-bold text-foreground/90 leading-snug line-clamp-2 mb-1 group-hover:text-primary transition-colors">
+                {video?.title}
+              </h3>
+              
+              <div className="flex justify-between items-start mt-2">
+                <div className="flex flex-col min-w-0 pr-2">
+                  {/* Channel Name */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/search-results?q=${encodeURIComponent(video?.channel?.name || video?.uploader || '')}`);
+                    }}
+                    className="text-[13px] text-muted-foreground font-semibold hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span className="truncate">{video?.channel?.name || video?.uploader || ''}</span>
+                    {video?.channel?.verified && <Icon name="CheckCircle" size={11} className="text-primary flex-shrink-0" />}
+                  </div>
+
+                  {/* Views • Upload Date */}
+                  <div className="text-[13px] text-muted-foreground flex items-center gap-1 mt-0.5 flex-wrap">
+                    {video?.views !== undefined && (
+                      <span>{formatViews(video?.views)}</span>
+                    )}
+                    {video?.views !== undefined && video?.uploadedDate && (
+                      <span className="text-muted-foreground/60">•</span>
+                    )}
+                    {video?.uploadedDate && (
+                      <span className="truncate">{video.uploadedDate}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Side Actions (Share/Save) */}
+                <div className="flex shrink-0 gap-2.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={handleToggleSave} 
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border backdrop-blur-md active:scale-95 shadow-sm ${isSaved ? 'bg-primary border-primary text-primary-foreground drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground/70 hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'}`}
+                    title={isSaved ? "Remove from Saved" : "Save to Favorites"}
+                  >
+                    <Icon name={isSaved ? "BookmarkCheck" : "Bookmark"} size={13} strokeWidth={isSaved ? 2.5 : 2} className={`${isSaved ? 'scale-110' : 'hover:scale-110'} transition-transform`} />
+                  </button>
+
+                  <button 
+                    onClick={handleShare} 
+                    className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 shadow-sm active:scale-95 text-foreground/70 hover:text-primary"
+                    title={t("homeSearchDashboard.share", "Share")}
+                  >
+                    <Icon name="Share2" size={13} className="hover:-rotate-12 transition-transform duration-300" />
+                  </button>
+                </div>
+              </div>
+              
+              {video?.tags && video?.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {video?.tags?.slice(0, 2)?.map((tag, index) => (
+                    <span key={index} className="text-[9px] font-bold tracking-wider uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 transition-colors hover:bg-primary/20 cursor-pointer">#{tag}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          
-          {video?.views !== undefined && (
-            <div className="flex items-center gap-1.5 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all px-2.5 py-1 rounded-full shadow-sm shrink-0 cursor-default">
-              <span className="text-[10.5px] font-bold text-foreground/85 whitespace-nowrap tracking-wider font-mono">
-                {formatViews(video?.views)}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        {video?.tags && video?.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {video?.tags?.slice(0, 3)?.map((tag, index) => (
-              <span key={index} className="text-[9px] font-bold tracking-wider uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-md border border-primary/20 shadow-sm transition-colors hover:bg-primary/20 cursor-pointer">#{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Quick Actions Footer */}
-      <div className="px-2 pb-2.5 pt-3 mt-2 flex items-center justify-between border-t border-border/10">
-        <button
-          className="h-[32px] px-3.5 bg-primary/10 hover:bg-primary/20 transition-all duration-300 rounded-full flex items-center gap-1.5 text-[10px] font-bold text-primary border border-primary/20 hover:border-primary/40 shadow-sm hover:shadow active:scale-[0.96] group/btn uppercase tracking-wide"
-          onClick={(e) => { e?.stopPropagation(); onQuickDownload?.(video, 'jpg'); }}
-        >
-          <Icon name="Download" size={13} strokeWidth={2.5} className="text-primary group-hover/btn:-translate-y-0.5 transition-transform duration-300" />
-          <span>{t("homeSearchDashboard.downloadThumbnail", "Thumbnail")}</span>
-        </button>
-        
-        <div className="flex items-center gap-1.5">
-          <button 
-            onClick={handleToggleSave} 
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border shadow-sm active:scale-95 group/save ${isSaved ? 'bg-primary border-primary text-primary-foreground drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]' : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-foreground/70 hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'}`}
-            title={isSaved ? "Remove from Saved" : "Save to Favorites"}
-          >
-            <Icon name={isSaved ? "BookmarkCheck" : "Bookmark"} size={13} strokeWidth={isSaved ? 2.5 : 2} className={`${isSaved ? 'scale-110' : 'group-hover/save:scale-110'} transition-transform`} />
-          </button>
-
-          <button 
-            onClick={handleShare} 
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 shadow-sm active:scale-95 group/share text-foreground/70 hover:text-primary"
-            title={t("homeSearchDashboard.share", "Share")}
-          >
-            <Icon name="Share2" size={13} className="group-hover/share:-rotate-12 transition-transform duration-300" />
-          </button>
         </div>
       </div>
 

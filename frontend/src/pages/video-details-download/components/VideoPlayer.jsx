@@ -222,7 +222,7 @@ const VideoPlayer = ({ videoData, onQualityChange }) => {
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.35)] border border-white/5"
+      className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.35)]"
       onMouseMove={showCtrlsTemp}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >

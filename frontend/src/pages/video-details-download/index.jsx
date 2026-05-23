@@ -18,143 +18,239 @@ const VideoDetailsDownload = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { addDownload, cancelDownload, resumeDownload, downloads, dismissDownload } = useDownloadContext();
-  // Keep a local set of download IDs created by this page for DownloadProgress sidebar
   const [localDownloadIds, setLocalDownloadIds] = useState([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [trimSettings, setTrimSettings] = useState(null);
   const [videoData, setVideoData] = useState(null);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(true);
+
+  // Phase 1: show full-page skeleton until Piped meta + min 1.5s delay done
+  const [isMetaLoaded, setIsMetaLoaded] = useState(false);
+  // Phase 2: show format skeleton until yt-dlp formats ready
+  const [isFormatsLoaded, setIsFormatsLoaded] = useState(false);
   const [error, setError] = useState(null);
-  // Tracks the quality/type the user currently has selected in DownloadTabs
   const [selectedConfig, setSelectedConfig] = useState(null);
 
-  // Get video data from location state or URL params
+  // Keep backward-compat: old code checked isLoadingVideo
+  const isLoadingVideo = !isMetaLoaded;
+
   const initialVideo = location.state?.video;
 
   useEffect(() => {
-    // Request notification permission
     if (Notification.permission === 'default') {
       Notification.requestPermission();
     }
-
-    // Load video data
     loadVideoData();
   }, []);
 
   const loadVideoData = async () => {
-    setIsLoadingVideo(true);
+    setIsMetaLoaded(false);
+    setIsFormatsLoaded(false);
     setError(null);
 
     try {
-      let videoInfo = null;
+      if (!initialVideo) {
+        setError('No video data available. Please go back and select a video.');
+        setIsMetaLoaded(true);
+        return;
+      }
 
-      if (initialVideo?.url) {
-        // Cache-first: check if we already fetched this video's details
-        const cacheKey = CacheKey.videoDetails(initialVideo.url);
-        const cached = dataCache.get(cacheKey);
-        if (cached) {
-          setVideoData(cached);
-          setIsLoadingVideo(false);
-          if (location.state?.autoDownload) {
-            handleDownload({
-              url: cached.url,
-              type: 'video',
-              quality: cached.max_quality || '1080p',
-              format: 'mp4',
-              filename: cached.title
-            });
+      const cardVideoId = initialVideo.id || initialVideo.url?.split('v=')?.[1]?.split('&')?.[0] || '';
+      const fallbackUrl = initialVideo.url || `https://www.youtube.com/watch?v=${cardVideoId}`;
+
+      // Build base data from card (used as starting point)
+      const baseData = {
+        id: cardVideoId,
+        title: initialVideo.title || '',
+        description: initialVideo.description || '',
+        thumbnail: initialVideo.thumbnail || `https://i.ytimg.com/vi/${cardVideoId}/hqdefault.jpg`,
+        duration: initialVideo.duration,
+        views: initialVideo.views || 0,
+        likes: 0,
+        comments: 0,
+        uploadDate: null,
+        channel: {
+          name: initialVideo.channel?.name || initialVideo.uploader || '',
+          subscribers: initialVideo.channel?.subscribers || '',
+          avatar: initialVideo.channel?.avatar || null,
+          verified: initialVideo.channel?.verified || false,
+        },
+        formats: [],
+        all_formats: [],
+        max_quality: null,
+        url: fallbackUrl,
+        videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(fallbackUrl)}&quality=720p`,
+      };
+
+      // ── Check cache before anything ──────────────────────────────────────
+      const cacheKey = CacheKey.videoDetails(fallbackUrl);
+      const cached = dataCache.get(cacheKey);
+      if (cached) {
+        setVideoData({ ...baseData, ...cached });
+        setIsMetaLoaded(true);
+        setIsFormatsLoaded(true);
+        if (location.state?.autoDownload) {
+          handleDownload({ url: cached.url, type: 'video', quality: cached.max_quality || '1080p', format: 'mp4', filename: cached.title });
+        }
+        return;
+      }
+
+      // ── PHASE 1: Quick metadata (multi-source) + 1.5s min skeleton delay ──
+      // Backend tries Piped, YouTube page scrape, and RYD API in parallel.
+      // Both metadata fetch and min delay run in parallel; we wait for BOTH.
+      const minDelayPromise = new Promise(res => setTimeout(res, 1500));
+
+      let quickMeta = null;
+      let quickFailed = false;
+
+      if (cardVideoId) {
+        const quickPromise = YTDeluxeAPI.getVideoQuick(cardVideoId)
+          .then(res => {
+            if (res?.metadata) quickMeta = res.metadata;
+            else { quickFailed = true; console.warn('[Phase 1] Quick metadata returned null'); }
+          })
+          .catch((err) => { quickFailed = true; console.error('[Phase 1] Quick metadata failed:', err); });
+
+        await Promise.all([minDelayPromise, quickPromise]);
+      } else {
+        await minDelayPromise;
+        quickFailed = true;
+      }
+
+      if (quickFailed) {
+        // ── FALLBACK: All quick sources failed → keep skeleton, wait for full yt-dlp ──
+        // Do NOT setIsMetaLoaded(true) here — skeleton stays until yt-dlp finishes
+        console.warn('[Phase 1 Fallback] Quick metadata failed, falling back to full yt-dlp extraction');
+
+        try {
+          const response = await YTDeluxeAPI.getVideoDetails(fallbackUrl);
+          if (response.video) {
+            const videoFormats = (response.video.formats || []).filter(f => f.type === 'video');
+            const bestQuality = response.video.max_quality || (videoFormats.length ? videoFormats[0].quality : '1080p');
+            const fullData = {
+              ...baseData,
+              id: response.video.id || baseData.id,
+              title: response.video.title || baseData.title,
+              description: response.video.description || '',
+              thumbnail: response.video.thumbnail || baseData.thumbnail,
+              duration: response.video.duration || baseData.duration,
+              views: response.video.view_count || baseData.views,
+              likes: response.video.like_count || 0,
+              comments: response.video.comment_count || 0,
+              uploadDate: response.video.upload_date
+                ? (response.video.upload_date.includes('T')
+                    ? response.video.upload_date
+                    : response.video.upload_date.length >= 8
+                      ? `${response.video.upload_date.slice(0,4)}-${response.video.upload_date.slice(4,6)}-${response.video.upload_date.slice(6,8)}T00:00:00Z`
+                      : new Date().toISOString())
+                : null,
+              channel: {
+                name: (typeof response.video.channel === 'object' ? response.video.channel?.name : response.video.channel) || response.video.uploader || baseData.channel.name || 'Unknown Channel',
+                subscribers: response.video.channel_follower_count || baseData.channel.subscribers || '',
+                avatar: response.video.channel_avatar || baseData.channel.avatar || null,
+                verified: response.video.channel_verified || false,
+              },
+              formats: response.video.formats || [],
+              all_formats: response.video.all_formats || response.video.formats || [],
+              max_quality: bestQuality,
+              url: fallbackUrl,
+              videoUrl: baseData.videoUrl,
+            };
+            dataCache.set(cacheKey, fullData, TTL.VIDEO_DETAILS);
+            setVideoData(fullData);
+            setIsFormatsLoaded(true);  // Formats also ready — no skeleton needed
+            setIsMetaLoaded(true);     // NOW show the page — everything is complete
+            if (location.state?.autoDownload) {
+              handleDownload({ url: fallbackUrl, type: 'video', quality: bestQuality, format: 'mp4', filename: fullData.title });
+            }
+          } else {
+            // yt-dlp returned no video data
+            setVideoData(baseData);
+            setIsMetaLoaded(true);
           }
-          return;
+        } catch (ytErr) {
+          console.error('[Fallback] yt-dlp also failed:', ytErr);
+          setError('Failed to load video information. Please try again.');
+          setIsMetaLoaded(true);
         }
+        return;
+      }
 
-        // Get video details from API
-        const response = await YTDeluxeAPI.getVideoDetails(initialVideo.url);
+      // ── Quick metadata succeeded: build enriched meta and show page ────────
+      const m = quickMeta;
+      const enrichedData = {
+        ...baseData,
+        description: m.description || baseData.description,
+        likes: m.likes || 0,
+        views: m.views || baseData.views,
+        uploadDate: m.uploadDate || null,
+        channel: {
+          ...baseData.channel,
+          name: m.uploaderName || baseData.channel.name,
+          avatar: m.uploaderAvatar || baseData.channel.avatar,
+          subscribers: m.uploaderSubscriberCount || baseData.channel.subscribers,
+          verified: m.uploaderVerified || baseData.channel.verified,
+        },
+      };
+
+      setVideoData(enrichedData);
+      setIsMetaLoaded(true); // ← Page renders now (Phase 1 complete)
+
+      // ── PHASE 2: yt-dlp format extraction in background ─────────────────
+      try {
+        const response = await YTDeluxeAPI.getVideoDetails(fallbackUrl);
         if (response.video) {
-          // Determine the best available quality from real formats
-          const videoFormats = (response.video.formats || []).filter((f) => f.type === 'video');
-          const bestQuality = response.video.max_quality || (
-            videoFormats.length ? videoFormats[0].quality : '1080p');
+          const videoFormats = (response.video.formats || []).filter(f => f.type === 'video');
+          const bestQuality = response.video.max_quality || (videoFormats.length ? videoFormats[0].quality : '1080p');
 
-          const fallbackUrl = initialVideo.url || `https://www.youtube.com/watch?v=${initialVideo.originalId || initialVideo.id?.split('_')?.[0] || response.video.id}`;
+          setVideoData(prev => {
+            if (!prev) return prev;
+            const merged = {
+              ...prev,
+              id: response.video.id || prev.id,
+              title: response.video.title || prev.title,
+              description: prev.description || response.video.description || '',
+              thumbnail: response.video.thumbnail || prev.thumbnail,
+              duration: response.video.duration || prev.duration,
+              views: prev.views || response.video.view_count || 0,
+              likes: prev.likes || response.video.like_count || 0,
+              comments: response.video.comment_count || prev.comments,
+              uploadDate: prev.uploadDate || (response.video.upload_date
+                ? (response.video.upload_date.includes('T')
+                    ? response.video.upload_date
+                    : response.video.upload_date.length >= 8
+                      ? `${response.video.upload_date.slice(0,4)}-${response.video.upload_date.slice(4,6)}-${response.video.upload_date.slice(6,8)}T00:00:00Z`
+                      : new Date().toISOString())
+                : null),
+              channel: {
+                name: prev.channel?.name || (typeof response.video.channel === 'object' ? response.video.channel?.name : response.video.channel) || response.video.uploader || 'Unknown Channel',
+                subscribers: prev.channel?.subscribers || response.video.channel_follower_count || '',
+                avatar: prev.channel?.avatar || response.video.channel_avatar || null,
+                verified: prev.channel?.verified || response.video.channel_verified || false,
+              },
+              formats: response.video.formats || [],
+              all_formats: response.video.all_formats || response.video.formats || [],
+              max_quality: bestQuality,
+              url: prev.url,
+              videoUrl: prev.videoUrl,
+            };
+            dataCache.set(cacheKey, merged, TTL.VIDEO_DETAILS);
+            return merged;
+          });
+          setIsFormatsLoaded(true);
 
-          videoInfo = {
-            id: response.video.id,
-            title: response.video.title,
-            description: response.video.description || 'No description available.',
-            thumbnail: response.video.thumbnail,
-            duration: response.video.duration,
-            views: response.video.view_count || initialVideo && initialVideo.views || Math.floor(Math.random() * 1000000) + 10000,
-            likes: Math.floor(Math.random() * 50000) + 1000,
-            comments: Math.floor(Math.random() * 5000) + 100,
-            uploadDate: (response.video.upload_date && response.video.upload_date.length >= 8) ?
-              `${response.video.upload_date.slice(0, 4)}-${response.video.upload_date.slice(4, 6)}-${response.video.upload_date.slice(6, 8)}T00:00:00Z` :
-              (response.video.upload_date || new Date().toISOString()),
-            channel: {
-              name: (typeof response.video.channel === 'object' ? response.video.channel?.name : response.video.channel) ||
-                response.video.uploader ||
-                initialVideo?.channel?.name ||
-                initialVideo?.uploader ||
-                'Unknown Channel',
-              subscribers: response.video.channel_follower_count || '1M+',
-              avatar: response.video.channel_avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face'
-            },
-            formats: response.video.formats || [],
-            all_formats: response.video.all_formats || response.video.formats || [],
-            max_quality: bestQuality,
-            url: fallbackUrl,
-            videoUrl: `${import.meta.env.VITE_API_BASE_URL || ''}/api/stream?url=${encodeURIComponent(fallbackUrl)}&quality=720p`
-          };
-
-          // Cache the video details (5 min TTL — safe for download links)
-          dataCache.set(cacheKey, videoInfo, TTL.VIDEO_DETAILS);
+          if (location.state?.autoDownload) {
+            handleDownload({ url: fallbackUrl, type: 'video', quality: bestQuality || '1080p', format: 'mp4', filename: response.video.title });
+          }
         }
+      } catch (formatError) {
+        console.error('[Phase 2] yt-dlp format extraction failed:', formatError);
+        // Page is still usable — metadata shown, download tabs stay in skeleton
       }
 
-      // Fallback to mock data if API fails or no video URL
-      if (!videoInfo) {
-        videoInfo = {
-          id: "dQw4w9WgXcQ",
-          title: "Complete React Tutorial 2024 - Build Modern Web Applications",
-          description: `Learn React from scratch in this comprehensive tutorial! This course covers everything you need to know to build modern web applications with React 18.\n\nWhat you'll learn:\n• React fundamentals and JSX\n• Components and Props\n• State management with hooks\n• Event handling and forms\n• API integration\n• Routing with React Router\n• State management with Context API\n• Performance optimization\n• Testing React applications\n• Deployment strategies\n\nPerfect for beginners and intermediate developers looking to master React development. All source code and resources are available in the description.\n\n Source Code: https://github.com/example/react-tutorial\n Documentation: https://reactjs.org\n Discord Community: https://discord.gg/react\n\n#React #JavaScript #WebDevelopment #Programming #Tutorial`,
-          thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=450&fit=crop",
-          videoUrl: "https://example.com/video.mp4",
-          captionsUrl: "https://example.com/captions.vtt",
-          duration: 3847, // 64 minutes 7 seconds
-          views: 1250000,
-          likes: 45600,
-          comments: 2340,
-          uploadDate: "2024-01-15T10:30:00Z",
-          channel: {
-            name: "CodeMaster Academy",
-            subscribers: "2.1M",
-            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"
-          },
-          tags: [
-            "react", "javascript", "web-development", "programming", "tutorial",
-            "frontend", "hooks", "components", "jsx", "modern-web", "coding", "learn-to-code"],
-
-          formats: []
-        };
-      }
-
-      setVideoData(videoInfo);
-
-      // Auto-download if requested — use best available quality
-      if (location.state?.autoDownload) {
-        handleDownload({
-          url: videoInfo.url,
-          type: 'video',
-          quality: videoInfo.max_quality || '1080p',
-          format: 'mp4',
-          filename: videoInfo.title
-        });
-      }
-
-    } catch (error) {
-      console.error('Failed to load video data:', error);
+    } catch (err) {
+      console.error('loadVideoData failed:', err);
       setError('Failed to load video information. Please try again.');
-    } finally {
-      setIsLoadingVideo(false);
+      setIsMetaLoaded(true);
     }
   };
 
@@ -244,16 +340,15 @@ const VideoDetailsDownload = () => {
             <div className="flex flex-col gap-8 mt-4">
               {/* Block 1 Skeleton: Player & Metadata Row */}
               <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8">
-                {/* Full Width Video Player Skeleton */}
-                <div className="w-full aspect-video bg-black/10 dark:bg-white/10 rounded-2xl relative overflow-hidden shadow-sm">
-                   {shimmerSweep}
-                </div>
-
-                {/* Metadata & Quick Actions Row Skeleton */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
                   {/* Metadata Skeleton */}
                   <div className="xl:col-span-2 space-y-6">
-                    <div className="h-8 bg-black/10 dark:bg-white/10 rounded-lg w-3/4 relative overflow-hidden">
+                    {/* Video Player Skeleton */}
+                    <div className="w-full aspect-video bg-black/10 dark:bg-white/10 rounded-2xl relative overflow-hidden shadow-sm">
+                       {shimmerSweep}
+                    </div>
+
+                    <div className="h-8 bg-black/10 dark:bg-white/10 rounded-lg w-3/4 relative overflow-hidden mt-6">
                        {shimmerSweep}
                     </div>
                     <div className="flex items-center gap-4">
@@ -365,19 +460,18 @@ const VideoDetailsDownload = () => {
           </div>
 
           <div className="flex flex-col gap-8 mt-4">
-            {/* Block 1: Full Width Player & Metadata Row */}
+            {/* Block 1: Player, Metadata & Quick Actions */}
             <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8">
-              {/* Full Width Video Player */}
-              <div className="w-full">
-                <VideoPlayer
-                  videoData={videoData}
-                  onQualityChange={handleQualityChange} />
-              </div>
-
-              {/* Metadata & Quick Actions Row */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mt-10">
-                {/* Left: Metadata (Title, Channel, Description) */}
-                <div className="xl:col-span-2">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
+                {/* Left: Player + Metadata (Title, Channel, Description) */}
+                <div className="xl:col-span-2 flex flex-col gap-6">
+                  {/* Video Player */}
+                  <div className="w-full">
+                    <VideoPlayer
+                      videoData={videoData}
+                      onQualityChange={handleQualityChange} />
+                  </div>
+                  
                   <VideoMetadata videoData={videoData} />
                 </div>
 
@@ -404,8 +498,8 @@ const VideoDetailsDownload = () => {
                           format: 'mp4',
                           filename: videoData?.title
                         })}
-                        disabled={isDownloading}
-                        className="group relative w-full flex items-center justify-between p-4 rounded-xl overflow-hidden shadow-md shadow-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] border border-primary/20 bg-primary text-white"
+                        disabled={isDownloading || !isFormatsLoaded}
+                        className={`group relative w-full flex items-center justify-between p-4 rounded-xl overflow-hidden shadow-md shadow-primary/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/30 active:scale-[0.98] border border-primary/20 bg-primary text-white ${!isFormatsLoaded ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
                         <div
                           className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 opacity-0 group-hover:opacity-100 bg-[length:200%_100%] animate-shimmer transition-opacity duration-500 pointer-events-none"
@@ -414,7 +508,7 @@ const VideoDetailsDownload = () => {
 
                         <div className="flex items-center gap-3 relative z-10">
                           <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-inner flex items-center justify-center text-white">
-                            {isDownloading ? (
+                            {isDownloading || !isFormatsLoaded ? (
                               <Icon name="Loader2" className="w-5 h-5 animate-spin" />
                             ) : (
                               <Icon name="Download" className="w-5 h-5" />
@@ -427,7 +521,7 @@ const VideoDetailsDownload = () => {
                                 : t("videoDetailsDownload.quickDownload1")}
                             </span>
                             <span className="text-[11px] font-medium text-white/80 mt-0.5 tracking-wide">
-                              MP4 • {videoData?.max_quality || '1080p'}
+                              {isFormatsLoaded ? `MP4 • ${videoData?.max_quality || '1080p'}` : 'Preparing formats...'}
                             </span>
                           </div>
                         </div>
@@ -510,24 +604,209 @@ const VideoDetailsDownload = () => {
                   <h2 id="download-options" className="text-2xl font-bold text-foreground">{t("videoDetailsDownload.downloadOptions")}</h2>
                 </div>
 
-                <DownloadTabs
-                  videoData={videoData}
-                  onDownload={handleDownload}
-                  onSelect={handleSelectConfig}
-                  selectedConfig={selectedConfig} />
+                {!isFormatsLoaded && videoData?.formats?.length === 0 ? (
+                  /* Phase 2 skeleton: pixel-perfect download cards layout */
+                  /* Phase 2 skeleton: exact pixel-perfect DownloadTabs layout */
+                  <div className="space-y-6">
+                    {(() => {
+                      const shimmer = <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/60 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s' }} />;
+                      return (
+                        <>
+                          {/* MAIN TAB NAVIGATION skeleton */}
+                          <div className="relative flex items-center space-x-2 bg-black/5 dark:bg-white/5 w-fit p-1.5 rounded-2xl border border-border/50 overflow-hidden">
+                            {shimmer}
+                            <div className="px-5 py-2.5 rounded-xl bg-black/10 dark:bg-white/10 w-24 h-10 relative" />
+                            <div className="px-5 py-2.5 rounded-xl w-24 h-10 relative" />
+                            <div className="px-5 py-2.5 rounded-xl w-28 h-10 relative" />
+                          </div>
+
+                          {/* Quick Preset Download skeleton */}
+                          <div className="space-y-4">
+                            <div className="h-6 w-36 bg-black/10 dark:bg-white/10 rounded-lg relative overflow-hidden">{shimmer}</div>
+                            
+                            {/* Max Quality Badge */}
+                            <div className="flex items-center space-x-3 bg-black/5 dark:bg-white/5 w-fit px-4 py-2.5 rounded-2xl border border-border/50 mb-4 relative overflow-hidden">
+                              {shimmer}
+                              <div className="h-4 w-40 bg-black/10 dark:bg-white/10 rounded-md" />
+                              <div className="h-6 w-16 bg-primary/20 rounded-xl" />
+                            </div>
+                            
+                            {/* 3 Large Cards Grid Skeleton */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {[
+                                { label: 'Best', accent: 'bg-emerald-500/20', ring: 'border-emerald-500/20' },
+                                { label: 'Medium', accent: 'bg-blue-500/10', ring: 'border-blue-500/10' },
+                                { label: 'Lowest', accent: 'bg-orange-400/10', ring: 'border-orange-400/10' },
+                              ].map(({ label, accent, ring }, i) => {
+                                const cardShimmer = <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/60 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s', animationDelay: `${i * 0.2}s` }} />;
+                                return (
+                                  <div key={label} className={`relative bg-black/5 dark:bg-[#121212]/60 border ${ring} rounded-2xl p-5 flex flex-col gap-4 overflow-hidden shadow-glass-sm`}>
+                                    {cardShimmer}
+                                    {/* Header row */}
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${accent.replace('/10', '').replace('/20', '')} bg-black/20 dark:bg-white/20 shrink-0`} />
+                                        <div className="h-3 w-16 bg-black/10 dark:bg-white/10 rounded" />
+                                      </div>
+                                      <div className="h-5 w-14 bg-black/5 dark:bg-white/5 rounded-md" />
+                                    </div>
+                                    {/* Quality label */}
+                                    <div className="h-8 w-24 bg-black/10 dark:bg-white/10 rounded-lg" />
+                                    {/* Info grid */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div className={`${accent} border ${ring} rounded-xl p-3 flex flex-col gap-1.5`}>
+                                        <div className="h-2.5 w-10 bg-black/10 dark:bg-white/10 rounded" />
+                                        <div className="h-5 w-12 bg-black/15 dark:bg-white/15 rounded" />
+                                      </div>
+                                      <div className="bg-black/5 dark:bg-white/5 border border-border/50 rounded-xl p-3 flex flex-col gap-1.5">
+                                        <div className="h-2.5 w-8 bg-black/10 dark:bg-white/10 rounded" />
+                                        <div className="h-5 w-16 bg-black/10 dark:bg-white/10 rounded" />
+                                      </div>
+                                    </div>
+                                    {/* Download button skeleton */}
+                                    <div className="w-full h-12 bg-primary/20 rounded-xl mt-auto" />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Advanced Options accordion wrapper skeleton */}
+                          <div className="space-y-4 pt-4">
+                            {/* Advanced options heading skeleton */}
+                            <div className="flex items-center gap-2 px-1 relative overflow-hidden w-fit">
+                              {shimmer}
+                              <div className="w-5 h-5 bg-black/10 dark:bg-white/10 rounded-full" />
+                              <div className="h-6 w-48 bg-black/10 dark:bg-white/10 rounded-lg" />
+                            </div>
+
+                            {/* The Advanced Options body box */}
+                            <div className="bg-black/5 dark:bg-white/[0.02] p-6 md:p-8 space-y-8 relative z-10 border border-border/50 dark:border-white/5 flex flex-col rounded-3xl overflow-hidden">
+                              {shimmer}
+                              {/* Header + Tabs skeleton */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 relative z-20">
+                                <div className="flex items-center justify-between sm:justify-start gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded-full bg-black/10 dark:bg-white/10" />
+                                    <div className="h-4 w-28 bg-black/10 dark:bg-white/10 rounded-md" />
+                                  </div>
+                                  <div className="flex items-center p-1 bg-black/5 dark:bg-white/5 border border-border/50 rounded-xl gap-1">
+                                    <div className="h-7 w-16 bg-black/10 dark:bg-white/10 rounded-lg" />
+                                    <div className="h-7 w-16 rounded-lg" />
+                                    <div className="h-7 w-20 rounded-lg" />
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3.5 h-3.5 rounded-full bg-black/5 dark:bg-white/5" />
+                                  <div className="h-3 w-16 bg-black/5 dark:bg-white/5 rounded-md" />
+                                </div>
+                              </div>
+
+                              {/* "Preparing…" hint */}
+                              <div className="flex items-center gap-2.5 text-muted-foreground/70 bg-primary/5 p-3 rounded-xl border border-primary/10 relative z-20">
+                                <div className="w-4 h-4 rounded-full border-2 border-primary/40 border-t-primary animate-spin shrink-0" />
+                                <span className="text-xs font-medium">Extracting rich formats from YouTube...</span>
+                              </div>
+
+                              {/* Quality Cards Grid Skeleton (6 cards) */}
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 relative z-20">
+                                {[1, 2, 3, 4, 5, 6].map((i) => {
+                                  const cardShimmer = <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/60 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s', animationDelay: `${i * 0.1}s` }} />;
+                                  // First card highlighted like 1080p
+                                  const isPrimary = i === 1;
+                                  return (
+                                    <div key={i} className={`relative bg-white/20 dark:bg-white/[0.03] border ${isPrimary ? 'border-primary/30 bg-primary/10' : 'border-border/40'} rounded-2xl p-4 flex flex-col overflow-hidden shadow-sm`}>
+                                      {cardShimmer}
+                                      <div className="mb-2">
+                                        <div className="flex items-center gap-1.5 mb-1.5">
+                                          <div className={`w-2 h-2 rounded-full ${isPrimary ? 'bg-primary/80' : 'bg-black/10 dark:bg-white/10'} shrink-0`} />
+                                          <div className="h-4 w-12 bg-black/10 dark:bg-white/10 rounded" />
+                                        </div>
+                                        <div className="flex items-center gap-1.5 mt-2">
+                                          <div className={`h-4 w-10 ${isPrimary ? 'bg-primary/20' : 'bg-black/10 dark:bg-white/10'} rounded-md`} />
+                                          <div className="h-4 w-16 bg-black/5 dark:bg-white/5 rounded-md" />
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5 mt-2">
+                                        <div className="h-5 w-20 bg-black/5 dark:bg-white/5 rounded-md" />
+                                        <div className="h-5 w-14 bg-black/5 dark:bg-white/5 rounded-md" />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Advanced Formats Dropdown */}
+                              <div className="w-full h-10 bg-black/10 dark:bg-white/10 rounded-xl border border-border/40 relative z-20" />
+
+                              {/* Container Format */}
+                              <div className="space-y-3 pt-2 relative z-20">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 bg-black/10 dark:bg-white/10 rounded" />
+                                  <div className="h-4 w-32 bg-black/10 dark:bg-white/10 rounded" />
+                                </div>
+                                <div className="w-[300px] max-w-full h-10 bg-black/10 dark:bg-white/10 rounded-xl border border-border/40" />
+                              </div>
+
+                              {/* Custom Filename */}
+                              <div className="space-y-3 pt-2 relative z-20">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 bg-black/10 dark:bg-white/10 rounded" />
+                                  <div className="h-4 w-32 bg-black/10 dark:bg-white/10 rounded" />
+                                </div>
+                                <div className="w-full h-14 bg-black/10 dark:bg-white/10 rounded-2xl border border-border/40" />
+                              </div>
+
+                              {/* Download Button */}
+                              <div className="flex justify-center pt-4 mt-2 border-t border-border/10 relative z-20">
+                                <div className="w-full sm:w-auto min-w-[250px] h-14 bg-primary/20 rounded-2xl" />
+                              </div>
+
+                            </div>
+                          </div>
+
+                          {/* Integrated Trimmer Skeleton (matching closed accordion layout) */}
+                          <div className="w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 bg-black/5 dark:bg-white/5 border-border/50 relative overflow-hidden mt-6">
+                            {shimmer}
+                            <div className="flex items-start gap-4 relative z-20">
+                              <div className="mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center bg-black/5 dark:bg-white/10 text-muted-foreground/30">
+                                <Icon name="Scissors" size={18} />
+                              </div>
+                              <div className="flex flex-col gap-2 pt-1">
+                                <div className="h-4 w-28 bg-black/10 dark:bg-white/10 rounded-md" />
+                                <div className="h-3 w-48 sm:w-60 bg-black/5 dark:bg-white/5 rounded-md" />
+                              </div>
+                            </div>
+                            <div className="shrink-0 w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-muted-foreground/30 relative z-20">
+                              <Icon name="ChevronDown" size={16} />
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <DownloadTabs
+                    videoData={videoData}
+                    onDownload={handleDownload}
+                    onSelect={handleSelectConfig}
+                    selectedConfig={selectedConfig} />
+                )}
               </div>
             </div>
 
             {/* Block 3: Video Trimmer */}
-            <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8">
-              <VideoTrimmer
-                videoData={videoData}
-                onTrimChange={handleTrimChange}
-                onDownload={handleDownload}
-                onSelectConfig={handleSelectConfig}
-                selectedConfig={selectedConfig}
-                downloads={downloads} />
-            </div>
+            {(isFormatsLoaded || videoData?.formats?.length > 0) && (
+              <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8">
+                <VideoTrimmer
+                  videoData={videoData}
+                  onTrimChange={handleTrimChange}
+                  onDownload={handleDownload}
+                  onSelectConfig={handleSelectConfig}
+                  selectedConfig={selectedConfig}
+                  downloads={downloads} />
+              </div>
+            )}
           </div>
         </div>
       </main>

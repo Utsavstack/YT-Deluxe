@@ -1,13 +1,11 @@
-QQ
-
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev)
-[![Vite](https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E)](https://vitejs.dev)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![pywebview](https://img.shields.io/badge/pywebview-FFD43B?style=for-the-badge&logo=python&logoColor=blue)](https://pywebview.flowrl.com)
+[![React](https://img.shields.io/npm/v/react?style=for-the-badge&logo=react&logoColor=61DAFB&label=React&color=20232A)](https://react.dev)
+[![Vite](https://img.shields.io/npm/v/vite?style=for-the-badge&logo=vite&logoColor=FFD62E&label=Vite&color=B73BFE)](https://vitejs.dev)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![FastAPI](https://img.shields.io/pypi/v/fastapi?style=for-the-badge&logo=fastapi&label=FastAPI&color=005571)](https://fastapi.tiangolo.com)
+[![pywebview](https://img.shields.io/pypi/v/pywebview?style=for-the-badge&logo=python&logoColor=blue&label=pywebview&color=FFD43B)](https://pywebview.flowrl.com)
 [![yt-dlp](https://img.shields.io/github/v/release/yt-dlp/yt-dlp?label=yt-dlp&logo=youtube&logoColor=red&style=for-the-badge)](https://github.com/yt-dlp/yt-dlp)
-[![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
-[![PO Token Provider](https://img.shields.io/github/v/release/Brainicism/bgutil-ytdlp-pot-provider?label=PO%20Token%20Provider&style=for-the-badge)](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-6.0%2B-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
+[![Piped](https://img.shields.io/badge/Piped-API-000000?style=for-the-badge&logo=youtube&logoColor=white)](https://github.com/TeamPiped/Piped)
 
 
 <h1 align="center">
@@ -23,6 +21,119 @@ QQ
 </h4>
 
 **YT Deluxe** is a *Free & OpenSource, Full-stack, Feature-rich* **YouTube Downloader and Media Management Hybrid (Web & Desktop) Application** with a **"Premium Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to **Search**, **Preview**, and **Download** YouTube Videos and Audio with a streamlined, premium experience.
+
+---
+
+## Table of Contents
+
+<details>
+<summary><a href="#1-why-yt-deluxe">1. Why YT Deluxe?</a></summary>
+
+- [1.1 The Problem](#11-the-problem)
+- [1.2 The Solution](#12-the-solution)
+
+</details>
+
+<details>
+<summary><a href="#2-features-overview">2. Features Overview</a></summary>
+
+- [2.1 Frontend (Modern UI)](#21-frontend-modern-ui)
+- [2.2 Backend (Advanced Engine)](#22-backend-advanced-engine)
+
+</details>
+
+<details>
+<summary><a href="#3-demo">3. Demo</a></summary>
+</details>
+
+<details>
+<summary><a href="#4-project-structure">4. Project Structure</a></summary>
+</details>
+
+<details>
+<summary><a href="#5-architecture--workflows">5. Architecture &amp; Workflows</a></summary>
+
+- [5.1 Complete User Lifecycle](#51-complete-user-lifecycle)
+- [5.2 Infinite Scroll & Content Discovery Architecture](#52-infinite-scroll--content-discovery-architecture)
+- [5.3 System Performance & Optimization Architecture](#53-system-performance--optimization-architecture)
+- [5.3 Hybrid Video Player Architecture](#53-hybrid-video-player-architecture)
+- [5.4 Format Fetch, Preset Display & Download System](#54-format-fetch-preset-display--download-system)
+- [5.5 Precision Trimming Architecture](#55-precision-trimming-architecture)
+- [5.6 Trimmer Component Architecture](#56-trimmer-component-architecture)
+- [5.7 Hosted Web Application Architecture](#57-hosted-web-application-architecture)
+- [5.8 Native Windows Desktop Architecture](#58-native-windows-desktop-architecture)
+- [5.9 System Architecture & Workflows](#59-system-architecture--workflows)
+
+</details>
+
+<details>
+<summary><a href="#6-installation-and-setup-local-development">6. Installation and Setup (Local Development)</a></summary>
+
+- [6.1 Frontend Dependencies](#61-frontend-dependencies)
+- [6.2 Backend Dependencies](#62-backend-dependencies)
+- [6.3 Desktop Dependencies](#63-desktop-dependencies)
+- [6.4 Prerequisites](#64-prerequisites)
+- [6.5 Frontend Setup (Local)](#65-frontend-setup-local)
+- [6.6 Backend Setup (Local)](#66-backend-setup-local)
+
+</details>
+
+<details>
+<summary><a href="#7-api-reference">7. API Reference</a></summary>
+</details>
+
+<details>
+<summary><a href="#8-usage-guide">8. Usage Guide</a></summary>
+
+- [8.1 Search and Discovery](#81-search-and-discovery)
+- [8.2 Download & Trimming Management](#82-download--trimming-management)
+- [8.3 Batch Processing](#83-batch-processing)
+- [8.4 Real-time Performance Tracking](#84-real-time-performance-tracking)
+- [8.5 History and Storage Management](#85-history-and-storage-management)
+- [8.6 Native Desktop Integrations](#86-native-desktop-integrations)
+- [8.7 User Feedback](#87-user-feedback)
+- [8.8 API Usage Examples (CLI/cURL)](#88-api-usage-examples-clicurl)
+
+</details>
+
+<details>
+<summary><a href="#9-building--deploying-the-web-app">9. Building &amp; Deploying the Web App</a></summary>
+
+- [9.1 Backend (Cloud Web Service)](#91-backend-cloud-web-service)
+- [9.2 Frontend (Static Hosted App)](#92-frontend-static-hosted-app)
+- [9.3 Connecting Frontend & Backend](#93-connecting-frontend--backend)
+
+</details>
+
+<details>
+<summary><a href="#10-building-for-desktop-windows-exe">10. Building for Desktop (Windows .exe)</a></summary>
+
+- [10.1 Environment Preparation (Crucial)](#101-environment-preparation-crucial)
+- [10.2 Build Static Frontend](#102-build-static-frontend)
+- [10.3 Bundle Backend via PyInstaller](#103-bundle-backend-via-pyinstaller)
+- [10.4 Build UI Launcher via PyInstaller](#104-build-ui-launcher-via-pyinstaller)
+- [10.5 Post-Build Testing (Port 8000 Conflict Awareness)](#105-post-build-testing-port-8000-conflict-awareness)
+- [10.6 Create the Final Setup Installer (Inno Setup)](#106-create-the-final-setup-installer-inno-setup)
+
+</details>
+
+<details>
+<summary><a href="#11-contributing">11. Contributing</a></summary>
+</details>
+
+<details>
+<summary><a href="#12-legal">12. Legal</a></summary>
+
+- [12.1 License](#121-license)
+- [12.2 Privacy Policy](#122-privacy-policy)
+- [12.3 Terms & Conditions](#123-terms--conditions)
+- [12.4 Disclaimer](#124-disclaimer)
+
+</details>
+
+<details>
+<summary><a href="#14-support--maintenance">14. Support &amp; Maintenance</a></summary>
+</details>
 
 ---
 
@@ -53,7 +164,8 @@ In today’s digital-first world, YouTube is one of the largest sources of video
 ### 2.2 Backend (Advanced Engine)
 
 - **FastAPI Core**: Blazing fast asynchronous processing with comprehensive endpoint management.
-- **Advanced yt-dlp Extractor**: Robust video/audio fetching with **PO Token** (Proof of Origin) support to bypass bot detection.
+- **Advanced yt-dlp Extractor**: The core extraction engine handles all YouTube video/audio fetching, format resolution, and download execution with **PO Token** (Proof of Origin) support to bypass bot detection. Also serves as the reliable fallback data source for trending and search when external APIs are unavailable.
+- **Multi-Source Metadata Enrichment**: Supplements yt-dlp with rich metadata using a parallel race condition across 3 sources: **Piped API**, **YouTube Page Scraping**, and **Return YouTube Dislike (RYD) API**. This guarantees ultra-fast metadata loading (~3s) even when community APIs are blocked by YouTube, providing upload dates, real avatars, and accurate like counts instantly.
 - **Integrated FFmpeg Merge**: Seamlessly merges high-res (1080p+) DASH video/audio streams into a single high-quality file.
 - **Unified Download Engine**: On Windows Desktop, files are natively routed to your `Downloads` folder, with an "Open Folder" feature.
 - **Thumbnail API Proxy**: Bypasses CORS and environment restrictions in desktop mode by routing image downloads through a secure backend proxy.
@@ -81,28 +193,123 @@ In today’s digital-first world, YouTube is one of the largest sources of video
 
 ```text
 yt-deluxe/
-├── .env            # Environment variables
-├── .gitignore         # Git ignore rules
-├── README.md          # This file
+├── .gitignore                  # Git ignore rules
+├── .nvmrc                      # Node version pin
+├── ARCHITECTURE.md             # Full technical documentation
+├── CHANGELOG.md                # Release & version history
+├── README.md                   # Project overview & quick start
 │
-├── frontend/          # React app (Vite + TailwindCSS)
-│  ├── package.json      # NPM dependencies & scripts
-│  ├── vite.config.mjs     # Vite build config
-│  └── src/
-│    ├── pages/       # Core UI (Search, Details, History, Settings)
-│    ├── components/     # Reusable UI parts
-│    └── utils/api.js    # Backend communication client
+├── frontend/                   # React app (Vite + TailwindCSS)
+│   ├── index.html              # HTML entry point
+│   ├── package.json            # NPM dependencies & scripts
+│   ├── vite.config.mjs         # Vite build configuration
+│   ├── tailwind.config.js      # TailwindCSS theme & plugins
+│   ├── postcss.config.js       # PostCSS pipeline config
+│   ├── jsconfig.json           # JS path aliases
+│   ├── sync-version.js         # Syncs version across package files
+│   ├── vercel.json             # Vercel deployment config (Web)
+│   ├── public/                 # Static public assets
+│   │   ├── assets/             # Images, logos, icons
+│   │   ├── fonts/              # Self-hosted web fonts
+│   │   ├── manifest.json       # PWA manifest
+│   │   ├── robots.txt          # Search engine crawl rules
+│   │   ├── completed.mp3       # Download complete sound
+│   │   ├── started.mp3         # Download started sound
+│   │   └── error.mp3           # Download error sound
+│   └── src/                    # Application source
+│       ├── index.jsx           # React DOM entry point
+│       ├── App.jsx             # Root App component
+│       ├── Routes.jsx          # Client-side routing definitions
+│       ├── pages/              # Full-page views
+│       │   ├── home-search-dashboard/    # Home & trending feed
+│       │   ├── search-results-page/      # Keyword search results
+│       │   ├── video-details-download/   # Video player & download UI
+│       │   ├── download-history-management/ # History & disk usage
+│       │   ├── user-settings-preferences/   # Settings & preferences
+│       │   └── NotFound.jsx              # 404 fallback page
+│       ├── components/         # Reusable UI components
+│       │   ├── ui/             # Core UI primitives
+│       │   │   ├── Header.jsx              # Top navigation & search bar
+│       │   │   ├── GlobalPIPPlayer.jsx     # Picture-in-Picture player
+│       │   │   ├── GlobalProgressFloater.jsx # Download progress overlay
+│       │   │   ├── ShareModal.jsx          # Share dialog
+│       │   │   ├── PermissionDialog.jsx    # Desktop permission prompts
+│       │   │   ├── ProgressNotification.jsx # Toast notifications
+│       │   │   ├── CustomDropdown.jsx      # Styled dropdown menu
+│       │   │   ├── Button.jsx              # Reusable button
+│       │   │   ├── Input.jsx               # Styled text input
+│       │   │   ├── Select.jsx              # Select/combobox
+│       │   │   ├── Checkbox.jsx            # Styled checkbox
+│       │   │   ├── ThemeToggle.jsx         # Dark/light mode toggle
+│       │   │   ├── UndoToast.jsx           # Undo action toast
+│       │   │   ├── WifiLoader.jsx          # Connection spinner
+│       │   │   └── the-infinite-grid.jsx   # Animated background grid
+│       │   ├── AppIcon.jsx     # Dynamic app icon component
+│       │   ├── AppImage.jsx    # Lazy image with fallback
+│       │   ├── ErrorBoundary.jsx # React error boundary
+│       │   ├── PageSkeleton.jsx  # Loading skeleton layouts
+│       │   └── ScrollToTop.jsx   # Scroll restoration on navigation
+│       ├── context/            # React context providers
+│       │   ├── DownloadContext.jsx  # Global download state & queue
+│       │   └── PIPContext.jsx       # PIP player state
+│       ├── styles/             # Global stylesheets
+│       │   ├── index.css       # Base CSS reset & variables
+│       │   └── tailwind.css    # Tailwind directive entry
+│       ├── locales/            # i18n translation files
+│       │   ├── en.json         # English
+│       │   ├── hi.json         # Hindi
+│       │   ├── de.json         # German
+│       │   └── hg.json         # Hinglish
+│       └── utils/              # Utility modules
+│           ├── api.js          # Backend API communication client
+│           ├── dataCache.js    # In-memory cache for search & trending
+│           ├── storage.js      # localStorage abstraction layer
+│           ├── dateFormat.js   # Relative & absolute date formatting
+│           ├── fileNaming.js   # Download filename sanitization
+│           ├── permissions.js  # Desktop permission helpers
+│           ├── i18n.js         # i18next initialization
+│           ├── cn.js           # clsx/tailwind-merge helper
+│           └── ThemeContext.jsx # Theme provider & hook
 │
-├── backend/          # FastAPI application
-│  ├── main.py         # Routes, FFmpeg execution, Background Tasks
-│  ├── requirements.txt    # Python module dependencies
-│  └── tempfiles/       # Ephemeral processing directory
+├── backend/                    # FastAPI Python application
+│   ├── main.py                 # All routes, background tasks & logic
+│   ├── requirements.txt        # Python package dependencies
+│   ├── Dockerfile              # Docker container definition
+│   ├── export_cookies.py       # Browser cookie extraction utility
+│   ├── ffmpeg.exe              # Bundled FFmpeg binary (Windows)
+│   ├── bgutil-ytdlp-pot-provider/ # PO Token provider for yt-dlp
+│   ├── secrets_runtime/        # Runtime secrets & cookie storage
+│   └── tempfiles/              # Ephemeral download processing dir
 │
-└── desktop/          # Native Windows Wrappers
-   ├── launcher.py       # Spawns Backend & PyWebView window
-   ├── build.spec       # PyInstaller build config
-   └── installer/       # Inno Setup 6 Distribution Scripts
-       └── setup.iss     # Builds the final .exe Windows Installer
+├── desktop/                    # Native Windows Desktop wrapper
+│   ├── launcher.py             # Spawns backend & PyWebView window
+│   ├── build.spec              # PyInstaller .exe bundle config
+│   ├── requirements.txt        # Desktop-only Python dependencies
+│   ├── assets/
+│   │   └── icon.ico            # Application window icon
+│   └── installer/              # Inno Setup 6 distribution package
+│       ├── setup.iss           # Inno Setup installer script
+│       └── MicrosoftEdgeWebview2Setup.exe  # Bundled WebView2 installer
+│
+├── website/                    # Static marketing/landing site
+│   ├── index.html              # Landing page
+│   ├── features.html           # Features showcase
+│   ├── about.html              # About the project
+│   ├── updates.html            # Changelog/updates page
+│   ├── privacy.html            # Privacy policy
+│   ├── terms.html              # Terms of use
+│   ├── disclaimer.html         # Legal disclaimer
+│   ├── license.html            # License page
+│   ├── 404.html                # Not found page
+│   ├── robots.txt              # SEO crawl rules
+│   ├── assets/                 # Images & media
+│   ├── css/                    # Stylesheets
+│   └── js/                     # Scripts
+│
+├── docs/                       # Documentation assets
+│   └── assets/                 # Screenshots & media for README
+│
+└── config/                     # Reserved for future config files
 ```
 
 ---
@@ -121,8 +328,8 @@ flowchart TD
     D -- Yes --> E["YouTube iframe loads\n(Hybrid Player Layer 1)\nor backend stream fallback"]
     D -- No --> F["User clicks card"]
     E --> F
-    F --> G["Navigate to VideoDetailsDownload\nGET /api/video?url=...\nyt-dlp extracts full format list"]
-    G --> H["Backend builds formats + all_formats\n(recommended + every raw stream)"]
+    F --> G["Navigate to VideoDetailsDownload\nPhase 1: GET /api/video/quick (Multi-Source)\nPhase 2: GET /api/video?url=... (yt-dlp)"]
+    G --> H["Phase 1 renders instant metadata (~3s)\nPhase 2 builds formats + all_formats (~6s)"]
     H --> I["videoData set in index.jsx\nDownloadTabs + VideoTrimmer receive props"]
     I --> J["User sees:\nQuick Actions sidebar\nQuick Download preset cards\nAdvanced Options quality grid"]
     J --> K{"User action?"}
@@ -189,9 +396,13 @@ Clicking a card triggers a client-side navigation to `/video?url=<youtube_url>`.
 
 #### Step 5: Video Details Page & Format Fetch
 
-**Component:** `index.jsx` | **API:** `GET /api/video?url=...`
+**Component:** `index.jsx` | **API:** `GET /api/video/quick?id=...` & `GET /api/video?url=...`
 
-As soon as `VideoDetailsDownload` mounts, `index.jsx` calls `YTDeluxeAPI.getVideoDetails(url)`. The backend runs `yt-dlp` with `skip_download: True` to extract the full stream manifest without downloading anything. It processes every format in the manifest:
+As soon as `VideoDetailsDownload` mounts, it launches two parallel API requests:
+1. **Phase 1 (Quick Metadata):** Calls `GET /api/video/quick` which runs a 3-source parallel race (Piped, YT Scrape, RYD) to instantly return title, views, likes, avatar, and upload date. The UI renders this within ~3s to eliminate the loading skeleton.
+2. **Phase 2 (Formats):** Calls `GET /api/video` which runs `yt-dlp` with `skip_download: True` to extract the full stream manifest.
+
+Once Phase 2 completes, it processes every format in the manifest:
 
 - **Audio streams** filtered by codec, sorted by bitrate, deduplicated to one per codec family (Opus, AAC, other), max 3 total
 - **Video streams** the single best stream per resolution height (by `tbr` then `filesize`) is kept for `formats`; every raw stream is kept for `all_formats`
@@ -311,7 +522,7 @@ A history entry is written to `~/.yt-deluxe/history.json` containing: title, cha
 
 #### 5.2.1 System Overview
 
-YT Deluxe uses a **three-layer content delivery architecture** for both Trending and Search feeds:
+YT Deluxe uses a **four-layer content delivery architecture** for both Trending and Search feeds, with the **Piped public API** as the primary metadata source and **yt-dlp** as fallback:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -330,20 +541,36 @@ YT Deluxe uses a **three-layer content delivery architecture** for both Trending
 │                    FastAPI Backend (main.py)                      │
 │  ┌───────────────────────────┐  ┌───────────────────────────┐   │
 │  │   _trending_cache         │  │   _search_cache           │   │
-│  │   cursor-based slicing    │  │   page-based slicing      │   │
+│  │   cursor-based slicing    │  │   Piped cursor + page     │   │
 │  │   auto-extend on low      │  │   auto-extend on low      │   │
 │  │   remaining (< limit)     │  │   remaining (≤ 2 pages)   │   │
 │  └─────────────┬─────────────┘  └─────────────┬─────────────┘   │
 └────────────────┼────────────────────────────── ┼─────────────────┘
-                 │ ytsearchN: keyword             │ ytsearchN: query
-┌────────────────▼────────────────────────────── ▼─────────────────┐
-│                        yt-dlp → YouTube                           │
-└───────────────────────────────────────────────────────────────────┘
+                 │                                │
+     ┌───────────▼────────────────────────────────▼───────────┐
+     │          Piped Public API (PRIMARY)                     │
+     │  Instances: api.piped.private.coffee                    │
+     │             pipedapi.kavin.rocks                        │
+     │             pipedapi.leptons.xyz                         │
+     │  Endpoints: /trending?region=IN                         │
+     │             /search?q=...&filter=videos                 │
+     │             /nextpage/search (cursor-based)             │
+     │  Returns:   uploadedDate, uploaderAvatar,               │
+     │             uploaderVerified, nextpage cursor            │
+     └───────────────────────┬─────────────────────────────────┘
+                             │ fallback (if all instances fail)
+     ┌───────────────────────▼─────────────────────────────────┐
+     │          yt-dlp → YouTube (FALLBACK)                     │
+     │  ytsearchN: keyword      ytsearchN: query               │
+     │  Basic metadata only (no uploadedDate, no avatars)       │
+     └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-#### 5.2.2 Backend: `/api/trending` Cursor-Based Infinite Cache
+#### 5.2.2 Backend: `/api/trending` yt-dlp Core with Piped API Enrichment
+
+> **Data Source Strategy**: The trending endpoint uses a **dual data source** approach. For the "All" category, metadata is first fetched via the Piped API (`/trending?region=IN`) for rich fields like `uploadedDate` and `uploaderAvatar`. For category-specific trending (Music, Gaming, etc.), Piped's search endpoint is used with category keywords. If all Piped instances are unavailable, the system falls back to **yt-dlp** the core extraction engine using keyword-based search (`ytsearch`).
 
 ##### 5.2.2.1 Constants & Cache Structure
 
@@ -352,6 +579,14 @@ TRENDING_CACHE_TTL  = 30 * 60   # 30-minute TTL per category
 TRENDING_FETCH_SIZE = 120        # Full background fill size (BG thread)
 TRENDING_QUICK_FETCH = 21        # Quick sync fetch serves page 1 instantly
 TRENDING_PAGE_SIZE  = 18         # Videos served per frontend request (3-col grid × 6 rows)
+
+# Piped API multi-instance failover
+PIPED_API_INSTANCES = [
+  "https://api.piped.private.coffee",
+  "https://pipedapi.kavin.rocks",
+  "https://pipedapi.leptons.xyz",
+]
+PIPED_TIMEOUT = 10  # seconds per instance
 
 _trending_cache: dict = {
     "{category_id}_{region}": {
@@ -362,26 +597,36 @@ _trending_cache: dict = {
 }
 ```
 
-##### 5.2.2.2 Quick-Fetch + Background Fill Flow
+##### 5.2.2.2 Piped-First Trending Flow
 
-First load uses a **two-phase strategy** to return cards quickly while filling the full cache silently:
+First load uses a **three-phase strategy**: Piped API → yt-dlp keyword fallback → background fill:
 
 ```mermaid
 flowchart TD
     A["GET /api/trending\n?cursor=0&limit=18"] --> B{"Cache HIT?\n(not expired)"}
 
     B -- "Yes" --> C["Serve from cache (instant)"]
-    B -- "No" --> D["Attempt real feed\nyt-dlp: youtube.com/feed/trending"]
+    B -- "No" --> PA{"Category = All?"}
+
+    PA -- "Yes" --> PB["Try _fetch_piped_trending()\nPiped /trending?region=IN\nMulti-instance failover"]
+    PA -- "No (Music/Gaming/...)" --> PC["Try _fetch_piped_search()\nPiped /search?q=category+keywords\nCursor-based pagination"]
+
+    PB --> PD{"Piped returned\n≥ 5 results?"}
+    PC --> PD
+
+    PD -- "Yes" --> PE["Use Piped results\n(uploadedDate ✅, avatar ✅,\nuploaderVerified ✅)"]
+    PD -- "No / Error" --> D["Fallback: yt-dlp\nyoutube.com/feed/trending"]
 
     D --> E{"info is None?"}
     E -- "Yes" --> F["Return empty list\n(NoneType crash fix)"]
     E -- "No" --> G{"≥ 5 results?"}
 
     F --> G
-    G -- "No" --> H["Quick keyword fetch\nytsearch21: 'trending viral today India popular'\n~2–6s synchronous"]
+    G -- "No" --> H["Quick keyword fetch\nytsearch21: category keywords\n~2–6s synchronous"]
     G -- "Yes" --> I["Use real feed results"]
 
-    H --> J["Store QUICK results in cache\n{results:21, filling:True}"]
+    PE --> J["Store results in cache\n{results:N, filling:True}"]
+    H --> J
     I --> J
     J --> K["Return page 1 to user immediately"]
 
@@ -456,7 +701,9 @@ This converts a noisy `AttributeError` crash into a clean empty-list return, imm
 
 ---
 
-#### 5.2.3 Backend: `/api/search` Auto-Extending Page Cache
+#### 5.2.3 Backend: `/api/search` yt-dlp Core with Piped API Enrichment
+
+> **Data Source Strategy**: The search endpoint uses a **dual data source** approach. For page 1, metadata is fetched via the Piped API (`/search?q=...&filter=videos`) for rich fields like `uploadedDate`, `uploaderAvatar`, and cursor-based `nextpage` tokens. For subsequent pages, Piped's cursor is used via `_fetch_piped_search_nextpage()`. If all Piped instances are unavailable or the `nextpage` param is absent, the system falls back to **yt-dlp** the core extraction engine with page-based caching and background fill.
 
 ##### 5.2.3.1 Constants & Cache Structure
 
@@ -469,6 +716,8 @@ SEARCH_CACHE_TTL   = 30 * 60
 _search_cache: dict = {
     "{q}": {
         "results": [ ...video objects... ],
+        "piped_results": [ ...piped video objects... ],  # Piped-sourced results
+        "piped_nextpage": str | None,  # Piped cursor token for next page
         "expires_at": float,
         "extension_count": int,  # how many auto-extends have fired
         "filling": bool          # True while background fill thread is running
@@ -478,7 +727,7 @@ _search_cache: dict = {
 
 ##### 5.2.3.2 Auto-Extension Trigger
 
-Unlike Trending (cursor-based), Search uses **page-number** pagination. Extension fires when ≤ 2 pages remain:
+Unlike Trending (cursor-based), Search uses **page-number** pagination for yt-dlp fallback and **cursor tokens** for Piped. Extension fires when ≤ 2 pages remain:
 
 ```python
 EXTEND_THRESHOLD = SEARCH_PAGE_SIZE * 2   # 36 results = 2 pages
@@ -493,9 +742,9 @@ if remaining <= EXTEND_THRESHOLD:
     # fetch → deduplicate by id → append → extension_count++
 ```
 
-##### 5.2.3.3 Quick-Fetch + Background Fill Flow
+##### 5.2.3.3 Piped-First Search Flow
 
-Search also uses the two-phase strategy. The endpoint is `async` so yt-dlp runs in a thread pool via `run_in_executor`, keeping the FastAPI event loop unblocked:
+Search uses a **Piped-first strategy** with cursor-based pagination. The endpoint is `async` so yt-dlp runs in a thread pool via `run_in_executor`, keeping the FastAPI event loop unblocked:
 
 ```mermaid
 flowchart TD
@@ -503,10 +752,22 @@ flowchart TD
 
     B -- "Full HIT" --> C["Serve from cache (instant)"]
     B -- "Partial HIT\n(filling=True)" --> D["Serve from partial cache\nBG fill still running"]
-    B -- "MISS" --> E["async run_in_executor:\nytsearch21:phonk\n~10-16s (yt-dlp init + scrape)"]
+    B -- "MISS" --> PA{"nextpage param\nprovided?"}
+
+    PA -- "Yes (cursor)" --> PB["_fetch_piped_search_nextpage()\nPiped /nextpage/search\nCursor-based pagination"]
+    PA -- "No (page 1)" --> PC["Try _fetch_piped_search()\nPiped /search?q=phonk&filter=videos\nMulti-instance failover"]
+
+    PC --> PD{"Piped returned\nresults?"}
+    PB --> PD
+
+    PD -- "Yes" --> PE["Use Piped results\n(uploadedDate ✅, avatar ✅,\nnextpage cursor ✅)"]
+    PD -- "No / Error" --> E["Fallback: async run_in_executor\nytsearch21:phonk\n~10-16s (yt-dlp init + scrape)"]
+
+    PE --> PF["Store Piped results in cache\n{piped_results:N, piped_nextpage:cursor}"]
+    PF --> G["Return page to user\n(with nextpage cursor if available)"]
 
     E --> F["Store QUICK results\n{results:21, filling:True}"]
-    F --> G["Return page 1 to user"]
+    F --> G
 
     F --> H["Spawn background thread\n_background_fill_search()"]
     H --> I["ytsearch180:phonk\nFetch full batch (180)"]
@@ -1417,9 +1678,31 @@ This section documents exactly how formats become visible in the UI after a vide
 
 ---
 
-#### 5.4.1 Phase 1 Video Fetch & Format Collection (`GET /api/video`)
+#### 5.4.1 Two-Phase Metadata Fetching Architecture
 
-When a user navigates to the Video Details page, `index.jsx` immediately calls `YTDeluxeAPI.getVideoDetails(url)`. The backend endpoint `GET /api/video` runs `yt-dlp` with `skip_download: True` to extract the full stream list without downloading anything.
+When a user navigates to the Video Details page, YT-Deluxe uses a **Two-Phase** parallel fetching architecture to eliminate loading waits.
+
+**Phase 1: Quick Metadata (Multi-Source Parallel Fetch)**
+A request is immediately sent to `GET /api/video/quick?id={video_id}`. Because community Piped instances are highly unreliable (often returning 500/502 errors from YouTube blocking), this endpoint runs a 3-source parallel race condition using `asyncio.gather`:
+
+```mermaid
+graph LR
+    A["GET /api/video/quick"] --> B["Parallel Launch"]
+    B --> C["Piped API (2 instances, 2s timeout)"]
+    B --> D["YouTube Page Scrape (~3s)"]
+    B --> E["Return YouTube Dislike API (~1.5s)"]
+    C --> F{"Piped Success?"}
+    F -->|Yes| G["Return Piped (Fastest & Richest)"]
+    F -->|No| H{"Scrape Success?"}
+    H -->|Yes| I["Merge Scrape + RYD Data"]
+    H -->|No| J{"RYD Success?"}
+    J -->|Yes| K["Return RYD only (likes/views)"]
+    J -->|No| L["Return null (yt-dlp fallback)"]
+```
+*This guarantees partial or full metadata (Title, Avatar, Likes, Views, Upload Date, Channel) is returned within ~3 seconds, instantly hiding the loading skeleton.*
+
+**Phase 2: Format Collection (`GET /api/video`)**
+In parallel to Phase 1, `index.jsx` calls `YTDeluxeAPI.getVideoDetails(url)`. The backend endpoint `GET /api/video` runs `yt-dlp` with `skip_download: True` to extract the full stream list. This acts as both the format extractor and the ultimate failsafe fallback if all Phase 1 sources fail.
 
 **Backend processing pipeline (`main.py: get_video_details`):**
 
@@ -2226,13 +2509,59 @@ npm run dev     # Starts Vite Server on http://localhost:5848
 #### Frontend Files Structure
 
 ```text
-├── frontend/          # React app (Vite + TailwindCSS)
-│  ├── package.json      # NPM dependencies & scripts
-│  ├── vite.config.mjs     # Vite build config
-│  └── src/
-│    ├── pages/       # Core UI (Search, Details, History, Settings)
-│    ├── components/     # Reusable UI parts
-│    └── utils/api.js    # Backend communication client
+frontend/
+├── index.html                  # HTML entry point
+├── package.json                # NPM dependencies & scripts
+├── vite.config.mjs             # Vite build configuration
+├── tailwind.config.js          # TailwindCSS theme & plugins
+├── postcss.config.js           # PostCSS pipeline config
+├── jsconfig.json               # JS path aliases
+├── sync-version.js             # Syncs version across package files
+├── vercel.json                 # Vercel deployment config (Web)
+├── public/
+│   ├── assets/                 # Images, logos, icons
+│   ├── fonts/                  # Self-hosted web fonts
+│   ├── manifest.json           # PWA manifest
+│   ├── robots.txt              # SEO crawl rules
+│   ├── completed.mp3           # Download complete sound
+│   ├── started.mp3             # Download started sound
+│   └── error.mp3               # Download error sound
+└── src/
+    ├── index.jsx               # React DOM entry point
+    ├── App.jsx                 # Root App component
+    ├── Routes.jsx              # Client-side routing definitions
+    ├── pages/
+    │   ├── home-search-dashboard/
+    │   ├── search-results-page/
+    │   ├── video-details-download/
+    │   ├── download-history-management/
+    │   ├── user-settings-preferences/
+    │   └── NotFound.jsx
+    ├── components/
+    │   ├── ui/                 # Core UI primitives (Header, PIP, Dropdown, etc.)
+    │   ├── AppIcon.jsx
+    │   ├── AppImage.jsx
+    │   ├── ErrorBoundary.jsx
+    │   ├── PageSkeleton.jsx
+    │   └── ScrollToTop.jsx
+    ├── context/
+    │   ├── DownloadContext.jsx  # Global download queue & state
+    │   └── PIPContext.jsx
+    ├── styles/
+    │   ├── index.css
+    │   └── tailwind.css
+    ├── locales/
+    │   ├── en.json  ├── hi.json  ├── de.json  └── hg.json
+    └── utils/
+        ├── api.js              # Backend communication client
+        ├── dataCache.js        # In-memory cache for API results
+        ├── storage.js          # localStorage abstraction
+        ├── dateFormat.js       # Date formatting helpers
+        ├── fileNaming.js       # Download filename sanitizer
+        ├── permissions.js      # Desktop permission utilities
+        ├── i18n.js             # i18next initialization
+        ├── cn.js               # clsx/tailwind-merge helper
+        └── ThemeContext.jsx    # Theme provider & hook
 ```
 
 ### 6.6 Backend Setup (Local)
@@ -2271,13 +2600,32 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ### Backend Files Structure
 
 ```text
-├── backend/          # FastAPI application
-│  ├── main.py         # Routes, FFmpeg execution, Background Tasks
-│  ├── requirements.txt    # Python module dependencies
-│  └── tempfiles/       # Ephemeral processing directory
+backend/
+├── main.py                       # All routes, background tasks & logic
+├── requirements.txt              # Python package dependencies
+├── Dockerfile                    # Docker container definition
+├── export_cookies.py             # Browser cookie extraction utility
+├── ffmpeg.exe                    # Bundled FFmpeg binary (Windows)
+├── bgutil-ytdlp-pot-provider/    # PO Token provider plugin for yt-dlp
+├── secrets_runtime/              # Runtime secrets & session cookie storage
+└── tempfiles/                    # Ephemeral download processing directory
 ```
 
 *By default, the frontend expects the backend at `localhost:8000`. Set `VITE_API_BASE_URL` in your `.env` if this differs.*
+
+### Desktop Files Structure
+
+```text
+desktop/
+├── launcher.py             # Spawns FastAPI backend & opens PyWebView window
+├── build.spec              # PyInstaller .exe bundle configuration
+├── requirements.txt        # Desktop-only Python dependencies (pywebview)
+├── assets/
+│   └── icon.ico            # Application window & taskbar icon
+└── installer/              # Inno Setup 6 distribution package
+    ├── setup.iss           # Inno Setup installer script (.exe builder)
+    └── MicrosoftEdgeWebview2Setup.exe  # Bundled WebView2 runtime installer
+```
 
 ---
 
@@ -2557,6 +2905,7 @@ You may **not**:
 
 **Third-Party Services:**
 - **YouTube / Google**: Requests go through the backend via yt-dlp. YouTube's own [Privacy Policy](https://policies.google.com/privacy) applies.
+- **Piped API**: Trending and search metadata requests are routed through public [Piped](https://github.com/TeamPiped/Piped) API instances. No user-identifiable data is sent only search queries and region codes.
 - Temporary download files are **auto-deleted** from the server after 10 minutes (Web mode)
 
 ---

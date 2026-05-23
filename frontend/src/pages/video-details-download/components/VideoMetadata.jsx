@@ -12,6 +12,7 @@ const VideoMetadata = ({ videoData }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const handleKeywordClick = (keyword) => {
     if (!keyword) return;
@@ -118,24 +119,39 @@ const VideoMetadata = ({ videoData }) => {
 
   const formatNumber = (num) => {
     if (!num && num !== 0) return '0';
-    
+
     let numericNum = num;
     if (typeof num === 'string') {
-      // If it already has K, M, B suffix, return as is (like "1M+")
-      if (/[KMB+]$/i.test(num)) return num;
-      numericNum = parseInt(num.replace(/,/g, ''), 10);
+      // Strip trailing words like "subscribers", "views", "likes" etc.
+      // Handles: "96.4K subscribers", "381 subscribers", "27.4M subscribers"
+      const cleaned = num.trim().replace(/\s+(subscribers?|views?|likes?|comments?).*$/i, '').trim();
+
+      // Match patterns like "96.4K", "1.2M", "2.5B", "27.4M+"
+      const match = cleaned.match(/^([\d.]+)\s*([KMBkmb])\+?$/);
+      if (match) {
+        const val = parseFloat(match[1]);
+        const suffix = match[2].toUpperCase();
+        let multiplier = 1;
+        if (suffix === 'K') multiplier = 1000;
+        else if (suffix === 'M') multiplier = 1000000;
+        else if (suffix === 'B') multiplier = 1000000000;
+        numericNum = val * multiplier;
+      } else {
+        // Plain number like "381" or "1,234,567"
+        numericNum = parseFloat(cleaned.replace(/,/g, '')) || 0;
+      }
     }
 
     if (isNaN(numericNum)) return `${num}`;
 
     if (numericNum >= 1000000000) {
-      return `${(numericNum / 1000000000)?.toFixed(1).replace(/\.0$/, '')}B`;
+      return `${(numericNum / 1000000000).toFixed(1).replace(/\.0$/, '')}B`;
     } else if (numericNum >= 1000000) {
-      return `${(numericNum / 1000000)?.toFixed(1).replace(/\.0$/, '')}M`;
+      return `${(numericNum / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
     } else if (numericNum >= 1000) {
-      return `${(numericNum / 1000)?.toFixed(1).replace(/\.0$/, '')}K`;
+      return `${(numericNum / 1000).toFixed(1).replace(/\.0$/, '')}K`;
     }
-    return numericNum.toString();
+    return Math.round(numericNum).toString();
   };
 
   const formatUploadDate = (date) => {
@@ -197,8 +213,14 @@ const VideoMetadata = ({ videoData }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-border/50 shadow-glass-sm transition-all hover:border-primary/20">
         <div className="flex items-center space-x-4">
           <div className="relative">
-            {videoData?.channel?.avatar ? (
-              <img src={videoData.channel.avatar} alt={videoData.channel.name} className="w-14 h-14 rounded-full object-cover border-2 border-primary/20" />
+            {videoData?.channel?.avatar && !avatarError ? (
+              <img
+                src={videoData.channel.avatar}
+                alt={videoData.channel.name}
+                className="w-14 h-14 rounded-full object-cover border-2 border-primary/20"
+                onError={() => setAvatarError(true)}
+                loading="lazy"
+              />
             ) : (
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center border-2 border-primary/20 shadow-lg shadow-primary/20">
                 <span className="text-white font-bold text-xl">

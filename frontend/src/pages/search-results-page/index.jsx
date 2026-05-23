@@ -27,6 +27,7 @@ const SearchResultsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [nextpageCursor, setNextpageCursor] = useState(null);
   const [error, setError] = useState(null);
 
   const [previewVideo, setPreviewVideo] = useState(null);
@@ -67,16 +68,17 @@ const SearchResultsPage = () => {
       setCurrentPage(1);
       setTotalPages(1);
       setHasMore(false);
+      setNextpageCursor(null);
       setError(null);
       currentQueryRef.current = query;
-      performSearch(query, 1, true);
+      performSearch(query, 1, true, null);
     } else {
       navigate('/home-search-dashboard');
     }
   }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Core fetch ─────────────────────────────────────────────────────────────
-  const performSearch = async (searchQuery, page = 1, isInitial = false) => {
+  const performSearch = async (searchQuery, page = 1, isInitial = false, nextpage = null) => {
     // Cache-first: check if we already have this query+page result
     const cacheKey = CacheKey.search(searchQuery, page);
     if (isInitial) {
@@ -101,7 +103,7 @@ const SearchResultsPage = () => {
     }
 
     try {
-      const response = await YTDeluxeAPI.smartSearchOrVideo(searchQuery, page);
+      const response = await YTDeluxeAPI.smartSearchOrVideo(searchQuery, page, nextpage);
 
       // If the user changed query mid-flight, discard stale results
       if (currentQueryRef.current !== searchQuery) return;
@@ -109,12 +111,49 @@ const SearchResultsPage = () => {
       if (response.video) {
         // Direct URL lookup — single result, no pagination
         const video = response.video;
+        // Build channel object from flat /api/video response
+        const channelName = (typeof video.channel === 'object' ? video.channel?.name : video.channel) ||
+          video.uploader || 'Unknown Channel';
+        const channelAvatar = video.channel_avatar || (typeof video.channel === 'object' ? video.channel?.avatar : null) || null;
+        const channelVerified = video.channel_verified || (typeof video.channel === 'object' ? video.channel?.verified : false) || false;
+
+        // Compute relative upload date from ISO or YYYYMMDD format
+        let uploadedDate = null;
+        const rawDate = video.upload_date;
+        if (rawDate) {
+          try {
+            let dateObj;
+            if (rawDate.includes('T')) {
+              dateObj = new Date(rawDate);
+            } else if (rawDate.length >= 8) {
+              dateObj = new Date(`${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`);
+            }
+            if (dateObj && !isNaN(dateObj.getTime())) {
+              const diffMs = Date.now() - dateObj.getTime();
+              const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+              if (diffDays === 0) uploadedDate = 'Today';
+              else if (diffDays === 1) uploadedDate = '1 day ago';
+              else if (diffDays < 7) uploadedDate = `${diffDays} days ago`;
+              else if (diffDays < 30) uploadedDate = `${Math.floor(diffDays / 7)} weeks ago`;
+              else if (diffDays < 365) uploadedDate = `${Math.floor(diffDays / 30)} months ago`;
+              else uploadedDate = `${Math.floor(diffDays / 365)} years ago`;
+            }
+          } catch (_) { /* ignore date parse errors */ }
+        }
+
         const transformedResult = {
           ...video,
           id: `${video.id}_url_0`,
           originalId: video.id,
           thumbnail: video?.thumbnail || (video?.id ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : '/assets/images/no_image.webp'),
-          url: `https://www.youtube.com/watch?v=${video.id}`
+          url: `https://www.youtube.com/watch?v=${video.id}`,
+          views: video.view_count || video.views,
+          uploadedDate: uploadedDate,
+          channel: {
+            name: channelName,
+            avatar: channelAvatar,
+            verified: channelVerified,
+          }
         };
         setSearchResults([transformedResult]);
         setTotalResults(1);
@@ -144,10 +183,13 @@ const SearchResultsPage = () => {
         const serverTotalPages   = response.total_pages ?? 1;
         const serverPage         = response.page ?? page;
 
+        const serverNextpage = response.nextpage || null;
         setTotalResults(serverTotalResults);
         setTotalPages(serverTotalPages);
         setCurrentPage(serverPage);
-        setHasMore(serverPage < serverTotalPages);
+        setNextpageCursor(serverNextpage);
+        // hasMore: if nextpage cursor exists (Piped), or if there are more pages (yt-dlp fallback)
+        setHasMore(!!serverNextpage || serverPage < serverTotalPages);
 
         // Save to cache for instant back-navigation
         dataCache.set(cacheKey, {
@@ -183,16 +225,24 @@ const SearchResultsPage = () => {
   // ── "Load more" — called by VirtuosoGrid endReached ───────────────────────
   const handleLoadMore = useCallback(() => {
     if (isLoadingMoreRef.current || !hasMore) return;
-    const nextPage = currentPage + 1;
-    if (nextPage > totalPages) return;
 
-    // Keep URL in sync so deep links work
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('page', nextPage.toString());
-    setSearchParams(newParams, { replace: true });
-
-    performSearch(query, nextPage, false);
-  }, [currentPage, totalPages, hasMore, query, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+    // If we have a Piped nextpage cursor, use cursor-based pagination
+    if (nextpageCursor) {
+      const nextPage = currentPage + 1;
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('page', nextPage.toString());
+      setSearchParams(newParams, { replace: true });
+      performSearch(query, nextPage, false, nextpageCursor);
+    } else {
+      // yt-dlp fallback: use page-based pagination
+      const nextPage = currentPage + 1;
+      if (nextPage > totalPages) return;
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('page', nextPage.toString());
+      setSearchParams(newParams, { replace: true });
+      performSearch(query, nextPage, false, null);
+    }
+  }, [currentPage, totalPages, hasMore, nextpageCursor, query, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePreview = (video) => {
     setPreviewVideo(video);

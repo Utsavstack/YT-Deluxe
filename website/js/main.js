@@ -290,12 +290,12 @@ async function renderUpdatesPage() {
                     <div class="flex flex-wrap items-center gap-2">
                         ${dlBadge}
                         <span class="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white/40">Desktop</span>
-                        <svg class="chevron-icon w-5 h-5 text-white/30 transition-transform duration-300 ${i === 0 ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="chevron-icon w-5 h-5 text-white/30 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
                 </button>
-                <div class="version-body ${i === 0 ? '' : 'hidden'} border-t border-white/[0.05]">
+                <div class="version-body border-t border-white/[0.05]">
                     <div class="p-6 md:p-8">
                         <ul class="space-y-3 mb-6">${bulletHTML}</ul>
                         <div class="flex gap-4 pt-4 border-t border-white/[0.05]">
@@ -362,9 +362,30 @@ window.toggleVersionCard = function(btn) {
     const body    = card.querySelector('.version-body');
     const chevron = card.querySelector('.chevron-icon');
     if (!body) return;
-    const isOpen = !body.classList.contains('hidden');
-    body.classList.toggle('hidden', isOpen);
-    chevron && chevron.classList.toggle('rotate-180', !isOpen);
+    
+    const isOpen = body.classList.contains('is-open');
+    if (!isOpen) {
+        // Open
+        body.classList.add('is-open');
+        body.style.maxHeight = body.scrollHeight + 'px';
+        chevron && chevron.classList.add('rotate-180');
+        
+        // Allow height to auto-adjust for screen resizing after transition
+        setTimeout(() => {
+            if (body.classList.contains('is-open')) {
+                body.style.maxHeight = 'none';
+            }
+        }, 500);
+    } else {
+        // Close
+        body.style.maxHeight = body.scrollHeight + 'px';
+        // Force reflow
+        body.offsetHeight;
+        
+        body.classList.remove('is-open');
+        body.style.maxHeight = '0px';
+        chevron && chevron.classList.remove('rotate-180');
+    }
 };
 
 // ============================================================

@@ -12,10 +12,14 @@ const handleResponse = async (response) => {
 
 // API Service Class
 class YTDeluxeAPI {
-  // Search videos by keyword with cache-based pagination
-  static async searchVideos(query, page = 1) {
+  // Search videos by keyword with cache-based pagination + Piped nextpage cursor
+  static async searchVideos(query, page = 1, nextpage = null) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}&page=${page}`);
+      let url = `${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}&page=${page}`;
+      if (nextpage) {
+        url += `&nextpage=${encodeURIComponent(nextpage)}`;
+      }
+      const response = await fetch(url);
       const data = await handleResponse(response);
       if (data.results) {
         data.results = data.results.map(video => ({
@@ -25,7 +29,7 @@ class YTDeluxeAPI {
             { ...video.channel, name: video.channel.name?.replace(/^@/, '') || 'Unknown Channel' }
         }));
       }
-      return data; // { results, page, total_pages, total_results, page_size }
+      return data; // { results, page, total_pages, total_results, page_size, nextpage }
     } catch (error) {
       console.error('Search API error:', error);
       throw error;
@@ -70,6 +74,19 @@ class YTDeluxeAPI {
     } catch (error) {
       console.error('Video details API error:', error);
       throw error;
+    }
+  }
+
+  // Get quick video metadata from Piped API (fast, ~1-2s)
+  // Used by Phase 2 of two-phase rendering for instant metadata display
+  static async getVideoQuick(videoId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/video/quick?id=${encodeURIComponent(videoId)}`);
+      const data = await handleResponse(response);
+      return data; // { metadata: { description, likes, views, uploaderAvatar, ... } }
+    } catch (error) {
+      console.error('Video quick metadata API error:', error);
+      return { metadata: null };
     }
   }
 
@@ -311,13 +328,13 @@ class YTDeluxeAPI {
   }
 
   // Smart search: keyword or direct video URL
-  static async smartSearchOrVideo(query, page = 1) {
+  static async smartSearchOrVideo(query, page = 1, nextpage = null) {
     if (this.isYouTubeUrl(query)) {
       // If it's a YouTube URL, get video details
       return this.getVideoDetails(query).then(res => ({ video: res.video }));
     } else {
       // Otherwise, do a keyword search
-      return this.searchVideos(query, page);
+      return this.searchVideos(query, page, nextpage);
     }
   }
 }

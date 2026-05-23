@@ -9,21 +9,40 @@ import WifiLoader from '../../../components/ui/WifiLoader';
 
 // Skeleton card — Premium design with YouTube-like shimmer sweep
 const SkeletonCard = () => (
-  <div className="glass-card shadow-glass-md rounded-[24px] overflow-hidden relative bg-white dark:bg-zinc-900/50 border border-black/5 dark:border-white/10">
+  <div className="bg-white dark:bg-[#1e1e1e]/80 backdrop-blur-xl border border-border/40 p-3 pb-5 rounded-[24px] sm:rounded-[32px] shadow-glass-sm relative flex flex-col gap-3 overflow-hidden">
     {/* Shimmer sweep effect */}
     <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/50 dark:via-white/5 to-transparent bg-[length:200%_100%] animate-shimmer pointer-events-none" style={{ animationDuration: '2s' }} />
     
-    <div className="w-full h-48 bg-slate-200 dark:bg-zinc-800" />
-    <div className="p-4 space-y-3">
-      <div className="h-4 bg-slate-200 dark:bg-zinc-800 rounded-lg w-3/4" />
-      <div className="h-3 bg-slate-200 dark:bg-zinc-800 rounded-lg w-1/2" />
-      <div className="flex items-center gap-2 mt-2">
-        <div className="w-8 h-8 bg-slate-200 dark:bg-zinc-800 rounded-full shrink-0" />
-        <div className="h-3 bg-slate-200 dark:bg-zinc-800 rounded-lg w-1/3" />
-      </div>
-      <div className="flex justify-between mt-1">
-        <div className="h-3 bg-slate-200 dark:bg-zinc-800 rounded-lg w-1/4" />
-        <div className="h-3 bg-slate-200 dark:bg-zinc-800 rounded-lg w-1/4" />
+    {/* Thumbnail Section */}
+    <div className="relative overflow-hidden rounded-[16px] sm:rounded-[24px] bg-slate-200/50 dark:bg-zinc-800/50 w-full h-52 border border-black/5 dark:border-white/5" />
+    
+    {/* Content Section */}
+    <div className="flex gap-3 pt-1 px-1 flex-col">
+      <div className="flex gap-3 w-full">
+        {/* Channel Avatar */}
+        <div className="w-9 h-9 rounded-full bg-slate-200/50 dark:bg-zinc-800/50 shrink-0 border border-black/5 dark:border-white/10" />
+
+        {/* Text details */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Title (2 lines) */}
+          <div className="h-4 bg-slate-200/50 dark:bg-zinc-800/50 rounded-lg w-full mb-1.5" />
+          <div className="h-4 bg-slate-200/50 dark:bg-zinc-800/50 rounded-lg w-4/5 mb-1" />
+          
+          <div className="flex justify-between items-start mt-2">
+            <div className="flex flex-col min-w-0 w-full pr-2 gap-2">
+              {/* Channel Name */}
+              <div className="h-3 bg-slate-200/50 dark:bg-zinc-800/50 rounded-md w-1/2" />
+              {/* Views */}
+              <div className="h-3 bg-slate-200/50 dark:bg-zinc-800/50 rounded-md w-2/3" />
+            </div>
+
+            {/* Actions */}
+            <div className="flex shrink-0 gap-2.5 mt-1">
+              <div className="w-8 h-8 rounded-full bg-slate-200/50 dark:bg-zinc-800/50" />
+              <div className="w-8 h-8 rounded-full bg-slate-200/50 dark:bg-zinc-800/50" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -82,7 +101,7 @@ const SearchResults = ({
         </div>
 
         {/* Skeleton Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
           {Array.from({ length: 9 }).map((_, index) => (
             <SkeletonCard key={index} />
           ))}
@@ -167,7 +186,25 @@ const SearchResults = ({
         <VirtuosoGrid
           useWindowScroll
           style={{ overflow: 'hidden' }}
-          data={results}
+          data={(() => {
+            const GRID_COLS = 3;
+            const items = results || [];
+            const count = items.length;
+            const remainder = count % GRID_COLS;
+            if (isLoadingMore) {
+              // Fill partial row + one full row of skeletons
+              const fillPartial = remainder > 0 ? (GRID_COLS - remainder) : 0;
+              const totalSkels = fillPartial + GRID_COLS;
+              return [...items, ...Array(totalSkels).fill({ isSkeleton: true })];
+            }
+            if (hasMore && remainder > 0) {
+              // Not loading yet, but more coming — fill partial row with skeletons
+              const fillPartial = GRID_COLS - remainder;
+              return [...items, ...Array(fillPartial).fill({ isSkeleton: true })];
+            }
+            return items;
+          })()}
+          computeItemKey={(index, item) => item.isSkeleton ? `skel-${index}` : (item.id || `item-${index}`)}
           endReached={() => {
             if (!isLoading && !isLoadingMore && hasMore) {
               onLoadMore?.();
@@ -180,7 +217,7 @@ const SearchResults = ({
                 ref={ref}
                 {...props}
                 style={style}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10"
               >
                 {children}
               </div>
@@ -190,25 +227,6 @@ const SearchResults = ({
             ),
             Footer: () => (
               <div className="py-8 w-full flex flex-col items-center justify-center gap-6">
-                {/* "Load more" skeletons */}
-                {isLoadingMore && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <SkeletonCard key={`more-skel-${i}`} />
-                    ))}
-                  </div>
-                )}
-
-                {/* Spinner pill */}
-                {isLoadingMore && (
-                  <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-black/5 dark:bg-white/5 border border-border/50 backdrop-blur-md">
-                    <Icon name="Loader2" size={18} className="animate-spin text-primary" />
-                    <span className="text-sm font-medium text-foreground opacity-80">
-                      {t("common.loading", "Loading more results...")}
-                    </span>
-                  </div>
-                )}
-
                 {/* End of results */}
                 {!hasMore && !isLoadingMore && results?.length > 0 && (
                   <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border/40 bg-card/60 backdrop-blur-md text-sm text-muted-foreground">
@@ -219,14 +237,18 @@ const SearchResults = ({
               </div>
             ),
           }}
-          itemContent={(index, video) => (
-            <VideoCard
-              key={video?.id}
-              video={video}
-              onQuickDownload={onQuickDownload}
-              onPreview={onPreview}
-            />
-          )}
+          itemContent={(index, item) => 
+            item.isSkeleton ? (
+              <SkeletonCard />
+            ) : (
+              <VideoCard
+                key={item?.id}
+                video={item}
+                onQuickDownload={onQuickDownload}
+                onPreview={onPreview}
+              />
+            )
+          }
         />
       )}
     </div>

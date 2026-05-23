@@ -133,34 +133,6 @@
         </div>
     </div>
 
-    <!-- Analytics Stats Bar -->
-    <section class="py-6 px-4 border-b border-white/[0.04]">
-        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-6 md:gap-10">
-            <div class="flex flex-col items-center gap-1">
-                <span id="stat-total-downloads" class="text-2xl font-bold text-white">&mdash;</span>
-                <span class="text-[11px] text-white/30 uppercase tracking-widest flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Total Downloads
-                </span>
-            </div>
-            <div class="w-px h-10 bg-white/[0.06] hidden md:block"></div>
-            <div class="flex flex-col items-center gap-1">
-                <span id="stat-page-views" class="text-2xl font-bold text-white">&mdash;</span>
-                <span class="text-[11px] text-white/30 uppercase tracking-widest flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                    Page Views
-                </span>
-            </div>
-            <div class="w-px h-10 bg-white/[0.06] hidden md:block"></div>
-            <div class="flex flex-col items-center gap-1">
-                <span id="stat-latest-version" class="text-2xl font-bold text-white">&mdash;</span>
-                <span class="text-[11px] text-white/30 uppercase tracking-widest flex items-center gap-1.5">
-                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Latest Version
-                </span>
-            </div>
-        </div>
-    </section>
     <section class="relative pt-40 pb-20 overflow-hidden">
         <!-- Ambient Background Shapes -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none -z-10">
@@ -190,8 +162,9 @@
                 <h2 class="text-3xl font-bold text-white tracking-tight">Release Notes</h2>
                 <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
             </div>
-            <div class="glass-card p-8 border-white/5 relative overflow-hidden reveal-on-scroll">
-                <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+            <div id="release-notes-card" class="glass-card border-white/5 relative overflow-hidden reveal-on-scroll">
+                <!-- Header (button) -->
+                <button class="w-full flex flex-col md:flex-row md:items-center justify-between p-6 md:p-8 gap-4 text-left outline-none select-none" onclick="toggleReleaseNotesCard()">
                     <div>
                         <div class="flex items-center gap-3 mb-1">
                             <span id="release-notes-version" class="text-2xl font-bold text-white">&mdash;</span>
@@ -199,14 +172,36 @@
                         </div>
                         <p id="release-notes-date" class="text-white/30 text-sm">&mdash;</p>
                     </div>
-                    <a id="release-notes-download" href="#" target="_blank"
-                       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-sm font-semibold hover:bg-accent/20 transition-all">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        Download
-                    </a>
-                </div>
-                <div id="release-notes-body" class="prose prose-invert prose-sm max-w-none text-white/60 leading-relaxed space-y-2">
-                    <p class="text-white/20 italic text-sm">Loading release notes&hellip;</p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <a id="release-notes-download" href="#" target="_blank" onclick="event.stopPropagation()"
+                           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent/10 border border-accent/20 text-accent text-sm font-semibold hover:bg-accent/20 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Download
+                        </a>
+                        <span class="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-xs text-white/40">Desktop</span>
+                        <svg id="release-notes-chevron" class="chevron-icon w-5 h-5 text-white/30 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                </button>
+                
+                <!-- Body with half-open support -->
+                <div id="release-notes-body-container" class="version-body-half border-t border-white/[0.05]">
+                    <div class="p-6 md:p-8">
+                        <div id="release-notes-body" class="prose prose-invert prose-sm max-w-none text-white/60 leading-relaxed space-y-2 pb-16">
+                            <p class="text-white/20 italic text-sm">Loading release notes&hellip;</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Opacity Fade Mask & Read More Button -->
+                    <div id="release-notes-fade-mask" class="fade-mask">
+                        <button onclick="event.stopPropagation(); toggleReleaseNotesCard(true)" class="pointer-events-auto px-5 py-2.5 rounded-2xl bg-accent/20 border border-accent/30 text-white text-xs font-semibold hover:bg-accent/30 transition-all shadow-[0_8px_20px_rgba(85,132,255,0.2)] backdrop-blur-md flex items-center gap-2">
+                            <span>Show More</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -408,6 +403,43 @@
             @apply p-8 rounded-[2rem] bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all duration-500;
         }
 
+        /* Dynamic version body accordion styles */
+        .version-body {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+        }
+        .version-body.is-open {
+            opacity: 1;
+        }
+
+        /* Custom half-open card styles */
+        .version-body-half {
+            max-height: 220px;
+            overflow: hidden;
+            position: relative;
+            transition: max-height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .version-body-half.is-expanded {
+            /* Calculated dynamically in JS */
+        }
+        .fade-mask {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 140px;
+            background: linear-gradient(to top, #030303 0%, rgba(3, 3, 3, 0.92) 35%, rgba(3, 3, 3, 0) 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 2rem;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-20px); }
@@ -415,6 +447,43 @@
     </style>
 
     <script>
+        window.toggleReleaseNotesCard = function(forceExpand = false) {
+            const container = document.getElementById('release-notes-body-container');
+            const chevron = document.getElementById('release-notes-chevron');
+            const mask = document.getElementById('release-notes-fade-mask');
+            if (!container || !chevron || !mask) return;
+
+            const isExpanded = container.classList.contains('is-expanded');
+            if (forceExpand || !isExpanded) {
+                // Expand
+                container.classList.add('is-expanded');
+                container.style.maxHeight = container.scrollHeight + 'px';
+                chevron.classList.add('rotate-180');
+                mask.style.opacity = '0';
+                mask.style.pointerEvents = 'none';
+                mask.style.visibility = 'hidden';
+                
+                // Allow card to self-adjust to dynamic content changes after transition completes
+                setTimeout(() => {
+                    if (container.classList.contains('is-expanded')) {
+                        container.style.maxHeight = 'none';
+                    }
+                }, 600);
+            } else {
+                // Collapse back to half-open state
+                container.style.maxHeight = container.scrollHeight + 'px';
+                // Force a layout reflow
+                container.offsetHeight;
+                
+                container.classList.remove('is-expanded');
+                container.style.maxHeight = '220px';
+                chevron.classList.remove('rotate-180');
+                mask.style.opacity = '1';
+                mask.style.pointerEvents = 'auto';
+                mask.style.visibility = 'visible';
+            }
+        };
+
         function scrollToFaq(id) {
             const element = document.getElementById(id);
             if (element) {

@@ -11,7 +11,7 @@ const releaseType  = isPreRelease ? 'Beta' : 'Stable';
 
 const AboutYTDeluxe = () => {
   const { t } = useTranslation();
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [activePreview, setActivePreview] = useState(null); // 'utsav' | 'jay' | null
 
   const features = [
     {
@@ -168,15 +168,11 @@ const AboutYTDeluxe = () => {
         </div>
         <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex-1 space-y-4 text-center md:text-left">
-            <div className="inline-flex items-center space-x-2 px-2 py-0.5 rounded-full bg-primary/5 border border-primary/10 text-[8px] uppercase tracking-widest font-black text-primary">
-              <span className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-              <span>{t('aboutUs.devBadge')}</span>
-            </div>
             <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 justify-center md:justify-start">
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsPreviewOpen(true)}
+                onClick={() => setActivePreview('utsav')}
                 transition={{ type: "spring", stiffness: 300 }}
                 className="w-32 h-32 rounded-full overflow-hidden border-4 border-background ring-2 ring-primary/40 shadow-xl flex items-center justify-center bg-primary/5 shrink-0 cursor-pointer"
               >
@@ -189,7 +185,7 @@ const AboutYTDeluxe = () => {
               </motion.div>
               <div className="text-center md:text-left">
                 <h3 className="text-2xl font-black text-foreground tracking-tight">Utsav Parmar</h3>
-                <p className="text-sm font-medium text-primary/80">{t('aboutUs.devRole')}</p>
+                <p className="text-sm font-medium text-primary/80">Founder & Lead Full-Stack Engineer</p>
               </div>
             </div>
             <p className="text-muted-foreground max-w-lg text-sm leading-relaxed">
@@ -208,7 +204,7 @@ const AboutYTDeluxe = () => {
             >
               <div className="flex items-center space-x-3">
                 <Icon name="Github" size={20} className="group-hover:text-primary" />
-                <span className="text-sm font-bold">{t('aboutUs.sourceCode')}</span>
+                <span className="text-sm font-bold">GitHub</span>
               </div>
               <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
             </motion.a>
@@ -261,6 +257,102 @@ const AboutYTDeluxe = () => {
         </div>
       </motion.div>
 
+      {/* Partner Context */}
+      <motion.div variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-8 border-t-4 border-primary/20 relative overflow-hidden group/card">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover/card:scale-110 transition-transform duration-1000">
+          <Icon name="Cpu" size={180} />
+        </div>
+        <div className="relative flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex-1 space-y-4 text-center md:text-left">
+            <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6 justify-center md:justify-start">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActivePreview('jay')}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="w-32 h-32 rounded-full overflow-hidden border-4 border-background ring-2 ring-primary/40 shadow-xl flex items-center justify-center bg-primary/5 shrink-0 cursor-pointer"
+              >
+                <img
+                  src="/assets/images/jay.webp"
+                  alt="Jay Prajapati"
+                  className="w-full h-full object-cover scale-[1.3] transform origin-top"
+                  onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Jay+Prajapati&background=10b981&color=fff&size=128' }}
+                />
+              </motion.div>
+              <div className="text-center md:text-left">
+                <h3 className="text-2xl font-black text-foreground tracking-tight">Jay Prajapati</h3>
+                <p className="text-sm font-medium text-primary/80">QA & Testing Engineer</p>
+              </div>
+            </div>
+            <p className="text-muted-foreground max-w-lg text-sm leading-relaxed">
+              Meticulous quality assurance and testing professional dedicated to ensuring YT Deluxe remains bug-free, stable, and delivers a flawless user experience across all devices.
+            </p>
+          </div>
+
+          <div className="flex flex-col space-y-3 min-w-[200px]">
+            <motion.a
+              whileHover={{ scale: 1.02, x: -3 }}
+              whileTap={{ scale: 0.98 }}
+              href="https://www.github.com/jaystack-io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <Icon name="Github" size={20} className="group-hover:text-primary" />
+                <span className="text-sm font-bold">GitHub</span>
+              </div>
+              <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+            </motion.a>
+
+            <motion.a
+              whileHover={{ scale: 1.02, x: -3 }}
+              whileTap={{ scale: 0.98 }}
+              href="https://www.linkedin.com/in/jayprajapati-exe"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <Icon name="Linkedin" size={20} className="group-hover:text-primary" />
+                <span className="text-sm font-bold">LinkedIn</span>
+              </div>
+              <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+            </motion.a>
+
+            <motion.a
+              whileHover={{ scale: 1.02, x: -3 }}
+              whileTap={{ scale: 0.98 }}
+              href="https://www.instagram.com/jayprajapati.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <Icon name="Instagram" size={20} className="group-hover:text-primary" />
+                <span className="text-sm font-bold">Instagram</span>
+              </div>
+              <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+            </motion.a>
+
+            <motion.a
+              whileHover={{ scale: 1.02, x: -3 }}
+              whileTap={{ scale: 0.98 }}
+              href="https://x.com/im_jay05"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between group px-5 py-3 rounded-xl bg-card border border-border/50 hover:border-primary hover:bg-primary/5 transition-all duration-300 shadow-glass-sm"
+            >
+              <div className="flex items-center space-x-3">
+                <svg className="w-5 h-5 group-hover:text-primary transition-colors" fill="currentColor" viewBox="0 0 24 24"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.292 19.494h2.039L6.486 3.24H4.298l13.311 17.407z"/></svg>
+                <span className="text-sm font-bold">Twitter</span>
+              </div>
+              <Icon name="ArrowRight" size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+            </motion.a>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Features Full Width */}
       <motion.div id="features-section" variants={itemVariants} className="bg-white dark:bg-card border border-border shadow-glass-xl rounded-3xl p-6 md:p-8 flex flex-col relative">
         <h2 className="text-xl font-bold text-foreground mb-8 flex items-center gap-2"> 
@@ -299,12 +391,12 @@ const AboutYTDeluxe = () => {
       {/* Developer Photo Preview Modal */}
       {createPortal(
         <AnimatePresence>
-          {isPreviewOpen && (
+          {activePreview && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsPreviewOpen(false)}
+              onClick={() => setActivePreview(null)}
               className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-md cursor-zoom-out"
             >
               <motion.div
@@ -316,16 +408,20 @@ const AboutYTDeluxe = () => {
                 className="relative max-w-md w-full aspect-square rounded-[2.5rem] overflow-hidden shadow-glass-2xl border border-white/10"
               >
                 <button
-                  onClick={() => setIsPreviewOpen(false)}
+                  onClick={() => setActivePreview(null)}
                   className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 backdrop-blur-sm transition-colors border border-white/10"
                 >
                   <Icon name="X" size={20} />
                 </button>
                 <img
-                  src="/assets/images/utsav.webp"
-                  alt="Utsav Parmar"
+                  src={activePreview === 'utsav' ? "/assets/images/utsav.webp" : "/assets/images/jay.webp"}
+                  alt={activePreview === 'utsav' ? "Utsav Parmar" : "Jay Prajapati"}
                   className="w-full h-full object-cover object-top"
-                  onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=Utsav+Parmar&background=0D8ABC&color=fff&size=512' }}
+                  onError={(e) => { 
+                    e.target.src = activePreview === 'utsav'
+                      ? 'https://ui-avatars.com/api/?name=Utsav+Parmar&background=0D8ABC&color=fff&size=512' 
+                      : 'https://ui-avatars.com/api/?name=Jay+Prajapati&background=10b981&color=fff&size=512';
+                  }}
                 />
               </motion.div>
             </motion.div>

@@ -20,20 +20,18 @@
   <a href="https://github.com/Utsavstack/YT-Deluxe/stargazers"><img src="https://img.shields.io/github/stars/Utsavstack/YT-Deluxe?style=flat-square" alt="Stars"></a>
 </p>
 
-<p align="center">
-  <a href="#1-what-is-yt-deluxe">What is it?</a> &bull;
-  <a href="#2-the-problem">Problem</a> &bull;
-  <a href="#3-the-solution">Solution</a> &bull;
-  <a href="#4-features">Features</a> &bull;
-  <a href="#5-demo">Demo</a> &bull;
-  <a href="#6-vision--roadmap">Vision</a> &bull;
-  <a href="#7-quick-start">Quick Start</a> &bull;
-  <a href="#8-contributing">Contributing</a> &bull;
-  <a href="#9-donate">Donate</a> &bull;
-  <a href="#10-about-the-developer">About</a> &bull;
-  <a href="#11-credits--acknowledgments">Credits</a> &bull;
-  <a href="#12-legal">Legal</a>
-</p>
+1. [What is YT Deluxe?](#1-what-is-yt-deluxe)
+2. [The Problem](#2-the-problem)
+3. [The Solution](#3-the-solution)
+4. [Features](#4-features)
+5. [Demo](#5-demo)
+6. [Vision & Roadmap](#6-vision--roadmap)
+7. [Quick Start](#7-quick-start)
+8. [Contributing](#8-contributing)
+9. [Donate](#9-donate)
+10. [About the Developer](#10-about-the-developer)
+11. [Credits & Acknowledgments](#11-credits--acknowledgments)
+12. [Legal](#12-legal)
 
 ---
 
@@ -296,6 +294,33 @@ Found something broken? [Open an issue](https://github.com/Utsavstack/YT-Deluxe/
 ### 8.4 Suggesting Features
 Have an idea? [Open a discussion](https://github.com/Utsavstack/YT-Deluxe/discussions) - let's talk about it before implementation.
 
+### 8.5 Piped Ecosystem (Made with Piped)
+
+Since YT Deluxe uses the Piped API to enrich trending and search results, here are other incredible open-source projects built on the Piped ecosystem:
+
+#### Mobile / Desktop Apps
+- **[LibreTube](https://github.com/libre-tube/LibreTube)** - Alternative frontend for YouTube for Android.
+- **[Yattee](https://github.com/yattee/yattee)** - Alternative frontend for YouTube for macOS / iOS.
+- **[YTDLnis](https://github.com/deniscerri/ytdlnis)** - Video and audio downloader for Android that uses Piped to update formats.
+- **[Pipeline](https://github.com/Aresiel/Pipeline)** - Alternative frontend for YouTube for Linux.
+- **[PlasmaTube](https://invent.kde.org/multimedia/plasmatube)** - Alternative frontend for YouTube for Linux.
+- **[Harmony Music](https://github.com/simp-m/harmony-music)** - YouTube Music alternative for Android/Windows/Debian, built with Flutter that supports Piped linking for playlists.
+
+#### Web Apps
+- **[Hyperpipe](https://github.com/hyperpipe/hyperpipe)** - Alternative privacy-respecting frontend for YouTube Music.
+- **[ytify](https://github.com/deep5050/ytify)** - Complementary audio streaming frontend for YouTube & YouTube Music.
+- **[Piped-Material](https://github.com/JVT03/Piped-Material)** - Fork of Piped, focusing on better performance and a more usable design.
+- **[Musicale](https://github.com/PatrickDemian/Musicale)** - Alternative frontend for YouTube Music with style.
+
+#### Not Under Active Development
+- **[PsTube](https://github.com/kcostm/PsTube)** - Watch and download videos without ads on Android, Linux, Windows, iOS, and macOS.
+- **[VibeYou](https://github.com/Eagler-Developer/VibeYou)** - Privacy-focused music player for Android supporting playback via Piped.
+- **[conduit](https://github.com/Complementary-Designs/conduit)** - Alternative frontend for YouTube, with a modern player and watch-together capabilities.
+- **[DeskVideo](https://github.com/DeskVideo/DeskVideo)** - Desktop-styled, customizable alternative frontend for YouTube.
+- **[ReacTube](https://github.com/DmitryKozirev/ReacTube)** - Privacy-friendly & distraction-free YouTube frontend.
+- **[vidyodl](https://github.com/TeamPiped/vidyodl)** - Simple API to download videos from YouTube, using Piped.
+- **[Piped Addon for Kodi](https://github.com/isiah-lloyd/plugin.video.piped)** - Kodi plugin for Piped.
+
 ---
 
 ## 9. Donate
@@ -344,13 +369,15 @@ YT Deluxe is built on the shoulders of giants. None of this would be possible wi
 
 ### 11.1 Core Engine
 
-The heart of YT Deluxe's media pipeline. These tools handle all YouTube extraction, stream merging, codec conversion, and bot-detection bypass entirely on the server side.
+The heart of YT Deluxe's media pipeline. **yt-dlp** is the core extraction engine handling all YouTube video/audio fetching, format resolution, stream merging, and download execution entirely on the server side. Because community APIs are frequently blocked by YouTube, YT-Deluxe uses a **Multi-Source Parallel Metadata Fetching** strategy leveraging the **Piped API**, **Return YouTube Dislike (RYD) API**, and direct **YouTube Page Scraping** to guarantee instant data delivery without relying on a single point of failure.
 
 | Project | Role | License |
 |---|---|---|
-| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | YouTube video/audio extraction engine | Unlicense |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Core YouTube video/audio extraction engine & reliable fallback | Unlicense |
 | [FFmpeg](https://ffmpeg.org) | Video/audio merging, trimming & transcoding | LGPL / GPL |
-| [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) | Automatic PO Token generation for bot detection bypass | MIT |
+| [Piped](https://github.com/TeamPiped/Piped) | Core metadata enrichment API (trending, search cursors) | AGPL-3.0 |
+| [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) | Automatic PO Token generation for bot detection bypass | MIT
+| [RYD](https://returnyoutubedislike.com) | Real-time accurate like and dislike counts | Open Source |
 
 ### 11.2 Frontend
 
@@ -414,6 +441,7 @@ A sincere thank you to:
 - The **[yt-dlp](https://github.com/yt-dlp/yt-dlp) contributors** - for building and maintaining the most powerful YouTube extraction tool available. YT Deluxe is fundamentally powered by their work.
 - The **[FFmpeg](https://ffmpeg.org) team** - for decades of unmatched multimedia processing that runs quietly behind every download and trim.
 - The **[Brainicism](https://github.com/Brainicism)** team - for the bgutil PO Token provider that keeps downloads working reliably.
+- The **[TeamPiped](https://github.com/TeamPiped/Piped)** contributors - for building and maintaining the Piped API, which supplements yt-dlp by enriching trending and search results with upload dates, channel avatars, and verified badges.
 - The **open-source community at large** - every Stack Overflow answer, GitHub issue, and documentation page that made this project possible.
 - **Every contributor, tester, and user** of YT Deluxe - your feedback and support drive this project forward.
 
@@ -474,6 +502,7 @@ See the full license text in [LICENSE](./LICENSE).
 > [!NOTE]
 > #### Third-Party Services
 > - **YouTube / Google**: When you search or download, your requests go through the backend (which uses yt-dlp). YouTube's own [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://www.youtube.com/static?template=terms) apply to all interactions with their platform.
+> - **Piped API**: Trending and search metadata requests are routed through public [Piped](https://github.com/TeamPiped/Piped) API instances. No user-identifiable data is sent only search queries and region codes. Piped is an open-source, privacy-focused YouTube frontend.
 > - **Shield.io** (README badges only): No user data is involved.
 
 #### 12.2.3 Web-Hosted Instance

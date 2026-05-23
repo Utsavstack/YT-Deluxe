@@ -288,35 +288,210 @@ def _normalize_entry(entry: dict) -> dict:
     'views': entry.get('view_count'),
   }
 
-# Endpoint: Search YouTube (by keyword) — cache-based pagination with auto-extend
+# ── Piped API configuration ──────────────────────────────────────────────────
+PIPED_API_INSTANCES = [
+  "https://api.piped.private.coffee",
+  "https://pipedapi.kavin.rocks",
+  "https://pipedapi.leptons.xyz",
+  "https://pipedapi.adminforge.de",
+  "https://api.piped.projectsegfau.lt",
+]
+PIPED_API_BASE = PIPED_API_INSTANCES[0]  # Primary instance
+PIPED_TIMEOUT = 10  # seconds (for search/trending which can be slow)
+PIPED_TIMEOUT_FAST = 4  # seconds (for quick metadata — fail fast)
+
+def _piped_get(path: str, timeout: int = None):
+  """Try each Piped instance in order until one succeeds. Returns response JSON or None."""
+  _timeout = timeout or PIPED_TIMEOUT
+  for base in PIPED_API_INSTANCES:
+    try:
+      url = f"{base}{path}"
+      resp = requests.get(url, timeout=_timeout)
+      resp.raise_for_status()
+      return resp.json()
+    except Exception as e:
+      print(f"[Piped] {base}{path} failed: {type(e).__name__}: {str(e)[:80]}")
+      continue
+  return None
+
+# ── Helper: normalize a single Piped API entry to our video dict ─────────────
+def _convert_piped_avatar(piped_url: str) -> str:
+  """Convert Piped proxy avatar URL to direct YouTube URL.
+  Piped format: https://proxy.piped.xxx/{path}?host=yt3.ggpht.com
+  YouTube format: https://yt3.ggpht.com/{path}
+  """
+  if not piped_url:
+    return None
+  try:
+    from urllib.parse import urlparse, parse_qs
+    parsed = urlparse(piped_url)
+    host_param = parse_qs(parsed.query).get('host', [None])[0]
+    if host_param:
+      # Extract the path (remove leading /) and reconstruct with original host
+      path = parsed.path
+      return f"https://{host_param}{path}"
+  except Exception:
+    pass
+  # If conversion fails, return the original Piped URL as fallback
+  return piped_url
+
+def _normalize_piped_entry(item: dict) -> dict:
+  vid_id = (item.get('url') or '').split('?v=')[-1] if '?v=' in (item.get('url') or '') else ''
+  raw_uploader = item.get('uploaderName') or 'Unknown Channel'
+  uploader_name = raw_uploader.lstrip('@') if raw_uploader else 'Unknown Channel'
+  thumb = f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg" if vid_id else item.get('thumbnail')
+  dur = item.get('duration')
+  avatar = _convert_piped_avatar(item.get('uploaderAvatar'))
+  return {
+    'id': vid_id,
+    'title': item.get('title'),
+    'url': f"https://www.youtube.com/watch?v={vid_id}" if vid_id else '',
+    'thumbnail': thumb,
+    'duration': dur if dur is not None and dur > 0 else None,
+    'uploader': uploader_name,
+    'views': item.get('views'),
+    'uploadedDate': item.get('uploadedDate'),   # "5 months ago" or null
+    'uploaded': item.get('uploaded'),            # ms timestamp or -1
+    'channel': {
+      'name': uploader_name,
+      'avatar': avatar,                          # Direct YouTube avatar URL
+      'verified': item.get('uploaderVerified', False),
+      'url': item.get('uploaderUrl', ''),
+    },
+    'isShort': item.get('isShort', False),
+  }
+
+def _fetch_piped_trending(region: str = "IN"):
+  """Fetch trending videos from Piped API (multi-instance). Returns list of normalized dicts or None."""
+  try:
+    print(f"[Piped] Fetching trending for region={region}")
+    items = _piped_get(f"/trending?region={region}")
+    if items is None or not isinstance(items, list):
+      print(f"[Piped] Trending: no valid response from any instance")
+      return None
+    videos = [_normalize_piped_entry(e) for e in items if e and e.get('url') and '/shorts/' not in (e.get('url') or '')]
+    print(f"[Piped] Trending returned {len(videos)} videos")
+    return videos
+  except Exception as e:
+    print(f"[Piped] Trending fetch failed: {e}")
+    return None
+
+def _fetch_piped_search(query: str, filter_type: str = "videos"):
+  """Fetch search results from Piped API (multi-instance). Returns (items, nextpage) or (None, None)."""
+  try:
+    import urllib.parse
+    path = f"/search?q={urllib.parse.quote(query)}&filter={filter_type}"
+    print(f"[Piped] Searching: {query}")
+    data = _piped_get(path)
+    if data is None:
+      print(f"[Piped] Search: no valid response from any instance")
+      return None, None
+    items_raw = data.get('items') or []
+    nextpage = data.get('nextpage')
+    videos = [_normalize_piped_entry(e) for e in items_raw if e and e.get('url') and '/shorts/' not in (e.get('url') or '')]
+    print(f"[Piped] Search returned {len(videos)} videos, nextpage={'yes' if nextpage else 'no'}")
+    return videos, nextpage
+  except Exception as e:
+    print(f"[Piped] Search failed: {e}")
+    return None, None
+
+def _fetch_piped_search_nextpage(query: str, nextpage: str, filter_type: str = "videos"):
+  """Fetch next page of Piped search using cursor (multi-instance). Returns (items, nextpage) or (None, None)."""
+  try:
+    import urllib.parse
+    path = f"/nextpage/search?q={urllib.parse.quote(query)}&filter={filter_type}&nextpage={urllib.parse.quote(nextpage)}"
+    print(f"[Piped] Fetching nextpage search for: {query}")
+    data = _piped_get(path)
+    if data is None:
+      print(f"[Piped] Nextpage search: no valid response from any instance")
+      return None, None
+    items_raw = data.get('items') or []
+    new_nextpage = data.get('nextpage')
+    videos = [_normalize_piped_entry(e) for e in items_raw if e and e.get('url') and '/shorts/' not in (e.get('url') or '')]
+    print(f"[Piped] Nextpage search returned {len(videos)} videos, nextpage={'yes' if new_nextpage else 'no'}")
+    return videos, new_nextpage
+  except Exception as e:
+    print(f"[Piped] Nextpage search failed: {e}")
+    return None, None
+
+# Endpoint: Search YouTube (by keyword) — Piped API first, yt-dlp fallback
 @app.get("/api/search")
-async def search_videos(q: str, page: int = 1):
+async def search_videos(q: str, page: int = 1, nextpage: str = None):
   import asyncio as _asyncio
   try:
     page = max(1, page)
     cache_key = q.strip().lower()
     now = time.time()
 
-    # --- Check cache ---
+    # ── Piped API path (cursor-based pagination) ──────────────────────────────
+    # If nextpage cursor is provided, use Piped's nextpage endpoint directly
+    if nextpage:
+      print(f"[Search] Piped nextpage fetch for '{q}'")
+      piped_results, new_nextpage = _fetch_piped_search_nextpage(q, nextpage)
+      if piped_results is not None and len(piped_results) > 0:
+        return {
+          "results": piped_results,
+          "page": page,
+          "total_pages": page + (1 if new_nextpage else 0),
+          "total_results": len(piped_results),
+          "page_size": len(piped_results),
+          "nextpage": new_nextpage,
+        }
+      # If nextpage fetch failed, fall through to yt-dlp
+
+    # ── First page: try Piped API first ──────────────────────────────────────
+    if page == 1:
+      # Check cache first
+      with _search_cache_lock:
+        cached = _search_cache.get(cache_key)
+        if cached and cached['expires_at'] > now and cached.get('piped_results'):
+          print(f"[Search] Piped cache HIT for '{q}'")
+          return {
+            "results": cached['piped_results'],
+            "page": 1,
+            "total_pages": 2 if cached.get('piped_nextpage') else 1,
+            "total_results": len(cached['piped_results']),
+            "page_size": len(cached['piped_results']),
+            "nextpage": cached.get('piped_nextpage'),
+          }
+
+      # Fresh Piped fetch
+      piped_results, piped_nextpage = _fetch_piped_search(q)
+      if piped_results is not None and len(piped_results) > 0:
+        # Cache the Piped results
+        with _search_cache_lock:
+          _search_cache[cache_key] = {
+            'piped_results': piped_results,
+            'piped_nextpage': piped_nextpage,
+            'expires_at': now + SEARCH_CACHE_TTL,
+          }
+        return {
+          "results": piped_results,
+          "page": 1,
+          "total_pages": 2 if piped_nextpage else 1,
+          "total_results": len(piped_results),
+          "page_size": len(piped_results),
+          "nextpage": piped_nextpage,
+        }
+      print(f"[Search] Piped failed for '{q}', falling back to yt-dlp...")
+
+    # ── yt-dlp fallback (existing logic) ─────────────────────────────────────
+    # Check yt-dlp cache
     with _search_cache_lock:
       cached = _search_cache.get(cache_key)
       min_acceptable = SEARCH_CACHE_FETCH // 3
-      if cached and cached['expires_at'] > now and len(cached['results']) >= min_acceptable:
+      if cached and cached['expires_at'] > now and cached.get('results') and len(cached['results']) >= min_acceptable:
         all_results = cached['results']
-        print(f"[Search] Cache HIT for '{q}' ({len(all_results)} results cached)")
-      elif cached and cached['expires_at'] > now and len(cached['results']) >= SEARCH_QUICK_FETCH:
-        # Partial cache (quick fetch in progress) — serve from it
+        print(f"[Search] yt-dlp Cache HIT for '{q}' ({len(all_results)} results cached)")
+      elif cached and cached['expires_at'] > now and cached.get('results') and len(cached['results']) >= SEARCH_QUICK_FETCH:
         all_results = cached['results']
         print(f"[Search] Partial cache HIT for '{q}' ({len(all_results)} results, full fill in progress)")
       else:
-        if cached:
-          print(f"[Search] Cache STALE for '{q}' — re-fetching...")
-          del _search_cache[cache_key]
         all_results = None
 
-    # --- Cache miss: quick first fetch (SEARCH_QUICK_FETCH results) then background fill ---
+    # Cache miss: quick first fetch then background fill
     if all_results is None:
-      print(f"[Search] Cache MISS for '{q}' — quick fetch ({SEARCH_QUICK_FETCH} results) via executor...")
+      print(f"[Search] yt-dlp Cache MISS for '{q}' — quick fetch ({SEARCH_QUICK_FETCH} results) via executor...")
 
       def _do_quick_fetch():
         ydl_opts_quick = {
@@ -333,14 +508,15 @@ async def search_videos(q: str, page: int = 1):
       loop = _asyncio.get_event_loop()
       all_results = await loop.run_in_executor(None, _do_quick_fetch)
 
-      # Store quick results immediately so page 1 can be served right away
       with _search_cache_lock:
-        _search_cache[cache_key] = {
+        existing = _search_cache.get(cache_key, {})
+        existing.update({
           'results': all_results,
           'expires_at': now + SEARCH_CACHE_TTL,
           'extension_count': 0,
-          'filling': True,   # flag: background fill in progress
-        }
+          'filling': True,
+        })
+        _search_cache[cache_key] = existing
       print(f"[Search] Quick cache: {len(all_results)} results for '{q}'. Starting background fill...")
 
       # Background thread: fetch full SEARCH_CACHE_FETCH and replace cache
@@ -363,19 +539,18 @@ async def search_videos(q: str, page: int = 1):
           ]
           if full_results:
             with _search_cache_lock:
-              # Only update if cache entry still belongs to same query
               existing = _search_cache.get(ck)
               if existing:
-                # Merge: keep any quick results not in full batch
                 existing_ids = {v['id'] for v in full_results}
                 quick_only = [v for v in existing.get('results', []) if v['id'] not in existing_ids]
                 merged = full_results + quick_only
-                _search_cache[ck] = {
+                existing.update({
                   'results': merged,
                   'expires_at': expiry,
                   'extension_count': 0,
                   'filling': False,
-                }
+                })
+                _search_cache[ck] = existing
             print(f"[Search] BG fill done for '{query}': {len(full_results)} results cached")
         except Exception as bg_err:
           print(f"[Search] BG fill error for '{query}': {bg_err}")
@@ -391,13 +566,12 @@ async def search_videos(q: str, page: int = 1):
         daemon=True
       ).start()
 
-    # ── Auto-extend: fire BEFORE user hits the end (≤ 2 pages remaining) ──────
-    # Mirrors the exact same pattern used by /api/trending.
+    # Auto-extend when cache is running low
     total = len(all_results)
     start_pos = (page - 1) * SEARCH_PAGE_SIZE
-    remaining = total - start_pos          # results still left after current page
+    remaining = total - start_pos
 
-    EXTEND_THRESHOLD = SEARCH_PAGE_SIZE * 2   # trigger when ≤ 2 pages remain
+    EXTEND_THRESHOLD = SEARCH_PAGE_SIZE * 2
 
     if remaining <= EXTEND_THRESHOLD:
       with _search_cache_lock:
@@ -405,7 +579,6 @@ async def search_videos(q: str, page: int = 1):
 
       print(f"[Search] Cache running low for '{q}': {remaining} left — extension #{ext_count + 1}")
       try:
-        # Rotate seed words so every extension fetches a different batch
         seeds = [
           "latest", "new", "top", "popular", "best", "viral", "trending",
           "hot", "hits", "fresh", "must watch", "2024", "2025", "2026",
@@ -431,7 +604,6 @@ async def search_videos(q: str, page: int = 1):
           if e and e.get('id')
         ]
 
-        # Deduplicate against everything already cached
         existing_ids = {v['id'] for v in all_results}
         unique_new = [v for v in new_videos if v['id'] not in existing_ids]
         print(f"[Search] Extension: {len(new_videos)} fetched, {len(unique_new)} unique after dedup")
@@ -439,18 +611,20 @@ async def search_videos(q: str, page: int = 1):
         if unique_new:
           all_results = all_results + unique_new
           with _search_cache_lock:
-            _search_cache[cache_key] = {
+            existing = _search_cache.get(cache_key, {})
+            existing.update({
               'results': all_results,
               'expires_at': now + SEARCH_CACHE_TTL,
               'extension_count': ext_count + 1,
-            }
+            })
+            _search_cache[cache_key] = existing
           total = len(all_results)
           print(f"[Search] Cache extended to {total} results for '{q}'")
 
       except Exception as ext_err:
         print(f"[Search] Extension fetch failed: {ext_err}")
 
-    # --- Paginate from (possibly extended) all_results ---
+    # Paginate from all_results
     total_pages = max(1, (total + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE)
     page = min(page, total_pages)
     start = (page - 1) * SEARCH_PAGE_SIZE
@@ -463,6 +637,7 @@ async def search_videos(q: str, page: int = 1):
       "total_pages": total_pages,
       "total_results": total,
       "page_size": SEARCH_PAGE_SIZE,
+      "nextpage": None,  # yt-dlp fallback doesn't use Piped cursors
     }
   except Exception as e:
     print(f"[Search] Error: {e}")
@@ -479,12 +654,13 @@ TRENDING_QUICK_FETCH = 21       # Quick first batch (multiple of 3, serves first
 TRENDING_PAGE_SIZE = 18
 SEARCH_QUICK_FETCH = 21         # Quick first batch for search (serves page 1 instantly)
 
-# Endpoint: Trending videos — cursor-based, cache-backed infinite scroll
+# Endpoint: Trending videos — Piped API first, yt-dlp fallback, cursor-based infinite scroll
 @app.get("/api/trending")
 def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, limit: int = TRENDING_PAGE_SIZE, refresh: bool = False):
   """
   Returns `limit` trending videos starting from `cursor` index.
-  On cursor=0 (first load or category change), fetches a fresh batch and caches it.
+  Uses Piped API for "All" category (id=0) and Piped search for specific categories.
+  Falls back to yt-dlp if Piped fails.
   Pass refresh=true to force-clear the cache and fetch genuinely new data.
   Returns next_cursor=-1 when no more items are available.
   """
@@ -507,99 +683,93 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
     else:
       all_videos = None
 
-  # --- Fetch from yt-dlp if cache miss or cursor=0 (force fresh on category switch) ---
+  # --- Fetch if cache miss or cursor=0 (force fresh on category switch) ---
   if all_videos is None or cursor == 0:
-    # Build the trending feed URL
-    if category_id and category_id != "0":
-      trending_url = f"https://www.youtube.com/feed/trending?bp=4gI{category_id}"
-    else:
-      trending_url = "https://www.youtube.com/feed/trending"
-
-    def _fetch_feed():
-      ydl_opts = {
-        **get_yt_search_opts(),
-        'extract_flat': True,
-        'skip_download': True,
-        'ignoreerrors': True,
-        'extractor_args': {'youtube': {'player_client': ['web', 'default']}},
-        **get_cookie_opts()
-      }
-      with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(trending_url, download=False)
-      if not info:
-        return []
-      entries = info.get('entries') or []
-      return [_normalize_entry(e) for e in entries if e and e.get('id')]
-
-    def _fetch_keyword_fallback():
-      import math
-      cat_keyword_map = {
-        "0":  "trending viral today India",
-        "10": "trending music songs India",
-        "20": "trending gaming India",
-        "25": "trending news today",
-        "17": "trending sports highlights",
-        "1":  "trending movies trailers",
-      }
-      base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
-      hour_slot = math.floor(time.time() / 3600)
-      seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits", "fresh", "must watch",
-               "2024", "2025","2026","today", "this week", "right now", "live"]
-      seed = seeds[hour_slot % len(seeds)]
-      keyword = f"{base_keyword} {seed}"
-      print(f"[Trending] Keyword fallback: '{keyword}'")
-      ydl_opts = {
-        **get_yt_search_opts(),
-        'extract_flat': True,
-        'skip_download': True,
-        'ignoreerrors': True,
-        **get_cookie_opts()
-      }
-      with YoutubeDL(ydl_opts) as ydl:
-        result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
-      return [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
-
-    # ── Quick first batch: fetch only TRENDING_QUICK_FETCH results synchronously ──
-    # This returns the first page to the user in ~2-3s instead of 10-15s.
-    # A background thread then fills the full TRENDING_FETCH_SIZE cache.
     videos = []
-    try:
-      print(f"[Trending] Fetching real feed: {trending_url}")
-      videos = _fetch_feed()
-      print(f"[Trending] Real feed returned {len(videos)} videos")
-    except Exception as e:
-      print(f"[Trending] Real feed failed: {e} — using keyword fallback")
 
+    # ── Try Piped API first ──────────────────────────────────────────────────
+    # Use Piped search for ALL categories (including "All") to guarantee
+    # uploadedDate and proper durations. The /trending endpoint returns
+    # mostly shorts/live with no timestamps.
+    piped_category_search_map = {
+      "0":  "trending viral today India",
+      "10": "trending music India",
+      "20": "trending gaming India",
+      "25": "trending news today India",
+      "17": "trending sports highlights India",
+      "1":  "trending movies trailers India",
+    }
+
+    cat_query = piped_category_search_map.get(str(category_id), "trending viral today India")
+    piped_videos, _ = _fetch_piped_search(cat_query)
+    if piped_videos and len(piped_videos) >= 5:
+      videos = piped_videos
+      print(f"[Trending] Piped search returned {len(videos)} videos for category '{category_id}'")
+
+    # ── yt-dlp fallback if Piped didn't return enough results ────────────────
     if len(videos) < 5:
-      print(f"[Trending] Insufficient results ({len(videos)}) — quick keyword fetch ({TRENDING_QUICK_FETCH})")
-      try:
-        import math as _math
-        cat_keyword_map = {
-          "0":  "trending viral today India",
-          "10": "trending music songs India",
-          "20": "trending gaming India",
-          "25": "trending news today",
-          "17": "trending sports highlights",
-          "1":  "trending movies trailers",
-        }
-        base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
-        quick_keyword = f"{base_keyword} popular"
-        qdl_opts = {
+      print(f"[Trending] Piped insufficient ({len(videos)}) — falling back to yt-dlp")
+
+      if category_id and category_id != "0":
+        trending_url = f"https://www.youtube.com/feed/trending?bp=4gI{category_id}"
+      else:
+        trending_url = "https://www.youtube.com/feed/trending"
+
+      def _fetch_feed():
+        ydl_opts = {
           **get_yt_search_opts(),
           'extract_flat': True,
           'skip_download': True,
           'ignoreerrors': True,
+          'extractor_args': {'youtube': {'player_client': ['web', 'default']}},
           **get_cookie_opts()
         }
-        with YoutubeDL(qdl_opts) as ydl:
-          quick_res = ydl.extract_info(f"ytsearch{TRENDING_QUICK_FETCH}:{quick_keyword}", download=False)
-        videos = [_normalize_entry(e) for e in (quick_res.get('entries') or []) if e and e.get('id')]
-        print(f"[Trending] Quick fetch got {len(videos)} videos")
-      except Exception as fe:
-        print(f"[Trending] Quick fetch failed: {fe}")
-        return JSONResponse({"error": "Failed to fetch trending videos"}, status_code=500)
+        with YoutubeDL(ydl_opts) as ydl:
+          info = ydl.extract_info(trending_url, download=False)
+        if not info:
+          return []
+        entries = info.get('entries') or []
+        return [_normalize_entry(e) for e in entries if e and e.get('id')]
 
-    # Store quick results immediately
+      try:
+        print(f"[Trending] Fetching real feed: {trending_url}")
+        ydl_videos = _fetch_feed()
+        print(f"[Trending] Real feed returned {len(ydl_videos)} videos")
+        if len(ydl_videos) >= 5:
+          videos = ydl_videos
+      except Exception as e:
+        print(f"[Trending] Real feed failed: {e} — using keyword fallback")
+
+      if len(videos) < 5:
+        print(f"[Trending] Insufficient results ({len(videos)}) — quick keyword fetch ({TRENDING_QUICK_FETCH})")
+        try:
+          import math as _math
+          cat_keyword_map = {
+            "0":  "trending viral today India",
+            "10": "trending music songs India",
+            "20": "trending gaming India",
+            "25": "trending news today",
+            "17": "trending sports highlights",
+            "1":  "trending movies trailers",
+          }
+          base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
+          quick_keyword = f"{base_keyword} popular"
+          qdl_opts = {
+            **get_yt_search_opts(),
+            'extract_flat': True,
+            'skip_download': True,
+            'ignoreerrors': True,
+            **get_cookie_opts()
+          }
+          with YoutubeDL(qdl_opts) as ydl:
+            quick_res = ydl.extract_info(f"ytsearch{TRENDING_QUICK_FETCH}:{quick_keyword}", download=False)
+          videos = [_normalize_entry(e) for e in (quick_res.get('entries') or []) if e and e.get('id')]
+          print(f"[Trending] Quick fetch got {len(videos)} videos")
+        except Exception as fe:
+          print(f"[Trending] Quick fetch failed: {fe}")
+          return JSONResponse({"error": "Failed to fetch trending videos"}, status_code=500)
+
+    # Store results immediately
     all_videos = videos
     with _trending_cache_lock:
       _trending_cache[cache_key] = {
@@ -612,32 +782,62 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
     # Background thread: fill up to TRENDING_FETCH_SIZE
     def _background_fill_trending(ck, cat_id, reg, expiry):
       try:
-        import math as _math
-        cat_keyword_map = {
+        # Try Piped search for background fill too
+        bg_piped_map = {
           "0":  "trending viral today India",
           "10": "trending music songs India",
           "20": "trending gaming India",
-          "25": "trending news today",
-          "17": "trending sports highlights",
-          "1":  "trending movies trailers",
+          "25": "trending news today India",
+          "17": "trending sports highlights India",
+          "1":  "trending movies trailers India",
         }
-        base_keyword = cat_keyword_map.get(str(cat_id), "trending viral today")
-        hour_slot = _math.floor(time.time() / 3600)
-        seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits",
-                 "fresh", "must watch", "2024", "2025", "2026", "today", "this week"]
-        seed = seeds[hour_slot % len(seeds)]
-        keyword = f"{base_keyword} {seed}"
-        print(f"[Trending] BG fill with keyword: '{keyword}'")
-        ydl_opts_bg = {
-          **get_yt_search_opts(),
-          'extract_flat': True,
-          'skip_download': True,
-          'ignoreerrors': True,
-          **get_cookie_opts()
-        }
-        with YoutubeDL(ydl_opts_bg) as ydl:
-          result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
-        new_videos = [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+        bg_query = bg_piped_map.get(str(cat_id), "trending viral today India")
+
+        # Try multiple pages of Piped search for more results
+        piped_all = []
+        piped_results, np = _fetch_piped_search(bg_query)
+        if piped_results:
+          piped_all.extend(piped_results)
+          # Fetch 2 more pages if available
+          for _ in range(2):
+            if not np:
+              break
+            more_results, np = _fetch_piped_search_nextpage(bg_query, np)
+            if more_results:
+              piped_all.extend(more_results)
+
+        if len(piped_all) >= 20:
+          print(f"[Trending] BG Piped fill got {len(piped_all)} results")
+          new_videos = piped_all
+        else:
+          # Fallback to yt-dlp keyword search
+          import math as _math
+          cat_keyword_map = {
+            "0":  "trending viral today India",
+            "10": "trending music songs India",
+            "20": "trending gaming India",
+            "25": "trending news today",
+            "17": "trending sports highlights",
+            "1":  "trending movies trailers",
+          }
+          base_keyword = cat_keyword_map.get(str(cat_id), "trending viral today")
+          hour_slot = _math.floor(time.time() / 3600)
+          seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits",
+                   "fresh", "must watch", "2024", "2025", "2026", "today", "this week"]
+          seed = seeds[hour_slot % len(seeds)]
+          keyword = f"{base_keyword} {seed}"
+          print(f"[Trending] BG yt-dlp fill with keyword: '{keyword}'")
+          ydl_opts_bg = {
+            **get_yt_search_opts(),
+            'extract_flat': True,
+            'skip_download': True,
+            'ignoreerrors': True,
+            **get_cookie_opts()
+          }
+          with YoutubeDL(ydl_opts_bg) as ydl:
+            result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
+          new_videos = [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+
         if new_videos:
           with _trending_cache_lock:
             existing = _trending_cache.get(ck)
@@ -672,51 +872,116 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
 
   # Trigger extension BEFORE we run out — when remaining is less than a full page
   if remaining <= limit:
-    print(f"[Trending] Cache running low: remaining={remaining}, limit={limit}. Fetching more...")
+    with _trending_cache_lock:
+      cached_info = _trending_cache.get(cache_key, {})
+      ext_count = cached_info.get('extension_count', 0)
+      # Retrieve stored Piped nextpage cursor for deep pagination
+      stored_nextpage = cached_info.get('piped_nextpage_cursor')
+
+    print(f"[Trending] Cache running low: remaining={remaining}, limit={limit}. Fetching more (ext #{ext_count})...")
     try:
       import math
-      cat_keyword_map = {
-        "0":  "trending viral today India",
-        "10": "trending music songs India",
-        "20": "trending gaming India",
-        "25": "trending news today",
-        "17": "trending sports highlights",
-        "1":  "trending movies trailers",
-      }
-      base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
-      # Use cursor-based seed rotation so each extension fetches different results
-      seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits", "fresh", "must watch","instagram reels", "instagram viral reels today",
-               "2024", "2025", "2026", "today", "this week", "right now", "live", "epic", "amazing", "super", "mega"]
-      seed_index = (total // TRENDING_FETCH_SIZE) + int(time.time() // 600)
-      seed = seeds[seed_index % len(seeds)]
-      keyword = f"{base_keyword} {seed}"
-      print(f"[Trending] Extension fetch with keyword: '{keyword}'")
+      new_videos = []
 
-      ydl_opts = {
-        **get_yt_search_opts(),
-        'extract_flat': True,
-        'skip_download': True,
-        'ignoreerrors': True,
-        **get_cookie_opts()
-      }
-      with YoutubeDL(ydl_opts) as ydl:
-        result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
-      new_videos = [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+      # ── Strategy 1: Use stored Piped nextpage cursor for truly new results ──
+      if stored_nextpage:
+        piped_category_query_map = {
+          "0":  "trending viral today India",
+          "10": "trending music India",
+          "20": "trending gaming India",
+          "25": "trending news today India",
+          "17": "trending sports highlights India",
+          "1":  "trending movies trailers India",
+        }
+        base_query = piped_category_query_map.get(str(category_id), "trending viral today India")
+        page_results, next_np = _fetch_piped_search_nextpage(base_query, stored_nextpage)
+        if page_results:
+          new_videos = page_results
+          stored_nextpage = next_np
+          print(f"[Trending] Piped nextpage extension returned {len(new_videos)} videos")
 
-      # Deduplicate against existing cache
+      # ── Strategy 2: Fresh Piped search with varied keywords (multiple pages) ──
+      if len(new_videos) < 5:
+        ext_piped_map = {
+          "0":  "trending viral popular India",
+          "10": "trending music hits India",
+          "20": "trending gaming videos India",
+          "25": "trending news breaking India",
+          "17": "trending sports India",
+          "1":  "trending movies India",
+        }
+        seeds = ["latest", "viral", "new", "top", "popular", "best", "hot", "hits", "fresh", "must watch",
+                 "2026", "today", "this week", "right now", "live", "epic", "amazing", "super", "mega"]
+        seed = seeds[ext_count % len(seeds)]
+        ext_query = f"{ext_piped_map.get(str(category_id), 'trending viral today India')} {seed}"
+
+        piped_ext, next_np = _fetch_piped_search(ext_query)
+        if piped_ext and len(piped_ext) >= 5:
+          new_videos = piped_ext
+          stored_nextpage = next_np
+          print(f"[Trending] Piped keyword extension returned {len(new_videos)} videos")
+
+          # Fetch 1-2 more nextpages to get a bigger pool of unique results
+          for _ in range(2):
+            if not stored_nextpage:
+              break
+            more, stored_nextpage = _fetch_piped_search_nextpage(ext_query, stored_nextpage)
+            if more:
+              new_videos.extend(more)
+              print(f"[Trending] Piped extra nextpage: +{len(more)} videos")
+
+      # ── Strategy 3: yt-dlp keyword fallback ──
+      if len(new_videos) < 5:
+        cat_keyword_map = {
+          "0":  "trending viral today India",
+          "10": "trending music songs India",
+          "20": "trending gaming India",
+          "25": "trending news today",
+          "17": "trending sports highlights",
+          "1":  "trending movies trailers",
+        }
+        seed = seeds[ext_count % len(seeds)]
+        base_keyword = cat_keyword_map.get(str(category_id), "trending viral today")
+        keyword = f"{base_keyword} {seed}"
+        print(f"[Trending] Extension yt-dlp fetch with keyword: '{keyword}'")
+
+        ydl_opts = {
+          **get_yt_search_opts(),
+          'extract_flat': True,
+          'skip_download': True,
+          'ignoreerrors': True,
+          **get_cookie_opts()
+        }
+        with YoutubeDL(ydl_opts) as ydl:
+          result = ydl.extract_info(f"ytsearch{TRENDING_FETCH_SIZE}:{keyword}", download=False)
+        new_videos = [_normalize_entry(e) for e in (result.get('entries') or []) if e and e.get('id')]
+
+      # ── Strict dedup: only add genuinely unique videos ──
       existing_ids = set(v.get('id') for v in all_videos)
-      unique_new = [v for v in new_videos if v.get('id') not in existing_ids]
-      print(f"[Trending] Got {len(new_videos)} videos, {len(unique_new)} unique after dedup")
+      unique_new = [v for v in new_videos if v.get('id') and v.get('id') not in existing_ids]
+      # Track IDs within the new batch too
+      seen = set()
+      deduped = []
+      for v in unique_new:
+        if v['id'] not in seen:
+          seen.add(v['id'])
+          deduped.append(v)
+      unique_new = deduped
 
-      if unique_new:
-        all_videos = all_videos + unique_new
-        with _trending_cache_lock:
-          _trending_cache[cache_key] = {
-            'results': all_videos,
-            'expires_at': now + TRENDING_CACHE_TTL
-          }
-        total = len(all_videos)
-        print(f"[Trending] Cache extended to {total} videos")
+      print(f"[Trending] Got {len(new_videos)} videos, {len(unique_new)} unique after strict dedup")
+
+      with _trending_cache_lock:
+        cached_info = _trending_cache.get(cache_key, {})
+        if unique_new:
+          all_videos = all_videos + unique_new
+          cached_info['results'] = all_videos
+        cached_info['extension_count'] = ext_count + 1
+        cached_info['piped_nextpage_cursor'] = stored_nextpage
+        cached_info['expires_at'] = now + TRENDING_CACHE_TTL
+        _trending_cache[cache_key] = cached_info
+
+      total = len(all_videos)
+      print(f"[Trending] Cache extended to {total} videos ({len(unique_new)} new)")
     except Exception as ext_err:
       print(f"[Trending] Extension fetch failed: {ext_err}")
 
@@ -829,9 +1094,216 @@ async def get_search_suggestions(q: str, lang: str = "en"):
       pass  # sys.stdout is None in windowed .exe
     return {"suggestions": []}
 
-# Endpoint: Get video details (by URL)
+# ── Quick metadata helpers ─────────────────────────────────────────────────────
+def _scrape_youtube_page(video_id: str) -> dict:
+  """Scrape YouTube watch page for metadata. ~2-3s. Returns dict or None."""
+  import re as _re
+  try:
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    }
+    resp = requests.get(url, headers=headers, timeout=5)
+    html = resp.text
+
+    result = {}
+
+    # Extract ytInitialPlayerResponse
+    match = _re.search(r'var ytInitialPlayerResponse\s*=\s*({.+?});\s*(?:var|</script>)', html)
+    if match:
+      import json as _json
+      player = _json.loads(match.group(1))
+      vd = player.get('videoDetails', {})
+      micro = player.get('microformat', {}).get('playerMicroformatRenderer', {})
+
+      result['title'] = vd.get('title')
+      result['views'] = int(vd.get('viewCount', 0) or 0)
+      result['duration'] = int(vd.get('lengthSeconds', 0) or 0)
+      result['uploaderName'] = vd.get('author', '')
+      result['channelId'] = vd.get('channelId', '')
+      result['description'] = vd.get('shortDescription', '')
+      result['uploadDate'] = micro.get('uploadDate') or micro.get('publishDate')
+      result['category'] = micro.get('category')
+      result['uploaderVerified'] = False  # Not available from page scrape
+      # Construct avatar URL from channel ID (reliable pattern)
+      # Will be enriched from yt-dlp in Phase 2
+
+    # Try to get avatar from ytInitialData
+    match2 = _re.search(r'var ytInitialData\s*=\s*({.+?});\s*(?:var|</script>)', html)
+    if match2:
+      try:
+        import json as _json
+        init_data = _json.loads(match2.group(1))
+        # Navigate to video owner renderer for avatar
+        contents = init_data.get('contents', {}).get('twoColumnWatchNextResults', {}).get('results', {}).get('results', {}).get('contents', [])
+        for content in contents:
+          owner = content.get('videoSecondaryInfoRenderer', {}).get('owner', {}).get('videoOwnerRenderer', {})
+          if owner:
+            thumbs = owner.get('thumbnail', {}).get('thumbnails', [])
+            if thumbs:
+              result['uploaderAvatar'] = thumbs[-1].get('url', '')
+            sub_text = owner.get('subscriberCountText', {}).get('simpleText', '')
+            if sub_text:
+              result['uploaderSubscriberCount'] = sub_text
+            break
+      except Exception:
+        pass
+
+    return result if result else None
+  except Exception as e:
+    print(f"[YT Scrape] Error for {video_id}: {e}")
+    return None
+
+
+def _get_ryd_data(video_id: str) -> dict:
+  """Get likes/dislikes from Return YouTube Dislike API. ~1-2s."""
+  try:
+    resp = requests.get(
+      f"https://returnyoutubedislikeapi.com/votes?videoId={video_id}",
+      timeout=4
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {
+      'likes': data.get('likes', 0),
+      'dislikes': data.get('dislikes', 0),
+      'viewCount': data.get('viewCount', 0),
+    }
+  except Exception as e:
+    print(f"[RYD API] Error for {video_id}: {e}")
+    return None
+
+
+# Endpoint: Quick video metadata — multi-source parallel (fastest wins)
+@app.get("/api/video/quick")
+async def get_video_quick(id: str):
+  """Fast metadata from multiple sources running IN PARALLEL.
+  All sources start simultaneously; we merge results as they arrive.
+  Piped (if working): ~1-2s | YT scrape: ~2-3s | RYD: ~1-2s
+  Returns within 2-3s regardless of Piped status."""
+  import asyncio as _asyncio
+  try:
+    loop = _asyncio.get_event_loop()
+
+    # Only try 1-2 fastest Piped instances (not all 5) with very short timeout
+    def _piped_quick(vid_id):
+      """Try only the most reliable Piped instances with 2s timeout."""
+      fast_instances = PIPED_API_INSTANCES[:2]  # Only first 2
+      for base in fast_instances:
+        try:
+          url = f"{base}/streams/{vid_id}"
+          resp = requests.get(url, timeout=2)
+          resp.raise_for_status()
+          data = resp.json()
+          if data and data.get('title'):
+            return data
+        except Exception as e:
+          print(f"[Piped Quick] {base} failed: {type(e).__name__}: {str(e)[:60]}")
+          continue
+      return None
+
+    # Launch ALL three sources in parallel
+    piped_future = loop.run_in_executor(None, lambda: _piped_quick(id))
+    scrape_future = loop.run_in_executor(None, lambda: _scrape_youtube_page(id))
+    ryd_future = loop.run_in_executor(None, lambda: _get_ryd_data(id))
+
+    # Wait for all to complete (they run in parallel, so total time ≈ slowest one ≈ 3s)
+    piped_data, scrape_data, ryd_data = await _asyncio.gather(
+      piped_future, scrape_future, ryd_future,
+      return_exceptions=True
+    )
+
+    # Handle exceptions from gather
+    if isinstance(piped_data, Exception):
+      print(f"[Video Quick] Piped exception: {piped_data}")
+      piped_data = None
+    if isinstance(scrape_data, Exception):
+      print(f"[Video Quick] Scrape exception: {scrape_data}")
+      scrape_data = None
+    if isinstance(ryd_data, Exception):
+      print(f"[Video Quick] RYD exception: {ryd_data}")
+      ryd_data = None
+
+    # ── Priority 1: Use Piped data if available (most complete) ──
+    if piped_data and isinstance(piped_data, dict) and piped_data.get('title'):
+      print(f"[Video Quick] Piped succeeded for {id}")
+      meta = {
+        "description": piped_data.get('description'),
+        "likes": piped_data.get('likes'),
+        "dislikes": piped_data.get('dislikes'),
+        "views": piped_data.get('views'),
+        "uploadDate": piped_data.get('uploadDate'),
+        "uploaderAvatar": _convert_piped_avatar(piped_data.get('uploaderAvatar')),
+        "uploaderName": (piped_data.get('uploader') or piped_data.get('uploaderName') or '').lstrip('@'),
+        "uploaderVerified": piped_data.get('uploaderVerified', False),
+        "uploaderSubscriberCount": piped_data.get('uploaderSubscriberCount'),
+        "duration": piped_data.get('duration'),
+        "category": piped_data.get('category'),
+        "title": piped_data.get('title'),
+        "thumbnailUrl": piped_data.get('thumbnailUrl'),
+        "source": "piped",
+      }
+      # Enrich with RYD likes if Piped didn't have them
+      if ryd_data and isinstance(ryd_data, dict) and not meta.get('likes'):
+        meta['likes'] = ryd_data.get('likes', 0)
+        meta['dislikes'] = ryd_data.get('dislikes', 0)
+      return {"metadata": meta}
+
+    # ── Priority 2: Use YT scrape + RYD data ──
+    if scrape_data and isinstance(scrape_data, dict):
+      print(f"[Video Quick] Using YT scrape + RYD for {id}")
+      meta = {
+        'title': scrape_data.get('title'),
+        'description': scrape_data.get('description'),
+        'views': scrape_data.get('views', 0),
+        'uploadDate': scrape_data.get('uploadDate'),
+        'uploaderName': scrape_data.get('uploaderName', ''),
+        'uploaderAvatar': scrape_data.get('uploaderAvatar'),
+        'uploaderVerified': scrape_data.get('uploaderVerified', False),
+        'uploaderSubscriberCount': scrape_data.get('uploaderSubscriberCount'),
+        'duration': scrape_data.get('duration', 0),
+        'category': scrape_data.get('category'),
+      }
+      if ryd_data and isinstance(ryd_data, dict):
+        meta['likes'] = ryd_data.get('likes', 0)
+        meta['dislikes'] = ryd_data.get('dislikes', 0)
+        if not meta.get('views'):
+          meta['views'] = ryd_data.get('viewCount', 0)
+      meta['source'] = 'scrape+ryd'
+      return {"metadata": meta}
+
+    # ── Priority 3: RYD only (very limited but better than nothing) ──
+    if ryd_data and isinstance(ryd_data, dict):
+      print(f"[Video Quick] Only RYD data available for {id}")
+      return {"metadata": {
+        "likes": ryd_data.get('likes', 0),
+        "dislikes": ryd_data.get('dislikes', 0),
+        "views": ryd_data.get('viewCount', 0),
+        "source": "ryd_only",
+      }}
+
+    print(f"[Video Quick] All sources failed for {id}")
+    return {"metadata": None}
+
+  except Exception as e:
+    print(f"[Video Quick] Error: {e}")
+    return {"metadata": None}
+
+# Endpoint: Get video details (by URL) — full format extraction via yt-dlp
 @app.get("/api/video")
-def get_video_details(url: str):
+async def get_video_details(url: str):
+  import asyncio as _asyncio
+  try:
+    def _do_extract():
+      return _extract_video_formats(url)
+    loop = _asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, _do_extract)
+    return result
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
+
+def _extract_video_formats(url: str):
   try:
     ydl_opts = {
       **get_yt_opts(),
@@ -1027,17 +1499,25 @@ def get_video_details(url: str):
     raw_channel = info.get('channel') or info.get('uploader') or info.get('uploader_id') or 'Unknown Channel'
     channel_name = raw_channel.lstrip('@') if raw_channel else 'Unknown Channel'
 
+    # NOTE: Piped enrichment moved to /api/video/quick (Phase 2) for faster page load.
+    # Frontend now calls /api/video/quick in parallel for metadata (avatar, likes, etc.)
+    # and /api/video for format extraction only.
+    vid_id = info.get('id', '')
+
     video = {
-      'id': info.get('id'),
+      'id': vid_id,
       'title': info.get('title'),
       'thumbnail': info.get('thumbnail'),
       'duration': info.get('duration'),
       'uploader': channel_name,
       'channel': channel_name,
-      'channel_avatar': info.get('thumbnails', [{}])[-1].get('url') if info.get('channel_id') else None,
+      'channel_avatar': None,  # Piped enrichment now handled by /api/video/quick
       'channel_follower_count': info.get('channel_follower_count'),
+      'channel_verified': False,
       'description': info.get('description'),
       'view_count': info.get('view_count'),
+      'like_count': info.get('like_count'),
+      'comment_count': info.get('comment_count'),
       'upload_date': info.get('upload_date'),
       'formats': formats,
       'all_formats': all_formats,

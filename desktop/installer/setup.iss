@@ -14,7 +14,7 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 #define MyAppName "YT Deluxe"
-#define MyAppVersion "1.0.0-beta"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "Utsavstack"
 #define MyAppURL "https://github.com/Utsavstack/YT-Deluxe"
 #define MyAppExeName "YT-Deluxe.exe"
@@ -30,7 +30,7 @@ AppSupportURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir=output
-OutputBaseFilename=YT-Deluxe-Setup-v1.0.0-beta
+OutputBaseFilename=YT-Deluxe-Setup-v2.0.0
 SetupIconFile=..\assets\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
