@@ -78,8 +78,20 @@ const PermissionDialog = () => {
             <div className="p-7">
               {/* App identity */}
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <Icon name="Zap" size={18} className="text-primary" />
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-white/80 to-white/40 border border-white/60 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img
+                    src="/assets/images/logo-light.webp"
+                    alt="YT Deluxe"
+                    className="w-9 h-9 object-contain"
+                    onError={(e) => {
+                      // fallback: hide img, show icon
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div style={{ display: 'none' }} className="w-full h-full items-center justify-center">
+                    <Icon name="Zap" size={18} className="text-primary" />
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs font-black text-primary uppercase tracking-widest">YT Deluxe</p>

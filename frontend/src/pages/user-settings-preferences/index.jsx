@@ -10,6 +10,7 @@ import LanguageSettings from './components/LanguageSettings';
 import AccountManagement from './components/AccountManagement';
 import AboutYTDeluxe from './components/AboutYTDeluxe';
 import ChangelogAndFaq from './components/ChangelogAndFaq';
+import ReportAProblem from './components/ReportAProblem';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsAndConditions from './components/TermsAndConditions';
 import LicenseAndDisclaimer from './components/LicenseAndDisclaimer';
@@ -80,11 +81,12 @@ const UserSettingsPreferences = () => {
     { id: 'downloads', label: t('nav.downloads'), icon: 'Download', description: t('nav.downloadsDesc') },
     { id: 'language', label: t('nav.language'), icon: 'Globe', description: t('nav.languageDesc') },
     { id: 'permissions', label: 'App Permissions', icon: 'ShieldCheck', description: 'Manage permissions' },
-    { id: 'updates', label: t('nav.updates', 'Updates & FAQ'), icon: 'Zap', description: t('nav.updatesDesc', 'Changelog and support') },
     { id: 'about', label: t('nav.about'), icon: 'Info', description: t('nav.aboutDesc') },
     { id: 'privacy', label: t('nav.privacy'), icon: 'Shield', description: t('nav.privacyDesc') },
     { id: 'terms', label: t('nav.terms'), icon: 'FileText', description: t('nav.termsDesc') },
-    { id: 'license', label: t('nav.license', 'License & Disclaimer'), icon: 'Scale', description: t('nav.licenseDesc', 'Legal terms and licenses') }
+    { id: 'license', label: t('nav.license', 'License & Disclaimer'), icon: 'Scale', description: t('nav.licenseDesc', 'Legal terms and licenses') },
+    { id: 'updates', label: t('nav.updates', 'Updates & FAQ'), icon: 'Zap', description: t('nav.updatesDesc', 'Changelog and support') },
+    { id: 'report', label: 'Report a Problem', icon: 'Bug', description: 'Bug reports & known issues' },
   ];
 
   // Load ALL persisted settings on mount
@@ -159,6 +161,8 @@ const UserSettingsPreferences = () => {
         return <PermissionsPanel />;
       case 'updates':
         return <ChangelogAndFaq />;
+      case 'report':
+        return <ReportAProblem />;
       case 'account':
         return <AccountManagement user={user} onUserUpdate={setUser} />;
       case 'about':
@@ -427,7 +431,7 @@ const UserSettingsPreferences = () => {
                     <li><a href="https://github.com/Utsavstack/YT-Deluxe/releases" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">Releases <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
                     <li><button onClick={() => setActiveSection('updates')} className="hover:text-primary transition-colors flex items-center group">Changelog <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
                     <li><button onClick={() => setActiveSection('updates')} className="hover:text-primary transition-colors flex items-center group">FAQ <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
-                    <li><a href="https://github.com/Utsavstack/YT-Deluxe/issues" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">Report a Bug <Icon name="ExternalLink" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></a></li>
+                    <li><button onClick={() => setActiveSection('report')} className="hover:text-primary transition-colors flex items-center group">Report a Bug <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
                     <li><button onClick={() => { setActiveSection('about'); setTimeout(() => document.getElementById('features-section')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-primary transition-colors flex items-center group">Features <Icon name="ChevronRight" size={12} className="ml-1 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all" /></button></li>
                   </ul>
                 </div>
@@ -491,6 +495,11 @@ const PermissionsPanel = () => {
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(null);
 
+  // Detect if we are running inside the pywebview desktop shell.
+  // In desktop mode clipboard is handled via the PowerShell bridge — no native
+  // OS permission is ever requested, so the badge says "System Managed".
+  const isDesktop = typeof window !== 'undefined' && !!window.pywebview?.api;
+
   const loadGrants = async () => {
     setLoading(true);
     const g = await getAllPermissions();
@@ -515,11 +524,13 @@ const PermissionsPanel = () => {
   };
 
   const STATUS_STYLE = {
-    granted: { label: 'Allowed', bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
-    denied:  { label: 'Denied',  bg: 'bg-red-500/10 text-red-500 border-red-500/20' },
-    prompt:  { label: 'Not asked', bg: 'bg-muted/60 text-muted-foreground border-border/40' },
+    granted: { label: 'Allowed',    bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+    denied:  { label: 'Denied',     bg: 'bg-red-500/10 text-red-500 border-red-500/20' },
+    prompt:  { label: 'Not asked',  bg: 'bg-muted/60 text-muted-foreground border-border/40' },
+    system:  { label: 'System',     bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
   };
 
+  const SYSTEM_MANAGED_KEYS = [PERMISSIONS.CLIPBOARD_READ, PERMISSIONS.CLIPBOARD_WRITE, PERMISSIONS.MICROPHONE];
   const allPermKeys = Object.values(PERMISSIONS);
   const hasAnyDecision = allPermKeys.some(k => grants[k] && grants[k] !== 'prompt');
 
@@ -535,19 +546,30 @@ const PermissionsPanel = () => {
             <div>
               <h3 className="text-xl font-black text-foreground tracking-tight">App Permissions</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                YT Deluxe never stores any access permition.
+                Your choices are stored locally and can be reset at any time.
               </p>
             </div>
           </div>
-          {hasAnyDecision && (
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Refresh button */}
             <button
-              onClick={handleResetAll}
-              disabled={resetting === 'all'}
-              className="shrink-0 px-4 py-2 rounded-xl text-xs font-bold border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50"
+              onClick={loadGrants}
+              disabled={loading}
+              title="Refresh permission states"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all disabled:opacity-40"
             >
-              {resetting === 'all' ? 'Resetting...' : 'Reset All'}
+              <Icon name={loading ? 'Loader2' : 'RefreshCw'} size={14} className={loading ? 'animate-spin' : ''} />
             </button>
-          )}
+            {hasAnyDecision && (
+              <button
+                onClick={handleResetAll}
+                disabled={resetting === 'all'}
+                className="px-4 py-2 rounded-xl text-xs font-bold border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50"
+              >
+                {resetting === 'all' ? 'Resetting...' : 'Reset All'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -560,8 +582,11 @@ const PermissionsPanel = () => {
         ) : (
           allPermKeys.map((key) => {
             const meta   = PERMISSION_META[key] || { icon: 'Shield', title: key, reason: '' };
-            const state  = grants[key] || 'prompt';
-            const status = STATUS_STYLE[state] || STATUS_STYLE.prompt;
+            const rawState = grants[key] || 'prompt';
+            // Clipboard + Microphone in desktop mode are system-managed (no OS dialog ever fires)
+            const isSystemManaged = isDesktop && SYSTEM_MANAGED_KEYS.includes(key) && rawState === 'granted';
+            const displayState = isSystemManaged ? 'system' : rawState;
+            const status = STATUS_STYLE[displayState] || STATUS_STYLE.prompt;
             const isResetting = resetting === key;
 
             return (
@@ -575,17 +600,20 @@ const PermissionsPanel = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-foreground">{meta.title}</p>
-                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">{meta.reason}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate">
+                    {isSystemManaged ? 'Handled via system bridge no OS permission required' : meta.reason}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${status.bg}`}>
                     {status.label}
                   </span>
-                  {state !== 'prompt' && (
+                  {/* Show reset for: decided user perms, OR any system-managed perm (user can revoke) */}
+                  {((!isSystemManaged && rawState !== 'prompt') || isSystemManaged) && (
                     <button
                       onClick={() => handleReset(key)}
                       disabled={isResetting}
-                      title="Reset — will ask again next time"
+                      title="Reset will ask again next time"
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all disabled:opacity-40"
                     >
                       <Icon name={isResetting ? 'Loader2' : 'RotateCcw'} size={13} className={isResetting ? 'animate-spin' : ''} />
@@ -597,7 +625,7 @@ const PermissionsPanel = () => {
           })
         )}
 
-        {!loading && !hasAnyDecision && (
+        {!loading && !hasAnyDecision && !isDesktop && (
           <div className="py-10 text-center">
             <div className="w-14 h-14 rounded-2xl bg-muted/40 border border-border/30 flex items-center justify-center mx-auto mb-3">
               <Icon name="ShieldCheck" size={24} className="text-muted-foreground/40" />

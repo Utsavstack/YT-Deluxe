@@ -167,7 +167,7 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
     }, 20);
   };
 
-  const handleVoiceSearch = () => {
+  const handleVoiceSearch = async () => {
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
@@ -175,6 +175,20 @@ const SearchBar = ({ onSearch, onVoiceSearch, recentSearches, onClearRecentSearc
     }
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      // Pre-request microphone access through our intercept layer.
+      // SpeechRecognition internally calls getUserMedia which bypasses our JS intercept
+      // and triggers the native WebView2 "localhost wants to use your microphone" prompt.
+      // By calling getUserMedia first (which goes through our auto-grant logic),
+      // WebView2 already has mic permission when SpeechRecognition starts.
+      try {
+        const preStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Got access — immediately stop the stream (we only needed the grant)
+        preStream.getTracks().forEach(t => t.stop());
+      } catch {
+        // Mic denied or unavailable — don't proceed with voice search
+        return;
+      }
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;

@@ -5,8 +5,43 @@ import os
 import time
 import http.client
 import atexit
+import logging
+import logging.handlers
 
 
+# ── Logging Setup ──────────────────────────────────────────────────────────────
+# Logs are written to %APPDATA%\YT Deluxe\logs\launcher.log
+# Rotating: max 5 MB per file, keeps last 3 backups (15 MB total)
+# This lets users share logs when reporting crashes or issues.
+def _setup_logging():
+    log_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "YT Deluxe", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "launcher.log")
+
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+
+    # Rotating file handler (5 MB × 3 backups)
+    fh = logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    )
+    fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S"))
+    root.addHandler(fh)
+
+    # Also keep console output (shows in dev mode terminal)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(logging.Formatter("[YT Deluxe] %(message)s"))
+    root.addHandler(ch)
+
+    return logging.getLogger("launcher"), log_file
+
+logger, LOG_FILE_PATH = _setup_logging()
+logger.info("=" * 60)
+logger.info("YT Deluxe Launcher starting")
+logger.info(f"Log file: {LOG_FILE_PATH}")
+logger.info(f"Python: {sys.version}")
+logger.info(f"Frozen (packaged): {getattr(sys, 'frozen', False)}")
+# ──────────────────────────────────────────────────────────────────────────────
 def resource(relative_path):
     """
     Returns absolute path to a bundled resource.
@@ -145,11 +180,16 @@ class AppApi:
     def write_clipboard(self, text):
         try:
             import subprocess
-            subprocess.run(
-                ["powershell", "-command", f"Set-Clipboard -Value '{text}'"],
+            # SECURITY FIX: Pass text via stdin instead of interpolating into the command string.
+            # Previously: f"Set-Clipboard -Value '{text}'" — a video title like `'; Start-Process calc; '`
+            # would execute arbitrary PowerShell code. Using $input | Set-Clipboard prevents this.
+            process = subprocess.run(
+                ["powershell", "-command", "$input | Set-Clipboard"],
+                input=text,
+                text=True,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            return True
+            return process.returncode == 0
         except Exception:
             return False
 
@@ -175,6 +215,23 @@ class AppApi:
         except Exception:
             pass
         return None
+
+    def open_logs_folder(self):
+        """Open the YT Deluxe logs folder in Windows Explorer."""
+        try:
+            log_dir = os.path.join(
+                os.environ.get('APPDATA', os.path.expanduser('~')),
+                'YT Deluxe', 'logs'
+            )
+            os.makedirs(log_dir, exist_ok=True)  # ensure it exists
+            subprocess.Popen(
+                ['explorer', log_dir],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            return True
+        except Exception as e:
+            logger.warning(f"open_logs_folder failed: {e}")
+            return False
 
     def read_installer_config(self):
         """Read installer-set preferences from Windows registry.
@@ -206,22 +263,23 @@ class AppApi:
 
 def main():
     # ── Step 1: Start Backend ─────────────────────────────────────────────
-    print("[YT Deluxe] Starting backend...")
+    logger.info("Starting backend...")
     backend_proc = start_backend()
 
-    print("[YT Deluxe] Waiting for backend to be ready...")
+    logger.info("Waiting for backend to be ready...")
     if not wait_for_backend(timeout=30):
-        print("[YT Deluxe] ERROR: Backend did not respond within 30s. Exiting.")
+        logger.error("Backend did not respond within 30s. Exiting.")
         kill_process_tree(backend_proc.pid)
         show_error(
             "YT Deluxe - Error",
             "YT Deluxe backend failed to start.\n\n"
             "Please try running the app again.\n"
-            "If the problem persists, check if your antivirus is blocking it."
+            "If the problem persists, check if your antivirus is blocking it.\n\n"
+            f"Log file: {LOG_FILE_PATH}"
         )
         sys.exit(1)
 
-    print("[YT Deluxe] Backend ready.")
+    logger.info("Backend ready.")
 
     # ── Step 2: Determine URL ─────────────────────────────────────────────
     if getattr(sys, 'frozen', False):
@@ -234,7 +292,7 @@ def main():
         # Dev: Vite dev server must be running separately on port 5848
         url = 'http://localhost:5848'
 
-    print(f"[YT Deluxe] Loading: {url}")
+    logger.info(f"Loading: {url}")
 
     # ── Polyfill for Pywebview to suppress stale Javascript Exceptions ─────
     import webview.window
@@ -249,6 +307,16 @@ def main():
 
     # ── Step 3: Create Window ─────────────────────────────────────────────
     api = AppApi()
+
+    # Persist WebView2 user data (including permission grants) across sessions.
+    # Without this, WebView2 resets ALL stored permissions on every app launch,
+    # meaning the native microphone/notification popup would reappear every time.
+    _webview_storage = os.path.join(
+        os.environ.get('APPDATA', os.path.expanduser('~')),
+        'YT Deluxe', 'webview_storage'
+    )
+    os.makedirs(_webview_storage, exist_ok=True)
+
     window = webview.create_window(
         title='YT Deluxe',
         url=url,
@@ -263,46 +331,139 @@ def main():
     api._window = window
 
     # ── Auto-grant WebView2 permissions (suppress native "localhost" dialogs) ──
-    def on_loaded():
-        """Hook into WebView2's PermissionRequested to auto-grant all permissions.
-        This prevents the native 'http://localhost:8000 wants to...' popup.
-        Our JS-side PermissionDialog handles the branded user-facing flow instead.
-        """
+    # We hook into CoreWebView2.PermissionRequested to silently auto-grant every
+    # native browser permission request. This prevents "localhost:8000 wants to..."
+    # prompts from appearing — our JS-side PermissionDialog handles user consent.
+    #
+    # Root cause of the ImportError: PyInstaller bundles pywebview's platform
+    # modules under internal names. By the time func= fires, pywebview has
+    # already imported its guilib — we find BrowserView via sys.modules instead
+    # of a fragile hardcoded path.
+    _permission_hook_installed = False
+
+    def _find_browser_view():
+        """Locate pywebview's BrowserView class however it was imported."""
+        import sys
+        import importlib
+
+        # Strategy 1: Try known module paths (dev mode / non-frozen)
+        for mod_path in (
+            'webview.platforms.edgechromium',
+            'webview.platforms.winforms',
+            'webview.platforms.chromium',
+        ):
+            try:
+                mod = importlib.import_module(mod_path)
+                bv = getattr(mod, 'BrowserView', None)
+                if bv and hasattr(bv, 'instances'):
+                    logger.info(f"[PermHook] BrowserView found via import: {mod_path}")
+                    return bv
+            except ImportError:
+                pass
+
+        # Strategy 2: Search already-loaded modules (PyInstaller-safe)
+        for name, mod in list(sys.modules.items()):
+            if mod is None:
+                continue
+            bv = getattr(mod, 'BrowserView', None)
+            if bv and hasattr(bv, 'instances'):
+                logger.info(f"[PermHook] BrowserView found in sys.modules: {name}")
+                return bv
+
+        # Strategy 3: Use webview.guilib (set after webview.start initialises)
         try:
-            from webview.platforms.edgechromium import BrowserView
+            import webview as _wv
+            guilib = getattr(_wv, 'guilib', None)
+            if guilib:
+                bv = getattr(guilib, 'BrowserView', None)
+                if bv and hasattr(bv, 'instances'):
+                    logger.info("[PermHook] BrowserView found via webview.guilib")
+                    return bv
+        except Exception:
+            pass
+
+        return None
+
+    def _install_permission_hook():
+        """Called from the webview GUI thread once the window is ready."""
+        nonlocal _permission_hook_installed
+        if _permission_hook_installed:
+            return
+        try:
+            BrowserView = _find_browser_view()
+            if not BrowserView:
+                logger.warning("[PermHook] BrowserView class not found in any module")
+                return
+
+            # Try by window uid first, then fall back to iterating all instances
             instance = BrowserView.instances.get(window.uid)
             if not instance:
-                print("[YT Deluxe] No BrowserView instance found")
+                all_instances = list(BrowserView.instances.values())
+                instance = all_instances[0] if all_instances else None
+
+            if not instance:
+                logger.warning("[PermHook] No BrowserView instance found")
                 return
 
-            # Access the WinForms WebView2 control → CoreWebView2
-            web_view = getattr(instance, 'browser', None) or getattr(instance, 'web_view', None)
+            # pywebview exposes the WinForms WebView2 control under different names
+            web_view = (
+                getattr(instance, 'browser', None)
+                or getattr(instance, 'web_view', None)
+                or getattr(instance, 'webview', None)
+                or getattr(instance, '_browser', None)
+            )
             if not web_view:
-                print("[YT Deluxe] No WebView2 control found on instance")
+                logger.warning("[PermHook] WebView2 control not found on instance")
                 return
 
-            core = web_view.CoreWebView2
+            core = getattr(web_view, 'CoreWebView2', None)
             if not core:
-                print("[YT Deluxe] CoreWebView2 not yet initialized")
+                logger.warning("[PermHook] CoreWebView2 not initialised yet")
                 return
 
             def on_permission_requested(sender, args):
-                # CoreWebView2PermissionState: 0=Default, 1=Allow, 2=Deny
-                args.State = 1  # Allow — our JS dialog already handled user consent
-                kind = getattr(args, 'PermissionKind', 'unknown')
-                print(f"[YT Deluxe] Auto-granted WebView2 permission: {kind}")
+                """Auto-grant every WebView2 permission request.
+                YT Deluxe's JS dialog already obtained user consent before
+                triggering the underlying browser API call.
+                CoreWebView2PermissionState: 0=Default, 1=Allow, 2=Deny
+                """
+                try:
+                    args.State = 1  # Allow
+                    kind = getattr(args, 'PermissionKind', 'unknown')
+                    logger.info(f"[PermHook] Auto-granted: {kind}")
+                except Exception as inner:
+                    logger.warning(f"[PermHook] Could not set State: {inner}")
 
             core.PermissionRequested += on_permission_requested
-            print("[YT Deluxe] WebView2 permission auto-grant: ACTIVE")
+            _permission_hook_installed = True
+            logger.info("[PermHook] WebView2 permission auto-grant: ACTIVE")
 
         except Exception as e:
-            print(f"[YT Deluxe] Permission auto-grant setup failed: {e}")
-            # Not fatal — JS-side dialog still works, user just sees native popup too
+            logger.warning(f"[PermHook] Setup failed: {e}", exc_info=True)
+
+    # Also hook on_loaded as a secondary attempt in case the func= callback
+    # fires too early (before CoreWebView2 is ready on some pywebview versions).
+    # Retry up to 12 times with 800ms delay (total ~9.6s window).
+    # CoreWebView2 on slow machines / first launch takes 4-8s to initialise.
+    def on_loaded():
+        import threading
+        def _retry_hook():
+            # Initial wait: BrowserView instance may not exist in sys yet
+            time.sleep(1.5)
+            for attempt in range(12):
+                if _permission_hook_installed:
+                    logger.info(f"[PermHook] Hook installed on retry attempt {attempt + 1}")
+                    return
+                _install_permission_hook()
+                time.sleep(0.8)
+            if not _permission_hook_installed:
+                logger.warning("[PermHook] All retry attempts exhausted — mic dialog may appear")
+        threading.Thread(target=_retry_hook, daemon=True).start()
 
     window.events.loaded += on_loaded
 
     def on_closed():
-        print("[YT Deluxe] Window closed. Killing backend process tree...")
+        logger.info("Window closed. Killing backend process tree...")
         kill_process_tree(backend_proc.pid)
 
     window.events.closed += on_closed
@@ -311,22 +472,38 @@ def main():
     # (e.g., process killed externally or exception in webview)
     atexit.register(lambda: kill_process_tree(backend_proc.pid))
 
-    # ── Step 4: Start WebView (blocking) ──────────────────────────────────
-    # Try EdgeChromium first (best rendering), then fallback to default
+    # ── Step 4: Start WebView (blocking) ─────────────────────────────────
+    # Try EdgeChromium first (best rendering), then fallback to default.
+    # Pass _install_permission_hook as func= so it runs on the GUI thread
+    # once the WebView2 control is fully initialised — the correct moment to
+    # subscribe to CoreWebView2.PermissionRequested.
     try:
-        webview.start(debug=False, gui='edgechromium')
+        webview.start(
+            func=_install_permission_hook,
+            debug=False,
+            gui='edgechromium',
+            private_mode=False,
+            storage_path=_webview_storage,
+        )
     except Exception as e:
-        print(f"[YT Deluxe] EdgeChromium failed: {e}. Trying default...")
+        logger.warning(f"EdgeChromium failed: {e}. Trying default...", exc_info=True)
         try:
-            webview.start(debug=False)
+            webview.start(
+                func=_install_permission_hook,
+                debug=False,
+                private_mode=False,
+                storage_path=_webview_storage,
+            )
         except Exception as e2:
+            logger.error(f"WebView2 completely unavailable: {e2}", exc_info=True)
             backend_proc.terminate()
             show_error(
-                "YT Deluxe — Missing Component",
+                "YT Deluxe - Missing Component",
                 "YT Deluxe could not start because Microsoft WebView2 Runtime is missing.\n\n"
                 "Please reinstall YT Deluxe using the Setup installer,\n"
                 "or install WebView2 manually from:\n"
-                "https://developer.microsoft.com/en-us/microsoft-edge/webview2/"
+                "https://developer.microsoft.com/en-us/microsoft-edge/webview2/\n\n"
+                f"Log file: {LOG_FILE_PATH}"
             )
             sys.exit(1)
 

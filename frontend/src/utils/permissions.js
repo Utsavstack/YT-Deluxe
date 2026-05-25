@@ -92,6 +92,46 @@ export async function resetAllPermissions() {
   await _saveGrants({});
 }
 
+/**
+ * Mark clipboard permissions as 'granted' without showing a dialog.
+ *
+ * Called at startup when the pywebview bridge is detected — clipboard
+ * is handled 100% via the PowerShell bridge (no OS permission dialog ever
+ * appears), so we record the state as 'granted' here so that the
+ * Settings > App Permissions panel reflects the truth instead of "Not asked".
+ */
+export async function markClipboardGranted() {
+  const grants = await _loadGrants();
+  let changed = false;
+  if (grants[PERMISSIONS.CLIPBOARD_READ]  !== 'granted') {
+    grants[PERMISSIONS.CLIPBOARD_READ]  = 'granted';
+    changed = true;
+  }
+  if (grants[PERMISSIONS.CLIPBOARD_WRITE] !== 'granted') {
+    grants[PERMISSIONS.CLIPBOARD_WRITE] = 'granted';
+    changed = true;
+  }
+  if (changed) await _saveGrants(grants);
+}
+
+/**
+ * Mark microphone permission as 'granted' without showing a dialog.
+ *
+ * In the desktop app, microphone is system-managed — the WebView2 auto-grant
+ * hook handles the native permission request, so the user never sees an OS
+ * dialog. We record it as 'granted' so Settings > App Permissions shows truth.
+ *
+ * If the user resets via Settings, the state becomes 'prompt' and the YT Deluxe
+ * branded dialog will show on next voice search use.
+ */
+export async function markMicrophoneGranted() {
+  const grants = await _loadGrants();
+  if (grants[PERMISSIONS.MICROPHONE] !== 'granted') {
+    grants[PERMISSIONS.MICROPHONE] = 'granted';
+    await _saveGrants(grants);
+  }
+}
+
 // ── Dialog trigger (set by PermissionDialog.jsx) ─────────────────────────────
 // The dialog component registers a callback here so the utility can trigger it.
 let _showDialog = null;

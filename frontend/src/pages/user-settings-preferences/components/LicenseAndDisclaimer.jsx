@@ -44,18 +44,18 @@ const LicenseAndDisclaimer = () => {
         <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
           <Icon name="BookOpen" size={120} />
         </div>
-        <div className="relative z-10">
-          <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+        <div className="relative z-10 flex flex-col items-center text-center">
+          <h3 className="text-xl font-bold text-foreground mb-4 flex items-center justify-center gap-2">
             <Icon name="BookOpen" size={20} className="text-primary" />
             GNU General Public License v3.0
           </h3>
-          <div className="prose prose-sm dark:prose-invert text-muted-foreground leading-relaxed space-y-4">
+          <div className="prose prose-sm dark:prose-invert text-muted-foreground leading-relaxed space-y-4 w-full text-center">
             <p>
               This project is licensed under the <strong>GNU General Public License v3.0 (GPL-3.0)</strong>.
             </p>
             
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 my-4 shadow-glass-sm">
-              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 my-4 shadow-glass-sm max-w-2xl mx-auto text-center">
+              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center justify-center gap-2">
                 <Icon name="HeartHandshake" size={16} className="text-primary" />
                 Community Intent: Personal & Non-Commercial Use
               </h4>
@@ -64,13 +64,13 @@ const LicenseAndDisclaimer = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              <div>
-                <h4 className="text-sm font-bold text-success mb-3 flex items-center gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 w-full">
+              <div className="flex flex-col items-center">
+                <h4 className="text-sm font-bold text-success mb-3 flex items-center justify-center gap-2">
                   <Icon name="CheckCircle" size={16} />
                   You are free to:
                 </h4>
-                <ul className="space-y-2 text-xs">
+                <ul className="space-y-2 text-xs text-left max-w-xs">
                   <li className="flex items-start gap-2"><Icon name="Check" size={14} className="text-success shrink-0 mt-0.5" /> Use this software for personal or educational purposes</li>
                   <li className="flex items-start gap-2"><Icon name="Check" size={14} className="text-success shrink-0 mt-0.5" /> Study and inspect the source code</li>
                   <li className="flex items-start gap-2"><Icon name="Check" size={14} className="text-success shrink-0 mt-0.5" /> Modify it for your own use</li>
@@ -78,12 +78,12 @@ const LicenseAndDisclaimer = () => {
                 </ul>
               </div>
               
-              <div>
-                <h4 className="text-sm font-bold text-destructive mb-3 flex items-center gap-2">
+              <div className="flex flex-col items-center">
+                <h4 className="text-sm font-bold text-destructive mb-3 flex items-center justify-center gap-2">
                   <Icon name="XCircle" size={16} />
                   You may not:
                 </h4>
-                <ul className="space-y-2 text-xs">
+                <ul className="space-y-2 text-xs text-left max-w-xs">
                   <li className="flex items-start gap-2"><Icon name="X" size={14} className="text-destructive shrink-0 mt-0.5" /> Distribute this software under a different license</li>
                   <li className="flex items-start gap-2"><Icon name="X" size={14} className="text-destructive shrink-0 mt-0.5" /> Use this in a closed-source/proprietary product without complying with GPL terms</li>
                   <li className="flex items-start gap-2"><Icon name="X" size={14} className="text-destructive shrink-0 mt-0.5" /> Remove copyright or license notices</li>
@@ -92,7 +92,7 @@ const LicenseAndDisclaimer = () => {
               </div>
             </div>
             
-            <p className="text-xs mt-4 pt-4 border-t border-border/50">
+            <p className="text-xs mt-4 pt-4 border-t border-border/50 text-center w-full">
               All third-party libraries used in this project retain their own licenses. 
             </p>
           </div>
@@ -105,14 +105,14 @@ const LicenseAndDisclaimer = () => {
           <Icon name="AlertTriangle" size={120} />
         </div>
         <div className="relative z-10">
-          <h3 className="text-xl font-bold text-amber-500 mb-6 flex items-center gap-2">
+          <h3 className="text-xl font-bold text-amber-500 mb-6 flex items-center justify-center gap-2">
             <Icon name="AlertTriangle" size={20} />
             Disclaimer
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors">
-              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors flex flex-col items-center text-center">
+              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center justify-center gap-2">
                 <Icon name="Slash" size={16} className="text-amber-500" />
                 No Affiliation
               </h4>
@@ -121,8 +121,8 @@ const LicenseAndDisclaimer = () => {
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors">
-              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors flex flex-col items-center text-center">
+              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center justify-center gap-2">
                 <Icon name="ShieldOff" size={16} className="text-amber-500" />
                 No Legal Responsibility
               </h4>
@@ -131,8 +131,8 @@ const LicenseAndDisclaimer = () => {
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors">
-              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors flex flex-col items-center text-center">
+              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center justify-center gap-2">
                 <Icon name="Activity" size={16} className="text-amber-500" />
                 Stability
               </h4>
@@ -141,8 +141,8 @@ const LicenseAndDisclaimer = () => {
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors">
-              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-card border border-border/50 hover:border-amber-500/30 transition-colors flex flex-col items-center text-center">
+              <h4 className="text-sm font-bold text-foreground mb-2 flex items-center justify-center gap-2">
                 <Icon name="AlertOctagon" size={16} className="text-amber-500" />
                 Use at Your Own Risk
               </h4>

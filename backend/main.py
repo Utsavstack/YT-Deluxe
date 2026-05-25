@@ -1,5 +1,5 @@
-from fastapi import FastAPI, Request, BackgroundTasks, UploadFile, File, Form, HTTPException
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, Request, BackgroundTasks, Form, HTTPException
+
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -13,7 +13,44 @@ import json
 import requests
 import threading
 import time
-import atexit
+import shutil
+import logging
+import logging.handlers
+
+# ── Backend Logging Setup ──────────────────────────────────────────────────────
+# Logs to %APPDATA%\YT Deluxe\logs\backend.log (same dir as launcher.log)
+# Rotating: 5 MB × 3 backups. Both files can be shared together for debugging.
+def _setup_backend_logging():
+    log_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "YT Deluxe", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "backend.log")
+
+    fmt = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", "%Y-%m-%d %H:%M:%S")
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+
+    fh = logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    )
+    fh.setFormatter(fmt)
+    root.addHandler(fh)
+
+    # Redirect uvicorn loggers to the same file
+    for uvicorn_logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        uvicorn_log = logging.getLogger(uvicorn_logger_name)
+        uvicorn_log.handlers = []
+        uvicorn_log.addHandler(fh)
+        uvicorn_log.propagate = False
+
+    return logging.getLogger("backend"), log_file
+
+logger, BACKEND_LOG_PATH = _setup_backend_logging()
+logger.info("=" * 60)
+logger.info("YT Deluxe Backend starting")
+logger.info(f"Log file: {BACKEND_LOG_PATH}")
+logger.info(f"Python: {sys.version}")
+# ──────────────────────────────────────────────────────────────────────────────
 
 # ── GLOBAL SUBPROCESS FIX FOR WINDOWS GUI (.exe) ──────────────────────────
 # Prevent child processes (like ffmpeg spawned by yt-dlp) from flashing terminal windows
@@ -367,7 +404,7 @@ def _fetch_piped_trending(region: str = "IN"):
     print(f"[Piped] Fetching trending for region={region}")
     items = _piped_get(f"/trending?region={region}")
     if items is None or not isinstance(items, list):
-      print(f"[Piped] Trending: no valid response from any instance")
+      print("[Piped] Trending: no valid response from any instance")
       return None
     videos = [_normalize_piped_entry(e) for e in items if e and e.get('url') and '/shorts/' not in (e.get('url') or '')]
     print(f"[Piped] Trending returned {len(videos)} videos")
@@ -384,7 +421,7 @@ def _fetch_piped_search(query: str, filter_type: str = "videos"):
     print(f"[Piped] Searching: {query}")
     data = _piped_get(path)
     if data is None:
-      print(f"[Piped] Search: no valid response from any instance")
+      print("[Piped] Search: no valid response from any instance")
       return None, None
     items_raw = data.get('items') or []
     nextpage = data.get('nextpage')
@@ -403,7 +440,7 @@ def _fetch_piped_search_nextpage(query: str, nextpage: str, filter_type: str = "
     print(f"[Piped] Fetching nextpage search for: {query}")
     data = _piped_get(path)
     if data is None:
-      print(f"[Piped] Nextpage search: no valid response from any instance")
+      print("[Piped] Nextpage search: no valid response from any instance")
       return None, None
     items_raw = data.get('items') or []
     new_nextpage = data.get('nextpage')
@@ -743,7 +780,7 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
       if len(videos) < 5:
         print(f"[Trending] Insufficient results ({len(videos)}) — quick keyword fetch ({TRENDING_QUICK_FETCH})")
         try:
-          import math as _math
+
           cat_keyword_map = {
             "0":  "trending viral today India",
             "10": "trending music songs India",
@@ -880,7 +917,7 @@ def get_trending(category_id: str = "0", region: str = "IN", cursor: int = 0, li
 
     print(f"[Trending] Cache running low: remaining={remaining}, limit={limit}. Fetching more (ext #{ext_count})...")
     try:
-      import math
+
       new_videos = []
 
       # ── Strategy 1: Use stored Piped nextpage cursor for truly new results ──
@@ -2147,7 +2184,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
 
       if not is_pause:
         # Cancel — clean up partial files
-        print(f"[cancel] Cleaning up partial files...")
+        print("[cancel] Cleaning up partial files...")
         try:
           current_files = set(os.listdir(TARGET_DIR))
           partial_files = current_files - existing_files
@@ -2163,7 +2200,7 @@ def download_worker(task_id: str, url: str, quality: str = None,
         download_tasks[task_id].update({"status": "cancelled", "error": None})
       else:
         # Pause — keep .part files for resume
-        print(f"[pause] Keeping partial files for resume")
+        print("[pause] Keeping partial files for resume")
         download_tasks[task_id].update({"error": None})
 
       _save_tasks()
@@ -2813,24 +2850,32 @@ def get_legal():
 # Static file serving for downloads (optional)
 @app.get("/api/downloads/{filename}")
 def serve_download(filename: str):
-  file_path = os.path.join(TEMPFILES_DIR, filename)
+  # SECURITY FIX: Resolve path and verify it stays inside TEMPFILES_DIR (prevents path traversal)
+  base = os.path.realpath(TEMPFILES_DIR)
+  file_path = os.path.realpath(os.path.join(TEMPFILES_DIR, filename))
+  if not file_path.startswith(base + os.sep) and file_path != base:
+    return JSONResponse({"error": "Invalid path"}, status_code=400)
   if os.path.exists(file_path):
-    response = FileResponse(file_path, filename=filename)
+    response = FileResponse(file_path, filename=os.path.basename(file_path))
     response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
     return response
   return JSONResponse({"error": "File not found."}, status_code=404)
 
 @app.get("/api/tempfiles/{filename}")
 def serve_tempfile(filename: str):
-  file_path = os.path.join(TEMPFILES_DIR, filename)
+  # SECURITY FIX: Resolve path and verify it stays inside TEMPFILES_DIR (prevents path traversal)
+  base = os.path.realpath(TEMPFILES_DIR)
+  file_path = os.path.realpath(os.path.join(TEMPFILES_DIR, filename))
+  if not file_path.startswith(base + os.sep) and file_path != base:
+    return JSONResponse({"error": "Invalid path"}, status_code=400)
   if os.path.exists(file_path):
-    response = FileResponse(file_path, filename=filename)
+    response = FileResponse(file_path, filename=os.path.basename(file_path))
     response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
     return response
   return JSONResponse({"error": "File not found or expired."}, status_code=404)
 
 # Desktop operations
-from fastapi import Request
+
 
 @app.post("/api/desktop/open-file")
 async def open_desktop_file(request: Request):
@@ -2887,7 +2932,7 @@ async def open_desktop_folder(request: Request):
       return JSONResponse({"error": str(e)}, status_code=500)
   return JSONResponse({"error": "Folder not found"}, status_code=404)
 
-import shutil
+
 
 @app.post("/api/system/storage")
 async def get_storage_info(request: Request):
@@ -2934,7 +2979,7 @@ if _frontend_dir and os.path.isdir(_frontend_dir):
 
     print(f'[YT Deluxe] Serving frontend from: {_frontend_dir}')
 elif getattr(sys, 'frozen', False):
-    print(f'WARNING: YTDELUXE_FRONTEND_DIR not set or invalid. Frontend will not be served.')
+    print('WARNING: YTDELUXE_FRONTEND_DIR not set or invalid. Frontend will not be served.')
 
 # Main entry point
 if __name__ == "__main__":

@@ -65,13 +65,13 @@
     /* white */
 
     /* Glassmorphism Variables */
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(255, 255, 255, 0.5);
-    --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
-    --glass-brightness: 1.1;
+    --glass-bg: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.12);
+    --glass-brightness: 1.05;
     --glass-shine: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.5) 20%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0.5) 80%, rgba(255, 255, 255, 0) 100%);
-    --glass-hover-bg: rgba(255, 255, 255, 0.25);
-    --glass-border-hover: rgba(255, 255, 255, 0.45);
+    --glass-hover-bg: rgba(255, 255, 255, 0.75);
+    --glass-border-hover: rgba(255, 255, 255, 0.7);
     --backdrop-blur: blur(10px);
 
     /* Border Radius */
@@ -175,8 +175,8 @@
   /* Glassmorphism Base Classes */
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: var(--backdrop-blur);
     -webkit-backdrop-filter: var(--backdrop-blur);
+    backdrop-filter: var(--backdrop-blur);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
   }
@@ -187,14 +187,14 @@
 
   .glass-header {
     @apply glass border-b border-white/20;
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
   }
 
   .glass-nav {
     @apply glass rounded-full px-6 py-3;
-    backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
   }
 
   /* Animation Classes */
@@ -222,18 +222,18 @@
 
   /* Backdrop Blur Utilities */
   .backdrop-blur-light {
-    backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
   }
 
   .backdrop-blur-medium {
-    backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
   }
 
   .backdrop-blur-heavy {
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
   }
 
   /* Glass Surface Utilities */
@@ -306,13 +306,13 @@
 /* Responsive Glassmorphism */
 @media (max-width: 768px) {
   .glass {
-    backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
   }
 
   .glass-header {
-    backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
   }
 }
 

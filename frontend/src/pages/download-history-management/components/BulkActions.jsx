@@ -44,7 +44,7 @@ const BulkActions = ({
   return (
     <AnimatePresence>
       {selectedItems?.length > 0 && (
-        <div className="fixed bottom-6 left-0 right-0 z-[200] flex justify-center px-4 pointer-events-none">
+        <div className="sticky bottom-6 z-[200] flex justify-center px-4 pointer-events-none mt-6">
           <motion.div 
             initial={{ y: 150, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

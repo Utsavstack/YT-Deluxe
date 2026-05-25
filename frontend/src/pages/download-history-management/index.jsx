@@ -496,13 +496,6 @@ const DownloadHistoryManagement = () => {
             {/* Main Content Area */}
             <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8">
               <div className="space-y-6">
-                <BulkActions
-                  selectedItems={selectedItems}
-                  onSelectAll={handleSelectAll}
-                  onDeselectAll={handleDeselectAll}
-                  onBulkDelete={handleBulkDelete}
-                  totalItems={filteredAndSortedData.length}
-                />
 
                 {error && (
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-sm font-bold flex items-center gap-3">
@@ -551,6 +544,15 @@ const DownloadHistoryManagement = () => {
                   </>
                 )}
               </div>
+
+              {/* Selection bar — sticky within content area, floats above cards */}
+              <BulkActions
+                selectedItems={selectedItems}
+                onSelectAll={handleSelectAll}
+                onDeselectAll={handleDeselectAll}
+                onBulkDelete={handleBulkDelete}
+                totalItems={filteredAndSortedData.length}
+              />
             </div>
           </div>
         </main>

@@ -1,5 +1,5 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
-; YT Deluxe Setup 2.0 — Inno Setup Installer Script
+; YT Deluxe Setup 2.0 Inno Setup Installer Script
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; Screen Flow:
 ;   [1] Welcome + About (Utsavstack branding, open-source info, GitHub link)
@@ -9,7 +9,7 @@
 ;   [5] Install Location
 ;   [6] Download Folder Setup (custom page)
 ;   [7] Ready to Install (interactive summary)
-;   [installing... — kills running YT-Deluxe.exe first]
+;   [installing... — kills running YT-Deluxe.exe + main.exe with retry & manual fallback]
 ;   [8] Installation Complete (update toggle, GitHub link)
 ; ═══════════════════════════════════════════════════════════════════════════════
 
@@ -240,35 +240,37 @@ begin
   // ── Title bar: show version ────────────────────────────────────────────────
   WizardForm.Caption := 'YT Deluxe v{#MyAppVersion} Setup';
 
-  // ── Screen 1: Welcome — KMPlayer-style About ──────────────────────────────
+  // ── Screen 1: Welcome ─────────────────────────────────────────────────────
   WizardForm.WelcomeLabel2.Caption :=
-    'Setup will guide you through the installation of YT Deluxe.' + #13#10 + #13#10 +
+    'Setup will guide you through the installation of YT Deluxe v{#MyAppVersion}.' + #13#10 +
     'Click Next to continue.';
 
   FeaturesLabel := TNewStaticText.Create(WizardForm);
   FeaturesLabel.Parent := WizardForm.WelcomePage;
   FeaturesLabel.Left := WizardForm.WelcomeLabel2.Left;
-  FeaturesLabel.Top := ScaleY(190);
+  FeaturesLabel.Top := ScaleY(128);
   FeaturesLabel.Caption :=
-    'YT Deluxe is a Free, Open-Source Platform' + #13#10 +
-    '  >>  100% Free & No Ads' + #13#10 +
-    '  >>  Premium UI' + #13#10 +
-    '  >>  Privacy-First  (No Tracking, No Accounts)' + #13#10 +
-    '  >>  Download Videos, Audio & Thumbnails' + #13#10 +
-    '  >>  Licensed under GPL-3.0';
+    '────────────────────────────────────' + #13#10 +
+    'YT Deluxe  |  Free && Open-Source YouTube Media Downloader' + #13#10 +
+    '────────────────────────────────────' + #13#10 + #13#10 +
+    '  • 100% Free && No Ads' + #13#10 +
+    '  • Premium Glassy UI' + #13#10 +
+    '  • Privacy-First (No Tracking, No Accounts)' + #13#10 +
+    '  • Download Videos, Audio && Thumbnails' + #13#10 +
+    '  • Licensed under GPL-3.0';
   FeaturesLabel.AutoSize := True;
 
   CreditLabel := TNewStaticText.Create(WizardForm);
   CreditLabel.Parent := WizardForm.WelcomePage;
   CreditLabel.Left := WizardForm.WelcomeLabel2.Left;
-  CreditLabel.Top := WizardForm.WelcomePage.ClientHeight - ScaleY(30);
+  CreditLabel.Top := WizardForm.WelcomePage.ClientHeight - ScaleY(34);
   CreditLabel.Caption := 'Copyright '#169' 2026 Utsavstack. All rights reserved.';
   CreditLabel.AutoSize := True;
 
   GitHubLink := TNewStaticText.Create(WizardForm);
   GitHubLink.Parent := WizardForm.WelcomePage;
   GitHubLink.Left := WizardForm.WelcomeLabel2.Left;
-  GitHubLink.Top := CreditLabel.Top - ScaleY(18);
+  GitHubLink.Top := CreditLabel.Top - ScaleY(20);
   GitHubLink.Caption := 'github.com/Utsavstack/YT-Deluxe';
   GitHubLink.AutoSize := True;
   GitHubLink.Cursor := crHand;
@@ -326,7 +328,7 @@ begin
   PrivacyViewer.Left := 0;
   PrivacyViewer.Top := 0;
   PrivacyViewer.Width := PrivacyPage.SurfaceWidth;
-  PrivacyViewer.Height := PrivacyPage.SurfaceHeight - 120;
+  PrivacyViewer.Height := PrivacyPage.SurfaceHeight - 52;
   PrivacyViewer.ReadOnly := True;
   PrivacyViewer.ScrollBars := ssVertical;
   PrivacyViewer.Color := clWindow;
@@ -355,25 +357,10 @@ begin
   PrivacyDeclineRadio.Checked := True;
   PrivacyDeclineRadio.Enabled := False;
 
-  // Network access toggle
-  PrivacyNetworkCheck := TNewCheckBox.Create(PrivacyPage);
-  PrivacyNetworkCheck.Parent := PrivacyPage.Surface;
-  PrivacyNetworkCheck.Top := PrivacyDeclineRadio.Top + 26;
-  PrivacyNetworkCheck.Left := 0;
-  PrivacyNetworkCheck.Width := PrivacyPage.SurfaceWidth;
-  PrivacyNetworkCheck.Height := 20;
-  PrivacyNetworkCheck.Caption := ' Allow network access for YouTube data';
-  PrivacyNetworkCheck.Checked := True;
-
-  // Update notifications toggle
-  PrivacyUpdateCheck := TNewCheckBox.Create(PrivacyPage);
-  PrivacyUpdateCheck.Parent := PrivacyPage.Surface;
-  PrivacyUpdateCheck.Top := PrivacyNetworkCheck.Top + 22;
-  PrivacyUpdateCheck.Left := 0;
-  PrivacyUpdateCheck.Width := PrivacyPage.SurfaceWidth;
-  PrivacyUpdateCheck.Height := 20;
-  PrivacyUpdateCheck.Caption := ' Notify me when updates are available (recommended)';
-  PrivacyUpdateCheck.Checked := True;
+  // Network access & update notifications are always enabled (no user toggle needed)
+  // These variables are kept for registry write compatibility in CurStepChanged
+  PrivacyNetworkCheck := nil;
+  PrivacyUpdateCheck := nil;
 
   // ── Screen 6: Download Folder Setup ───────────────────────────────────────
   DownloadFolderPage := CreateCustomPage(wpSelectDir,
@@ -470,11 +457,6 @@ begin
       MsgBox('You must accept the Privacy Policy to continue.', mbError, MB_OK);
       Result := False;
     end;
-    if not PrivacyNetworkCheck.Checked then
-    begin
-      MsgBox('Network access is required for YT Deluxe to function. Please enable it to continue.', mbError, MB_OK);
-      Result := False;
-    end;
   end;
 
   // Summary page: populate before showing
@@ -492,43 +474,103 @@ begin
     if AutoOrganizeCheck.Checked then
       SummaryMemo.Text := SummaryMemo.Text + '      Organized (Videos / Music / Thumbnails subfolders)' + #13#10
     else
-      SummaryMemo.Text := SummaryMemo.Text + '      Flat — all files saved directly to the download folder' + #13#10;
+      SummaryMemo.Text := SummaryMemo.Text + '      Flat (files saved directly to the download folder)' + #13#10;
 
     SummaryMemo.Text := SummaryMemo.Text + #13#10 +
-      '  Update Notifications' + #13#10;
-
-    if PrivacyUpdateCheck.Checked then
-      SummaryMemo.Text := SummaryMemo.Text + '      Enabled (GitHub check on launch)' + #13#10
-    else
-      SummaryMemo.Text := SummaryMemo.Text + '      Disabled' + #13#10;
-
-    SummaryMemo.Text := SummaryMemo.Text + #13#10 +
-      '  Network Access' + #13#10;
-
-    if PrivacyNetworkCheck.Checked then
-      SummaryMemo.Text := SummaryMemo.Text + '      Allowed' + #13#10
-    else
-      SummaryMemo.Text := SummaryMemo.Text + '      Disabled' + #13#10;
-
-    SummaryMemo.Text := SummaryMemo.Text + #13#10 +
+      '  Network Access:  Allowed (required)' + #13#10 +
+      '  Update Notifications:  Enabled' + #13#10 + #13#10 +
       '  Click Next to begin.';
   end;
 end;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PrepareToInstall — Kill running YT-Deluxe.exe before install
+// Helper — Check if a process is running via tasklist
 // ═══════════════════════════════════════════════════════════════════════════════
-function PrepareToInstall(var NeedsRestart: Boolean): String;
+function IsProcessRunning(ProcessName: String): Boolean;
 var
   ResultCode: Integer;
 begin
-  Result := '';
-  // Kill any running instance of YT-Deluxe.exe to prevent file-in-use errors
-  Exec('taskkill.exe', '/F /IM YT-Deluxe.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // findstr returns 0 if the process name is found in tasklist output
+  Exec('cmd.exe', '/C tasklist /NH /FI "IMAGENAME eq ' + ProcessName + '" 2>NUL | findstr /I "' + ProcessName + '" >NUL', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := (ResultCode = 0);
+end;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Helper — Attempt to kill a single process by name
+// ═══════════════════════════════════════════════════════════════════════════════
+procedure KillProcess(ProcessName: String);
+var
+  ResultCode: Integer;
+begin
+  Exec('taskkill.exe', '/F /IM ' + ProcessName, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   if ResultCode = 0 then
-    Log('Terminated running YT-Deluxe.exe process.')
+    Log('Killed process: ' + ProcessName)
   else
-    Log('No running YT-Deluxe.exe process found (or already closed).');
+    Log('Could not kill (or not running): ' + ProcessName);
+end;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PrepareToInstall — Kill running YT Deluxe processes before install
+//   Targets: YT-Deluxe.exe (launcher) + main.exe (backend)
+//   Retry up to 3 times with 1.5s delay, then show manual instructions
+// ═══════════════════════════════════════════════════════════════════════════════
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Attempt: Integer;
+  StillRunning: Boolean;
+  UserChoice: Integer;
+begin
+  Result := '';
+
+  for Attempt := 1 to 3 do
+  begin
+    // Kill both the launcher and the backend
+    KillProcess('YT-Deluxe.exe');
+    KillProcess('main.exe');
+
+    // Small delay to let OS release file handles
+    Sleep(1500);
+
+    // Check if either process is still alive
+    StillRunning := IsProcessRunning('YT-Deluxe.exe') or IsProcessRunning('main.exe');
+
+    if not StillRunning then
+    begin
+      Log('All YT Deluxe processes terminated successfully (attempt ' + IntToStr(Attempt) + ').');
+      Exit;
+    end;
+
+    Log('Processes still running after attempt ' + IntToStr(Attempt) + ', retrying...');
+  end;
+
+  // All 3 attempts failed — show manual instructions with Retry/Cancel
+  repeat
+    UserChoice := MsgBox(
+      'YT Deluxe is still running and could not be closed automatically.' + #13#10 + #13#10 +
+      'Please close it manually:' + #13#10 + #13#10 +
+      '  1. Press  Ctrl + Shift + Esc  to open Task Manager' + #13#10 +
+      '  2. Click the "Processes" tab' + #13#10 +
+      '  3. Look for  YT-Deluxe.exe  and/or  main.exe' + #13#10 +
+      '  4. Right-click each → "End Task"' + #13#10 +
+      '  5. Come back here and click "Retry"' + #13#10 + #13#10 +
+      'Click Retry after closing, or Cancel to abort installation.',
+      mbError, MB_RETRYCANCEL);
+
+    if UserChoice = IDCANCEL then
+    begin
+      Result := 'Installation cancelled: YT Deluxe is still running.';
+      Exit;
+    end;
+
+    // User clicked Retry — try killing again
+    KillProcess('YT-Deluxe.exe');
+    KillProcess('main.exe');
+    Sleep(1500);
+
+    StillRunning := IsProcessRunning('YT-Deluxe.exe') or IsProcessRunning('main.exe');
+  until not StillRunning;
+
+  Log('YT Deluxe processes terminated after manual intervention.');
 end;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -565,37 +607,21 @@ begin
       RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
         'AutoOrganize', '0');
 
-    // Update notification preference
-    if FinishUpdateNotifyCheck <> nil then
-    begin
-      if FinishUpdateNotifyCheck.Checked then
-        RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
-          'UpdateNotify', '1')
-      else
-        RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
-          'UpdateNotify', '0');
-    end
+    // Update notification preference — from finish page checkbox
+    if (FinishUpdateNotifyCheck <> nil) and FinishUpdateNotifyCheck.Checked then
+      RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
+        'UpdateNotify', '1')
     else
-    begin
-      if PrivacyUpdateCheck.Checked then
-        RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
-          'UpdateNotify', '1')
-      else
-        RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
-          'UpdateNotify', '0');
-    end;
+      RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
+        'UpdateNotify', '1');  // Default: enabled
 
     // Save installed version so the app can compare with GitHub latest release
-    // App reads this from localStorage key 'ytdeluxe_installed_version'
     RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
       'InstalledVersion', 'v{#MyAppVersion}');
 
-    if PrivacyNetworkCheck.Checked then
-      RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
-        'AllowNetwork', '1')
-    else
-      RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
-        'AllowNetwork', '0');
+    // Network access is always allowed (required for app functionality)
+    RegWriteStringValue(HKEY_CURRENT_USER, 'Software\YTDeluxe\Settings',
+      'AllowNetwork', '1');
 
     // Create download folder structure
     // If organized: create type subfolders inside the chosen path.
@@ -643,6 +669,12 @@ begin
   // Setup finish page controls
   if CurPageID = wpFinished then
   begin
+    // Override the default finish text to prevent truncation
+    WizardForm.FinishedLabel.Caption :=
+      'Setup has finished installing YT Deluxe on your computer.' + #13#10 +
+      'The application may be launched by selecting the checkbox below.' + #13#10 + #13#10 +
+      'Click Finish to exit Setup.';
+
     // Move the built-in run list higher so our controls fit
     WizardForm.RunList.Top := WizardForm.FinishedLabel.Top + WizardForm.FinishedLabel.Height + 8;
     WizardForm.RunList.Height := 24;
@@ -654,8 +686,8 @@ begin
     FinishUpdateNotifyCheck.Top := WizardForm.RunList.Top + WizardForm.RunList.Height + 4;
     FinishUpdateNotifyCheck.Width := WizardForm.FinishedPage.ClientWidth - (WizardForm.RunList.Left * 2);
     FinishUpdateNotifyCheck.Height := 20;
-    FinishUpdateNotifyCheck.Caption := ' Notify me when updates are available';
-    FinishUpdateNotifyCheck.Checked := PrivacyUpdateCheck.Checked;
+    FinishUpdateNotifyCheck.Caption := ' Notify me when updates are available (recommended)';
+    FinishUpdateNotifyCheck.Checked := True;
 
     // Copyright label at bottom
     FinishCreditLabel := TNewStaticText.Create(WizardForm);

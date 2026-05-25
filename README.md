@@ -8,7 +8,7 @@
 
 <h4 align="center">
   Premium YouTube Media Downloader<br><br>
-  A Free & Open Source, Feature-Rich YouTube Downloader &amp; Media Manager<br>
+  A Free & Open Source, Self Hosted, Feature-Rich YouTube Downloader &amp; Media Manager<br>
   with a Premium Liquid Glass UI for Web &amp; Desktop.
 </h4>
 
@@ -37,7 +37,7 @@
 
 ## 1. What is YT Deluxe?
 
-**YT Deluxe** is a *free, open-source, full-stack media management application* that lets you **search, preview, and download** YouTube videos and audio - with a beautifully crafted **Liquid Glass UI** that feels premium.
+**YT Deluxe** is a *free, open-source, full-stack media management self-hosted application* that lets you **search, preview, and download** YouTube videos and audio - with a beautifully crafted **Liquid Glass UI** that feels premium.
 
 It runs both as a **native Windows desktop app** (packaged `.exe`) and as a **hosted web application**, without any ads, trackers, or paywalls.
 
@@ -249,6 +249,7 @@ YT Deluxe is still growing. Here's where we're headed:
 cd frontend
 npm install
 npm run dev       # http://localhost:5848
+npm test          # Run 83 unit tests (Vitest)
 ```
 
 ### 7.3 Backend
@@ -285,11 +286,13 @@ Contributions make open-source great - and YT Deluxe better for everyone. All ki
 - For major changes, open an issue first to discuss
 
 ### 8.3 Reporting Bugs
-Found something broken? [Open an issue](https://github.com/Utsavstack/YT-Deluxe/issues) with:
+Found something broken? You can use the **Settings > Report a Problem** screen inside the app to automatically build a report with logs. Or [open an issue on GitHub](https://github.com/Utsavstack/YT-Deluxe/issues) with:
 - Steps to reproduce
 - Expected vs actual behavior
-- Your OS, browser/app version
-- Any relevant logs
+- Your OS, browser, and app version
+- **Log Files**: Paste the relevant logs. On Windows, they are saved at:
+  - **Startup/UI UI issues:** `%APPDATA%\YT Deluxe\logs\launcher.log`
+  - **Downloader/API errors:** `%APPDATA%\YT Deluxe\logs\backend.log`
 
 ### 8.4 Suggesting Features
 Have an idea? [Open a discussion](https://github.com/Utsavstack/YT-Deluxe/discussions) - let's talk about it before implementation.
@@ -392,12 +395,14 @@ The full React ecosystem powering the Liquid Glass UI from routing and state man
 | [Lucide React](https://lucide.dev) | Icon library | ISC |
 | [React Router](https://reactrouter.com) | Client-side routing | MIT |
 | [Redux Toolkit](https://redux-toolkit.js.org) | State management | MIT |
-| [Axios](https://axios-http.com) | HTTP client | MIT |
 | [i18next](https://www.i18next.com) | Internationalization | MIT |
 | [Recharts](https://recharts.org) | Data visualization | MIT |
 | [React Hook Form](https://react-hook-form.com) | Form state management | MIT |
 | [date-fns](https://date-fns.org) | Date utility library | MIT |
 | [Radix UI](https://www.radix-ui.com) | Accessible UI primitives | MIT |
+| [Vitest](https://vitest.dev) | Unit testing framework | MIT |
+| [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) | Vite React plugin v4 (Vite 6 compatible) | MIT |
+| [vite-tsconfig-paths](https://github.com/aleclarson/vite-tsconfig-paths) | TypeScript path alias resolution for Vite | MIT |
 
 ### 11.3 UI Component Credits
 
@@ -513,6 +518,13 @@ See the full license text in [LICENSE](./LICENSE).
 #### 12.2.4 Self-Hosted / Desktop
 - You are entirely in control of your own data
 - No network connection is made except to YouTube (via yt-dlp) and optionally to GitHub for updates
+
+#### 12.2.5 Application Permissions
+YT Deluxe requests permissions locally to enable custom client-side features. These are completely local, and you can revoke them anytime in **Settings > App Permissions**:
+- **Clipboard Access (Read):** Detects YouTube video URLs copied to your clipboard to enable auto-pasting. We never read, log, or upload any other clipboard content.
+- **Clipboard Copy (Write):** Copies video metadata (titles, descriptions) or direct share URLs to your clipboard upon request.
+- **Desktop Notifications:** Alerts you in the background when a download, file merge, or trim operation is completed.
+- **Microphone Access:** Captures voice inputs for the hands-free search bar. Audio data is processed purely local to the device.
 
 > [!NOTE]
 > This policy applies to the official YT Deluxe project. Third-party forks or hosted instances may have different data practices.

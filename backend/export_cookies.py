@@ -5,7 +5,9 @@ After running, restart the backend server.
 
 Usage: python export_cookies.py
 """
-import subprocess, sys, os
+import subprocess
+import sys
+import os
 
 browsers = ['chrome', 'edge', 'firefox', 'chromium', 'brave']
 

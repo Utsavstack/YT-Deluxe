@@ -4,7 +4,7 @@ import App from "./App";
 import "./utils/i18n";
 import "./styles/tailwind.css";
 import "./styles/index.css";
-import { requestPermission, PERMISSIONS } from "./utils/permissions";
+import { requestPermission, getPermissionState, PERMISSIONS, markClipboardGranted, markMicrophoneGranted } from "./utils/permissions";
 
 // Guard: stop calling pywebview bridge during page reload/unload
 window.__ytdeluxe_unloading = false;
@@ -13,10 +13,11 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ─── Clipboard Intercepts ────────────────────────────────────────────────────
-// Replace the native clipboard APIs with versions that:
-//   1. Use the pywebview bridge on desktop (no OS permission popup at all)
-//   2. Fall back to the browser API on web
-// This means no "localhost wants to..." dialog EVER appears for clipboard.
+// Clipboard is system-managed on desktop (like microphone):
+//   - Auto-granted at startup — no native OS dialog
+//   - If user resets in Settings, the YT Deluxe branded dialog shows next time
+//   - State is persisted in YTDeluxeStorage so it survives restarts
+// On web, falls back to native browser clipboard API.
 
 if (!navigator.clipboard) {
   navigator.clipboard = {};
@@ -25,9 +26,36 @@ if (!navigator.clipboard) {
 const _originalReadText  = navigator.clipboard.readText?.bind(navigator.clipboard);
 const _originalWriteText = navigator.clipboard.writeText?.bind(navigator.clipboard);
 
-// readText — use pywebview bridge (powershell Get-Clipboard, no permission needed)
+/**
+ * Check clipboard permission state and auto-grant on desktop if needed.
+ * Returns true if allowed, false if denied.
+ */
+async function _ensureClipboardPermission(permKey) {
+  const state = await getPermissionState(permKey);
+
+  if (state === 'granted') return true;
+  if (state === 'denied') return false;
+
+  // state === 'prompt' — first time or after reset
+  const isDesktop = !!window.pywebview?.api;
+  if (isDesktop) {
+    // Desktop: auto-grant without dialog (system managed)
+    await markClipboardGranted();
+    return true;
+  }
+
+  // Web mode: show YT Deluxe branded dialog
+  return await requestPermission(permKey);
+}
+
+// readText — permission-aware, uses pywebview bridge on desktop
 navigator.clipboard.readText = async function () {
   if (window.__ytdeluxe_unloading) return "";
+
+  const allowed = await _ensureClipboardPermission(PERMISSIONS.CLIPBOARD_READ);
+  if (!allowed) return "";
+
+  // Desktop bridge (PowerShell Get-Clipboard — no OS popup)
   try {
     if (
       window.pywebview?.api?.read_clipboard &&
@@ -37,15 +65,21 @@ navigator.clipboard.readText = async function () {
     }
   } catch { /* bridge not ready */ }
 
+  // Web fallback
   if (_originalReadText) {
     try { return await _originalReadText(); } catch { /* denied */ }
   }
   return "";
 };
 
-// writeText — use pywebview bridge (powershell Set-Clipboard, no permission needed)
+// writeText — permission-aware, uses pywebview bridge on desktop
 navigator.clipboard.writeText = async function (text) {
   if (window.__ytdeluxe_unloading) return;
+
+  const allowed = await _ensureClipboardPermission(PERMISSIONS.CLIPBOARD_WRITE);
+  if (!allowed) return;
+
+  // Desktop bridge (PowerShell Set-Clipboard — no OS popup)
   try {
     if (
       window.pywebview?.api?.write_clipboard &&
@@ -56,16 +90,35 @@ navigator.clipboard.writeText = async function (text) {
     }
   } catch { /* bridge not ready */ }
 
+  // Web fallback
   if (_originalWriteText) {
     try { await _originalWriteText(text); } catch { /* denied */ }
   }
 };
 
-// ─── Microphone Intercept ────────────────────────────────────────────────────
-// Intercept getUserMedia so our YT Deluxe branded dialog shows INSTEAD of the
-// native WebView2 "localhost:8000 wants to use your microphone" popup.
-// The Python-side auto-grant (launcher.py) ensures the native dialog is suppressed
-// even after we call the original getUserMedia.
+// ── Desktop system-managed auto-grant ───────────────────────────────────────────
+// When running in the pywebview desktop app, clipboard AND microphone are
+// system-managed — no OS permission dialog ever appears. Mark them as 'granted'
+// in storage so Settings > App Permissions shows the correct status.
+if (typeof window !== 'undefined') {
+  const _tryMarkSystemPerms = () => {
+    if (window.pywebview?.api) {
+      markClipboardGranted();
+      markMicrophoneGranted();
+    }
+  };
+  // Try immediately (may already be injected)
+  _tryMarkSystemPerms();
+  // Also try after a short delay in case the bridge initialises just after JS runs
+  setTimeout(_tryMarkSystemPerms, 1500);
+}
+
+
+// ─── Microphone Intercept ────────────────────────────────────────────────────────
+// Microphone is system-managed on desktop (like clipboard):
+//   - Auto-granted at startup — no native "localhost wants to..." dialog
+//   - If user resets in Settings, the YT Deluxe branded dialog shows next time
+//   - Result is persisted in YTDeluxeStorage so it survives restarts
 
 const _originalGetUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
 
@@ -75,16 +128,37 @@ if (navigator.mediaDevices && _originalGetUserMedia) {
       throw new DOMException('App unloading', 'AbortError');
     }
 
-    // Only intercept microphone — it's the only one YT Deluxe uses (voice search)
+    // Only intercept audio (microphone) — it's the only mediaDevice YT Deluxe uses
     if (constraints?.audio) {
+      const state = await getPermissionState(PERMISSIONS.MICROPHONE);
+
+      if (state === 'granted') {
+        // Already granted (system or user) — proceed silently
+        return await _originalGetUserMedia(constraints);
+      }
+
+      if (state === 'denied') {
+        // User explicitly denied via our dialog or Settings
+        throw new DOMException('Microphone permission denied by YT Deluxe', 'NotAllowedError');
+      }
+
+      // state === 'prompt' — first time or after reset
+      const isDesktop = !!window.pywebview?.api;
+      if (isDesktop) {
+        // Desktop: auto-grant without showing any dialog (system managed)
+        await markMicrophoneGranted();
+        return await _originalGetUserMedia(constraints);
+      }
+
+      // Web mode: show the YT Deluxe branded dialog
       const granted = await requestPermission(PERMISSIONS.MICROPHONE);
       if (!granted) {
         throw new DOMException('Microphone permission denied by YT Deluxe', 'NotAllowedError');
       }
+      return await _originalGetUserMedia(constraints);
     }
 
-    // Permission granted (or cached) — proceed with original call
-    // Python-side auto-grant suppresses the native WebView2 dialog
+    // Non-audio constraints — pass through unchanged
     return await _originalGetUserMedia(constraints);
   };
 }

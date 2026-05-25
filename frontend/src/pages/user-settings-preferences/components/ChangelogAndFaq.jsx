@@ -35,23 +35,28 @@ const FALLBACK_CHANGELOG = [
 const STATIC_FAQS = [
   {
     id: 1,
-    q: 'How do I download entire playlists?',
-    a: 'Simply paste the playlist URL into the main download input. The app will automatically detect that it is a playlist and present you with options to select which videos you want to download.',
+    q: 'Where are my downloaded files saved?',
+    a: "By default, files are saved in your system's Downloads folder. You can customize this path during installation or later inside the Settings page. If you enabled \"Auto-Organize\", files are sorted into Videos/, Music/, and Thumbnails/ subfolders automatically.",
   },
   {
     id: 2,
-    q: 'Where are my downloaded files saved?',
-    a: "By default, files are saved in your system's Downloads folder. You can customize this path and set up sub-folders based on channels or dates in the \"Downloads\" preferences tab.",
+    q: 'Can I download videos in 4K or 8K resolution?',
+    a: 'Yes! YT Deluxe supports all available resolutions from 144p up to 8K. Open the Quality Grid before downloading and select your preferred resolution. For 1080p and above, the app automatically merges the video and audio streams using FFmpeg.',
   },
   {
     id: 3,
-    q: 'Can I download videos in 4K resolution?',
-    a: 'Absolutely! If the source video is available in 4K or 8K, you can select the highest quality option in your preferences or right before hitting the download button.',
+    q: 'What audio and video formats are supported?',
+    a: 'Video: MP4, WebM, MKV, MOV (and more via the Advanced Format Picker). Audio: MP3, M4A, Opus, and original formats. MP3 downloads include embedded album art and metadata automatically.',
   },
   {
     id: 4,
+    q: 'How do update notifications work?',
+    a: 'When "Updates On" is enabled, the app checks GitHub for a new release once every 24 hours. If a newer version is found, a banner appears here on the Changelog tab. You can click Download to get the new installer, mute that specific version with the bell-off icon (so it never shows again for that version), or dismiss it just for this session.',
+  },
+  {
+    id: 5,
     q: 'Does this app track my usage or collect data?',
-    a: 'No. YT Deluxe is completely local-first and does not track, collect, or transmit your personal data. All processing happens on your machine.',
+    a: 'No. YT Deluxe is completely local-first and does not track, collect, or transmit your personal data. All processing happens on your machine. The only optional network calls are YouTube data fetching and a once-per-24h GitHub version check (which you can disable).',
   },
 ];
 

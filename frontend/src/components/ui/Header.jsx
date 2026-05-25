@@ -344,26 +344,26 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.92, y: -8 }}
                       transition={{ type: 'spring', stiffness: 360, damping: 28 }}
-                      className="absolute right-0 top-[calc(100%+12px)] w-[340px] max-h-[520px] rounded-2xl overflow-hidden shadow-glass-xl z-[500] flex flex-col bg-white/[0.65] dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/[0.08]"
+                      className="absolute right-0 top-[calc(100%+12px)] w-[380px] max-h-[520px] rounded-2xl overflow-hidden shadow-glass-xl z-[500] flex flex-col bg-white/[0.65] dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/[0.08]"
                     >
                       {/* Panel header */}
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
-                        <div className="flex items-center gap-2">
-                          <Icon name="Bell" size={15} className="text-primary" />
-                          <span className="text-sm font-semibold text-foreground">Downloads</span>
+                      <div className="flex items-center justify-between px-3 py-3 border-b border-white/10 flex-shrink-0 gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Icon name="Bell" size={15} className="text-primary flex-shrink-0" />
+                          <span className="text-sm font-semibold text-foreground truncate">Downloads</span>
                           {activeCount > 0 && (
-                            <span className="text-[10px] bg-warning/20 text-warning border border-warning/30 rounded-full px-2 font-mono font-bold">
+                            <span className="text-[10px] bg-warning/20 text-warning border border-warning/30 rounded-full px-1.5 py-0.5 font-mono font-bold whitespace-nowrap flex-shrink-0">
                               {activeCount} active
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <button
                             onClick={() => {
                               window.dispatchEvent(new Event('showGlobalFloater'));
                               setBellOpen(false);
                             }}
-                            className="text-[10px] font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-all border border-primary/20 flex items-center gap-1"
+                            className="text-[10px] font-bold text-primary hover:bg-primary/10 px-1.5 py-1 rounded-lg transition-all border border-primary/20 flex items-center gap-1 whitespace-nowrap"
                             title="Show floating progress panel"
                           >
                             <Icon name="ExternalLink" size={10} />
@@ -371,7 +371,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                           </button>
                           <button
                             onClick={() => setSortNewestFirst(prev => !prev)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors flex-shrink-0"
                             title={sortNewestFirst ? 'Newest first' : 'Oldest first'}
                           >
                             <Icon name={sortNewestFirst ? 'ArrowDownWideNarrow' : 'ArrowUpNarrowWide'} size={14} />
@@ -379,7 +379,7 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                           {visibleDownloads.length > 0 && (
                             <button
                               onClick={() => { clearHistory(); }}
-                              className="text-[11px] text-muted-foreground hover:text-error px-2 py-1 rounded-lg hover:bg-error/10 transition-all"
+                              className="text-[11px] text-muted-foreground hover:text-error px-1.5 py-1 rounded-lg hover:bg-error/10 transition-all whitespace-nowrap"
                             >
                               Clear All
                             </button>

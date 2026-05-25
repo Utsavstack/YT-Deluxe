@@ -92,7 +92,7 @@ class DataCache {
    * ttlMs = null means "no expiry" (for history/saved items).
    */
   set(key, data, ttlMs) {
-    const expireAt = ttlMs != null ? Date.now() + ttlMs : null;
+    const expireAt = (ttlMs !== null && ttlMs !== undefined) ? Date.now() + ttlMs : null;
     const entry = { data, expireAt };
     this._mem.set(key, entry);
     this._writeSession(key, entry);

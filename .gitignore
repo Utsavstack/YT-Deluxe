@@ -29,7 +29,6 @@ temp_deploy_to_render.py
 
 
 # Test and diagnostic files
-*test*.py
 *diag*.py
 
 # Temp folder

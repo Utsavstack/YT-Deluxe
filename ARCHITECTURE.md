@@ -20,7 +20,7 @@
   Premium YouTube Media Downloader
 </h4>
 
-**YT Deluxe** is a *Free & OpenSource, Full-stack, Feature-rich* **YouTube Downloader and Media Management Hybrid (Web & Desktop) Application** with a **"Premium Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to **Search**, **Preview**, and **Download** YouTube Videos and Audio with a streamlined, premium experience.
+**YT Deluxe** is a *Free & OpenSource, Full-stack, Feature-rich* **YouTube Downloader and Media Management Hybrid (Web & Desktop) Self-Hosted Application** with a **"Premium Liquid Glass"** UI. Built with a React frontend and a robust FastAPI backend, **YT Deluxe** empowers users to **Search**, **Preview**, and **Download** YouTube Videos and Audio with a streamlined, premium experience.
 
 ---
 
@@ -203,6 +203,8 @@ yt-deluxe/
 │   ├── index.html              # HTML entry point
 │   ├── package.json            # NPM dependencies & scripts
 │   ├── vite.config.mjs         # Vite build configuration
+│   ├── vitest.config.mjs       # Vitest test runner configuration
+│   ├── .eslintrc.cjs           # ESLint configuration
 │   ├── tailwind.config.js      # TailwindCSS theme & plugins
 │   ├── postcss.config.js       # PostCSS pipeline config
 │   ├── jsconfig.json           # JS path aliases
@@ -2363,6 +2365,15 @@ flowchart TD
   - **Persistent History**: Instead of browser storage, the app writes to a standard JSON database located in the user's home directory (`~/.yt-deluxe/`).
 - **One-Click Launch**: The `launcher.py` entry point ensures that both the server and the UI window open and close together gracefully.
 
+#### 5.8.1 Native Permissions Architecture
+
+YT Deluxe implements a custom, unified permissions system that bridges web APIs and native desktop capabilities, ensuring a seamless, premium UX without unbranded OS dialogs.
+
+- **Frontend Intercepts (`index.jsx`)**: Global overrides intercept browser APIs (`navigator.mediaDevices.getUserMedia`, `Notification.requestPermission`). Instead of showing the native browser prompt, they pause execution and trigger the custom React `PermissionDialog`.
+- **System Bridge Bypasses (`pywebview`)**: For specific APIs like Clipboard, the frontend detects if the desktop bridge is available. If present, it bypasses browser APIs entirely (which require permissions) and uses PowerShell commands via `window.pywebview.api` to read/write the clipboard silently.
+- **Backend Auto-Grant (`launcher.py`)**: To prevent the underlying Edge Chromium runtime from displaying fallback prompts (e.g., "localhost:8000 wants to use your microphone"), the backend hooks into `CoreWebView2.PermissionRequested` at the GUI-thread level (`webview.start(func=...)`). It silently auto-grants all requests since user consent is already collected by the React dialog.
+- **Persistent State (`permissions.js`)**: Decisions are cached in `YTDeluxeStorage`. Bridge-handled permissions (like Clipboard) are proactively marked as "System Managed" so the Settings UI accurately reflects their status without ever prompting the user.
+
 ---
 
 ### 5.9 System Architecture & Workflows
@@ -2462,11 +2473,13 @@ Follow this setup to run both servers (React + FastAPI) locally on any developme
 | Package | Version | Purpose |
 |---|---|---|
 | react | `^18.2.0` | UI library |
-| react-router-dom | `6.0.2` | Client-side routing |
+| react-router-dom | `^6.30.3` | Client-side routing |
 | @reduxjs/toolkit | `^2.6.1` | State management |
 | tailwindcss | `3.4.6` | Utility-first CSS |
 | framer-motion | `^10.16.4` | UI animations |
-| axios | `^1.8.4` | Backend API communication |
+| vitest | `^4.1.7` | Unit testing framework |
+| @vitejs/plugin-react | `^6.0.2` | Vite React plugin (Vite 8 compatible, uses oxc transformer) |
+| vite-tsconfig-paths | `3.6.0` | TypeScript path alias resolution (`components/X`, `pages/X`) |
 
 ### 6.2 Backend Dependencies
 
@@ -2504,6 +2517,7 @@ Open your first terminal window:
 cd frontend
 npm install
 npm run dev     # Starts Vite Server on http://localhost:5848
+npm test        # Run 83 unit tests (Vitest)
 ```
 
 #### Frontend Files Structure
@@ -2562,6 +2576,11 @@ frontend/
         ├── i18n.js             # i18next initialization
         ├── cn.js               # clsx/tailwind-merge helper
         └── ThemeContext.jsx    # Theme provider & hook
+    └── __tests__/              # Vitest unit tests (83 tests)
+        ├── api.test.js         # API helper tests (extractVideoId, formatDuration, etc.)
+        ├── dataCache.test.js   # Cache get/set/TTL/invalidation tests
+        ├── dateFormat.test.js  # Date/time/number formatting tests
+        └── fileNaming.test.js  # Filename sanitization & naming convention tests
 ```
 
 ### 6.6 Backend Setup (Local)
@@ -2691,8 +2710,22 @@ desktop/
 
 ### 8.7 User Feedback
 
-- Submit bug reports or suggestions directly from the application UI.
-- **REST API**: `POST /api/feedback`
+YT Deluxe features a centralized **Report a Problem** dashboard inside the Settings view (`ReportAProblem.jsx`).
+
+#### 8.7.1 Logging Infrastructure (Windows Desktop)
+The application initiates two distinct file-logging threads:
+- **UI Launcher Logs:** Written at `%APPDATA%\YT Deluxe\logs\launcher.log` (monitors WebView2 window rendering, PyWebView events, and initial port bindings).
+- **FastAPI Backend Logs:** Written at `%APPDATA%\YT Deluxe\logs\backend.log` (monitors HTTP controller endpoints, `yt-dlp` download executions, and FFmpeg command executions).
+
+#### 8.7.2 Automated GitHub Issue Integration
+Users can fill out a bug report form that dynamically bundles:
+1. **System Environment Info:** Automatically parses App version, OS type, User Agent, and timestamp.
+2. **Local Logs Preview:** Users can select their log file via a local HTML5 file-picker. The component previews the last 20 lines in the UI and appends the last 100 lines to the generated GitHub report.
+3. **Redirection:** Dynamically compiles a URL using `URLSearchParams` for the `Utsavstack/YT-Deluxe` repository issue builder and redirects the user with all fields pre-filled.
+
+#### 8.7.3 Troubleshooting & Self-Service
+- **Logs Folder Access:** Integrates with the backend controller via `GET /api/desktop/open-file` to open the logs directory in Windows Explorer.
+- **Pre-Known Accordion:** Embeds a curated list of common issues (Edge WebView2 runtime, PO Token expiration, port 8000 conflict, FFmpeg binaries, antivirus false positives) inside an animated `AnimatePresence` accordion to help users debug instantly without filing tickets.
 
 ---
 
@@ -2780,6 +2813,35 @@ pip install pyinstaller
 cd ..\desktop
 ..\backend\.venv\Scripts\pip.exe install -r requirements.txt
 ```
+
+### 10.1.1 Bundled FFmpeg Binary Integrity
+
+Before building (or before replacing `backend/ffmpeg.exe` with a newer version), verify the binary hash matches the expected value. This guards against accidental or malicious binary replacement in the supply chain.
+
+| Property | Value |
+|----------|-------|
+| **File** | `backend/ffmpeg.exe` |
+| **Version** | `2026-04-16-git-5abc240a27-essentials_build` |
+| **Source** | [gyan.dev/ffmpeg/builds](https://www.gyan.dev/ffmpeg/builds/) (essentials build) |
+| **SHA-256** | `EB911926E6A4F1A6887BDB4E64F9951BCD46CE8D9A2266CA5DBFE3BC9306A0E7` |
+| **Size** | ~96.8 MB (101,469,184 bytes) |
+
+**Verify before building:**
+```powershell
+# Run from repo root — must match hash above exactly
+Get-FileHash "backend\ffmpeg.exe" -Algorithm SHA256 | Select-Object Hash
+```
+
+> [!CAUTION]
+> If the hash does not match, **do not build the installer**. Re-download ffmpeg from the official source above and replace the binary.
+
+**Updating FFmpeg:** When upgrading to a newer ffmpeg build:
+1. Download the new `ffmpeg.exe` from gyan.dev essentials build
+2. Compute: `Get-FileHash backend\ffmpeg.exe -Algorithm SHA256`
+3. Update this table with the new hash, version, and size
+4. Commit the updated `ARCHITECTURE.md` alongside the new binary
+
+---
 
 ### 10.2 Build Static Frontend
 
@@ -2907,6 +2969,13 @@ You may **not**:
 - **YouTube / Google**: Requests go through the backend via yt-dlp. YouTube's own [Privacy Policy](https://policies.google.com/privacy) applies.
 - **Piped API**: Trending and search metadata requests are routed through public [Piped](https://github.com/TeamPiped/Piped) API instances. No user-identifiable data is sent only search queries and region codes.
 - Temporary download files are **auto-deleted** from the server after 10 minutes (Web mode)
+
+**Application Permissions:**
+YT Deluxe implements a local permissions framework to request client-side access. Users can view and revoke these permissions at any time via **Settings > App Permissions**:
+- **Clipboard Access (Read):** Auto-detects YouTube video URLs copied to the device clipboard for quick pasting. No other clipboard context is ever read or transmitted.
+- **Clipboard Copy (Write):** Copies metadata (titles, descriptions) or sharing URLs to the clipboard upon user command.
+- **Desktop Notifications:** Fires background desktop notifications when async download, conversion, or trimming processes complete.
+- **Microphone Access:** Records local audio inputs for the hands-free search bar. All voice data is processed entirely on-device.
 
 ---
 
