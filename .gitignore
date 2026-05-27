@@ -2,8 +2,13 @@
 node_modules
 /build
 .vscode/
-.agent/
+.agents/
+.claude/
+.gemini/
 .idea/
+
+# Agent files
+AGENTS.md
 
 # Python caching
 __pycache__/

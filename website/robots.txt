@@ -1,4 +1,40 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://utsavstack.github.io/YT-Deluxe/sitemap.xml
+User-agent: GPTBot
+Allow: /
+
+User-agent: Googlebot-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Yandex
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Dotbot
+Allow: /
+
+User-agent: DuckDuckGo
+Allow: /
+
+Sitemap: https://yt-deluxe.app/sitemap.xml
