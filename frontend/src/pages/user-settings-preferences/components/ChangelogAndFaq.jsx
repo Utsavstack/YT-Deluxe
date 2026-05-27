@@ -66,8 +66,32 @@ function parseChanges(body) {
   return body
     .split('\n')
     .map((l) => l.trim())
+    .map((l) => {
+      // Strip blockquote prefix if followed by a bullet
+      if (l.startsWith('>')) {
+        const after = l.slice(1).trim();
+        if (after.startsWith('- ') || after.startsWith('* ') || after.startsWith('+ ')) {
+          return after;
+        }
+      }
+      return l;
+    })
     .filter((l) => l.startsWith('- ') || l.startsWith('* ') || l.startsWith('+ '))
     .map((l) => l.slice(2).trim())
+    .filter((l) => {
+      const lower = l.toLowerCase();
+      return !lower.includes('sha-256') &&
+             !lower.includes('get-filehash') &&
+             !lower.includes('verification command') &&
+             !lower.includes('setup.exe') &&
+             !lower.includes('iscc.exe') &&
+             !lower.includes('installer') &&
+             !lower.includes('integrity');
+    })
+    .map((l) => {
+      // Strip leading commit hash link: [d78230e](https://github.com/.../commit/...) -
+      return l.replace(/^\[[a-f0-9]{7,}\]\(https:\/\/github\.com\/.*?\/commit\/[a-f0-9]+\)\s*-\s*/i, '');
+    })
     .filter(Boolean)
     .slice(0, 12);
 }
@@ -241,6 +265,7 @@ const ChangelogAndFaq = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab]     = useState('changelog');
   const [expandedFaq, setExpandedFaq] = useState(null);
+  const [expandedCard, setExpandedCard] = useState(null);
   const [changelog, setChangelog]     = useState(FALLBACK_CHANGELOG);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(false);
@@ -434,94 +459,117 @@ const ChangelogAndFaq = () => {
 
               {/* Changelog list */}
               <div className="space-y-5">
-                {changelog.map((log, index) => (
-                  <motion.div
-                    key={index}
-                    variants={itemVariants}
-                    className="glass-card p-6 border-l-4 group transition-all duration-400 hover:-translate-y-1.5 hover:shadow-glass-lg relative overflow-hidden"
-                    style={{
-                      borderLeftColor:
-                        log.type === 'latest'
-                          ? 'var(--primary)'
-                          : log.type === 'prerelease'
-                            ? '#f59e0b'
-                            : 'var(--border)',
-                    }}
-                  >
-                    {log.type === 'latest' && (
-                      <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500" />
-                    )}
+                {changelog.map((log, index) => {
+                  const isCardExpanded = expandedCard === log.version;
+                  return (
+                    <motion.div
+                      key={index}
+                      variants={itemVariants}
+                      className="glass-card p-6 border-l-4 group transition-all duration-400 hover:-translate-y-0.5 hover:shadow-glass-lg relative overflow-hidden"
+                      style={{
+                        borderLeftColor:
+                          log.type === 'latest'
+                            ? 'var(--primary)'
+                            : log.type === 'prerelease'
+                              ? '#f59e0b'
+                              : 'var(--border)',
+                      }}
+                    >
+                      {log.type === 'latest' && (
+                        <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500" />
+                      )}
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3 relative z-10">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="text-xl font-black text-foreground tracking-tight">{log.version}</h3>
-                        {log.type === 'latest' && (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 shadow-sm">
-                            {t('updates.latest', 'Latest')}
+                      {/* Interactive Header */}
+                      <div
+                        onClick={() => setExpandedCard(isCardExpanded ? null : log.version)}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10 cursor-pointer select-none"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <h3 className="text-xl font-black text-foreground tracking-tight">{log.version}</h3>
+                          {log.type === 'latest' && (
+                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 shadow-sm">
+                              {t('updates.latest', 'Latest')}
+                            </span>
+                          )}
+                          {log.type === 'prerelease' && (
+                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm">
+                              Pre-release
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 self-end sm:self-auto">
+                          {log.downloads && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Icon name="Download" size={12} />
+                              {log.downloads}
+                            </span>
+                          )}
+                          <span className="text-xs font-semibold text-muted-foreground flex items-center space-x-1.5 bg-card/50 px-3 py-1.5 rounded-lg border border-border/50">
+                            <Icon name="Calendar" size={14} />
+                            <span>{log.date}</span>
                           </span>
-                        )}
-                        {log.type === 'prerelease' && (
-                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm">
-                            Pre-release
-                          </span>
-                        )}
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${isCardExpanded ? 'bg-primary/10 text-primary' : 'bg-card/50 text-muted-foreground'}`}>
+                            <Icon name="ChevronDown" size={14} className={`transition-transform duration-300 ${isCardExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {log.downloads && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Icon name="Download" size={12} />
-                            {log.downloads}
-                          </span>
-                        )}
-                        <span className="text-xs font-semibold text-muted-foreground flex items-center space-x-1.5 bg-card/50 px-3 py-1.5 rounded-lg border border-border/50">
-                          <Icon name="Calendar" size={14} />
-                          <span>{log.date}</span>
-                        </span>
-                      </div>
-                    </div>
 
-                    {log.changes.length > 0 ? (
-                      <ul className="space-y-3 relative z-10">
-                        {log.changes.map((change, cIdx) => (
-                          <li
-                            key={cIdx}
-                            className="flex items-start space-x-3 text-sm text-muted-foreground group-hover:text-foreground/90 transition-colors duration-300"
+                      {/* Collapsible Content */}
+                      <AnimatePresence initial={false}>
+                        {isCardExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="overflow-hidden mt-5 pt-5 border-t border-border/20"
                           >
-                            <Icon name="CheckCircle" size={16} className="mt-0.5 text-primary/70 shrink-0" />
-                            <span className="leading-relaxed">{change}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground/50 italic relative z-10">No release notes available.</p>
-                    )}
+                            {log.changes.length > 0 ? (
+                              <ul className="space-y-3 relative z-10">
+                                {log.changes.map((change, cIdx) => (
+                                  <li
+                                    key={cIdx}
+                                    className="flex items-start space-x-3 text-sm text-muted-foreground hover:text-foreground/90 transition-colors duration-300"
+                                  >
+                                    <Icon name="CheckCircle" size={16} className="mt-0.5 text-primary/70 shrink-0" />
+                                    <span className="leading-relaxed">{change}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-muted-foreground/50 italic relative z-10">No release notes available.</p>
+                            )}
 
-                    {log.downloadUrl && (
-                      <div className="mt-5 relative z-10 flex gap-4">
-                        <a
-                          href={log.downloadUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs text-primary/80 hover:text-primary font-semibold transition-colors"
-                        >
-                          <Icon name="Download" size={13} />
-                          Download {log.version}
-                        </a>
-                        {log.htmlUrl && (
-                          <a
-                            href={log.htmlUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <Icon name="ExternalLink" size={12} />
-                            GitHub
-                          </a>
+                            {log.downloadUrl && (
+                              <div className="mt-5 relative z-10 flex gap-4">
+                                <a
+                                  href={log.downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs text-primary/80 hover:text-primary font-semibold transition-colors"
+                                >
+                                  <Icon name="Download" size={13} />
+                                  Download {log.version}
+                                </a>
+                                {log.htmlUrl && (
+                                  <a
+                                    href={log.htmlUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    <Icon name="ExternalLink" size={12} />
+                                    GitHub
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </motion.div>
                         )}
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               <motion.div variants={itemVariants} className="text-center pt-2">

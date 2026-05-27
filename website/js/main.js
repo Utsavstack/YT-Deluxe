@@ -17,7 +17,7 @@ const FALLBACK_LATEST = {
     size: '~85 MB',
     date: 'May 2026',
     downloads: '—',
-    sha256: 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590',
+    sha256: 'F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC',
     exeName: 'YT-Deluxe-Setup-v2.0.0.exe',
     changelog: '## v2.0.0\n- Dynamic Piped API Proxy Integration\n- Two-phase fast details loading\n- Premium Liquid Glass layout'
 };
@@ -60,7 +60,7 @@ async function fetchLatestRelease() {
         const totalDl = r.assets.reduce((sum, a) => sum + (a.download_count || 0), 0);
 
         const shaMatch = (r.body || '').match(/SHA-256.*?:?\s*([a-fA-F0-9]{64})/i);
-        const sha256 = shaMatch ? shaMatch[1].toUpperCase() : 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590';
+        const sha256 = shaMatch ? shaMatch[1].toUpperCase() : 'F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC';
 
         const data = {
             version:     r.tag_name,
@@ -155,7 +155,7 @@ async function renderRelease() {
 
     // Dynamic SHA-256 Hash and Command
     const shaHashEl = document.getElementById('dynamic-sha-hash');
-    if (shaHashEl) shaHashEl.textContent = release.sha256 || 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590';
+    if (shaHashEl) shaHashEl.textContent = release.sha256 || 'F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC';
 
     const shaCmdEl = document.getElementById('dynamic-sha-cmd');
     if (shaCmdEl) {
@@ -203,7 +203,7 @@ function renderIndexChangelog(releases) {
             ? `<span class="px-2 py-1 rounded-md bg-[#5584ff]/10 border border-[#5584ff]/20 text-xs font-semibold text-[#5584ff] flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>${r.downloads} downloads</span>`
             : '';
 
-        return `<div class="changelog-item ${r.isLatest ? 'is-open' : ''} bg-[#0a0a0c] border border-white/[0.04] rounded-[2.5rem] hover:bg-[#0f0f11] transition-colors group cursor-pointer overflow-hidden reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 ${i > 0 ? 'delay-' + (i * 100) : ''}">
+        return `<div class="changelog-item bg-[#0a0a0c] border border-white/[0.04] rounded-[2.5rem] hover:bg-[#0f0f11] transition-colors group cursor-pointer overflow-hidden reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 ${i > 0 ? 'delay-' + (i * 100) : ''}">
             <button class="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-5 md:px-8 outline-none text-left">
                 <div class="flex items-center space-x-4">
                     ${badge}
@@ -332,12 +332,24 @@ async function renderUpdatesPage() {
     // -- Release Notes (latest release body rendered as markdown) --
     const releaseNotesEl = document.getElementById('release-notes-body');
     if (releaseNotesEl && latest.changelog) {
+        // Strip out the build guide and duplicate verification cards from website notes
+        let cleanedChangelog = latest.changelog;
+        
+        // 1. Remove the build guide section
+        cleanedChangelog = cleanedChangelog.replace(/###?\s*.*?(?:Release Integrity|Hash Generation Guide)[\s\S]*?(?=---\s*\n|$)/gi, '');
+        
+        // 2. Remove the duplicate Verify Download Integrity blockquote
+        cleanedChangelog = cleanedChangelog.replace(/>\s*\[!IMPORTANT\]\s*\n>\s*\*\*Verify Download Integrity[\s\S]*?Get-FileHash[\s\S]*?```/gi, '');
+        
+        // 3. Remove trailing/multiple consecutive dividers if any
+        cleanedChangelog = cleanedChangelog.replace(/---\s*\n\s*---/g, '---').trim();
+
         if (typeof marked !== 'undefined') {
-            releaseNotesEl.innerHTML = marked.parse(latest.changelog);
+            releaseNotesEl.innerHTML = marked.parse(cleanedChangelog);
         } else {
             // Fallback: simple line rendering
             releaseNotesEl.innerHTML = '<ul class="space-y-2">' +
-                parseChangelogBullets(latest.changelog)
+                parseChangelogBullets(cleanedChangelog)
                     .map(b => `<li class="flex items-start gap-2 text-sm text-white/60">
                         <svg class="w-4 h-4 text-accent shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         ${b}</li>`).join('') +
@@ -352,7 +364,7 @@ async function renderUpdatesPage() {
 
         // Dynamic SHA-256 Hash and Command on Updates Page
         const shaHashEl = document.getElementById('dynamic-sha-hash');
-        if (shaHashEl) shaHashEl.textContent = latest.sha256 || 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590';
+        if (shaHashEl) shaHashEl.textContent = latest.sha256 || 'F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC';
 
         const shaCmdEl = document.getElementById('dynamic-sha-cmd');
         if (shaCmdEl) {
@@ -369,9 +381,33 @@ function parseChangelogBullets(body) {
     if (!body) return [];
     return body.split('\n')
         .map(line => line.trim())
-        .filter(line => line.startsWith('- ') || line.startsWith('* ') || line.startsWith('+ '))
         .map(line => {
-            let text = line.slice(2).trim();
+            // Strip blockquote prefix if followed by a bullet
+            if (line.startsWith('>')) {
+                const after = line.slice(1).trim();
+                if (after.startsWith('- ') || after.startsWith('* ') || after.startsWith('+ ')) {
+                    return after;
+                }
+            }
+            return line;
+        })
+        .filter(line => line.startsWith('- ') || line.startsWith('* ') || line.startsWith('+ '))
+        .map(line => line.slice(2).trim())
+        .filter(text => {
+            const lower = text.toLowerCase();
+            return !lower.includes('sha-256') &&
+                   !lower.includes('get-filehash') &&
+                   !lower.includes('verification command') &&
+                   !lower.includes('setup.exe') &&
+                   !lower.includes('iscc.exe') &&
+                   !lower.includes('installer') &&
+                   !lower.includes('integrity');
+        })
+        .map(text => {
+            // Strip leading commit hash link: [d78230e](https://github.com/.../commit/...) -
+            return text.replace(/^\[[a-f0-9]{7,}\]\(https:\/\/github\.com\/.*?\/commit\/[a-f0-9]+\)\s*-\s*/i, '');
+        })
+        .map(text => {
             // Parse **bold** to <strong>bold</strong>
             text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white/90">$1</strong>');
             // Parse `code` to <code>code</code>

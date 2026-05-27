@@ -114,6 +114,7 @@
 - [10.4 Build UI Launcher via PyInstaller](#104-build-ui-launcher-via-pyinstaller)
 - [10.5 Post-Build Testing (Port 8000 Conflict Awareness)](#105-post-build-testing-port-8000-conflict-awareness)
 - [10.6 Create the Final Setup Installer (Inno Setup)](#106-create-the-final-setup-installer-inno-setup)
+- [10.7 Distribution Integrity & SHA-256 Verification](#107-distribution-integrity--sha-256-verification)
 
 </details>
 
@@ -2908,6 +2909,51 @@ To generate the distribution `.exe` that users can install on any Windows machin
 - **Path Verification**: Bundles the `backend/dist/main` and `desktop/dist/YT-Deluxe` assets into a single compressed package (~84MB).
 - **Permission Hardening**: Configures the app to redirect all write operations (temp files and history) to the user's `%TEMP%` and `%USERPROFILE%` directories, dodging `WinError 5: Access Denied` errors common in installed apps.
 - **Standardized Deployment**: Creates Start Menu and Desktop shortcuts with the high-res app icon, and includes a clean uninstaller.
+
+### 10.7 Distribution Integrity & SHA-256 Verification
+
+To guarantee that the distributed installer has not been tampered with or corrupted during distribution, every release follows a strict integrity pipeline based on three core operations: **Build**, **Run**, and **Check**.
+
+#### 10.7.1 The "Build, Run, Check" Release Integrity Pipeline
+
+```mermaid
+flowchart TD
+    Build[Phase 1: Build\nCompile Desktop Installer] --> Run[Phase 2: Run\nGenerate SHA-256 Checksum]
+    Run --> Check[Phase 3: Check\nVerify Download Integrity]
+```
+
+##### 🛠️ Phase 1: Build (Compile Desktop Installer)
+The installer is built using Inno Setup 6 compiler by packaging the React frontend, FastAPI backend, and desktop UI wrapper.
+
+1. Open a PowerShell terminal in the project root directory.
+2. Run the compiler tool command to compile and generate `YT-Deluxe-Setup-v2.0.0.exe` under the `desktop/installer/Output/` folder:
+   ```powershell
+   & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "desktop/installer/setup.iss"
+   ```
+
+##### 🏃 Phase 2: Run (Generate SHA-256 Checksum)
+Once the build is complete, calculate the cryptographic hash value of the installer on the build machine.
+
+1. Compute the SHA-256 hash using the following native command in PowerShell:
+   ```powershell
+   Get-FileHash "D:\MyProject Reserve\30-9-25_Experimental\yt-deluxe\desktop\installer\Output\YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256 | Select-Object Hash
+   ```
+2. The output lists the cryptographic fingerprint. For the official release v2.0.0, this is:
+   ```text
+   F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC
+   ```
+
+##### 🔍 Phase 3: Check (Verify Download Integrity)
+Before running the executable installer on any target machine, users can perform a security sanity check to guarantee the file was not altered.
+
+1. Open PowerShell and run this check command:
+   ```powershell
+   Get-FileHash "YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256
+   ```
+2. Compare the output hash with the official publication hash:
+   - **Official Hash**: `F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC`
+   - If the hashes match, the installer is verified safe and intact.
+   - If they do not match, **do not execute** the installer, as it is corrupt or compromised.
 
 ---
 

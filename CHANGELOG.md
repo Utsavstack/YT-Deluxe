@@ -47,7 +47,7 @@ When building a new release, follow these step-by-step instructions in English t
 
 > [!IMPORTANT]
 > **Verify Download Integrity (v2.0.0)**
-> - **SHA-256 (Setup.exe)**: `C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590`
+> - **SHA-256 (Setup.exe)**: `F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC`
 > - **Verification Command (PowerShell)**:
 >   ```powershell
 >   Get-FileHash "YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256
