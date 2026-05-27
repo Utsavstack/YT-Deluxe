@@ -31,13 +31,13 @@ YT-Deluxe is a free YouTube video downloader for PC. It is the best open source 
 
 ## Key Links
 
-- Homepage: https://yt-deluxe.app/
+- Homepage: https://ytdeluxe.app/
 - Download (GitHub Releases): https://github.com/Utsavstack/YT-Deluxe/releases
 - Source Code: https://github.com/Utsavstack/YT-Deluxe
-- Features Overview: https://yt-deluxe.app/features.html
-- Changelog and FAQ: https://yt-deluxe.app/updates.html
-- Privacy Policy: https://yt-deluxe.app/privacy.html
-- Sitemap: https://yt-deluxe.app/sitemap.xml
+- Features Overview: https://ytdeluxe.app/features.html
+- Changelog and FAQ: https://ytdeluxe.app/updates.html
+- Privacy Policy: https://ytdeluxe.app/privacy.html
+- Sitemap: https://ytdeluxe.app/sitemap.xml
 - License: GPL-3.0
 
 ## Frequently Asked Questions

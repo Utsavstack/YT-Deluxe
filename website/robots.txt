@@ -37,4 +37,4 @@ Allow: /
 User-agent: DuckDuckGo
 Allow: /
 
-Sitemap: https://yt-deluxe.app/sitemap.xml
+Sitemap: https://ytdeluxe.app/sitemap.xml
