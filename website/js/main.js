@@ -12,12 +12,14 @@ const CACHE_TTL        = 60 * 60 * 1000; // 1 hour
 const PAGE_VIEWS_KEY   = 'ytdeluxe_page_views';
 
 const FALLBACK_LATEST = {
-    version: 'v1.0.0-beta',
+    version: 'v2.0.0',
     downloadUrl: `https://github.com/${REPO}/releases/latest`,
     size: '~85 MB',
     date: 'May 2026',
     downloads: '—',
-    changelog: '## v1.0.0-beta\n- Initial Public Beta Release of YT Deluxe\n- Premium Liquid Glass UI\n- Multi-language support\n- Precision Lossless Trimmer'
+    sha256: 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590',
+    exeName: 'YT-Deluxe-Setup-v2.0.0.exe',
+    changelog: '## v2.0.0\n- Dynamic Piped API Proxy Integration\n- Two-phase fast details loading\n- Premium Liquid Glass layout'
 };
 
 // ============================================================
@@ -57,6 +59,9 @@ async function fetchLatestRelease() {
         // Total downloads across all assets
         const totalDl = r.assets.reduce((sum, a) => sum + (a.download_count || 0), 0);
 
+        const shaMatch = (r.body || '').match(/SHA-256.*?:?\s*([a-fA-F0-9]{64})/i);
+        const sha256 = shaMatch ? shaMatch[1].toUpperCase() : 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590';
+
         const data = {
             version:     r.tag_name,
             downloadUrl: exe ? exe.browser_download_url : `https://github.com/${REPO}/releases/tag/${r.tag_name}`,
@@ -65,7 +70,9 @@ async function fetchLatestRelease() {
             downloadCount: totalDl,
             changelog:   r.body || '',
             date:        new Date(r.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
-            htmlUrl:     r.html_url
+            htmlUrl:     r.html_url,
+            sha256:      sha256,
+            exeName:     exe ? exe.name : `YT-Deluxe-Setup-${r.tag_name}.exe`
         };
         localStorage.setItem(CACHE_KEY_LATEST, JSON.stringify({ data, timestamp: Date.now() }));
         return data;
@@ -145,6 +152,16 @@ async function renderRelease() {
 
     const mainDownloadMeta = document.getElementById('main-download-meta');
     if (mainDownloadMeta) mainDownloadMeta.textContent = `${release.version} \u2022 ${release.date}`;
+
+    // Dynamic SHA-256 Hash and Command
+    const shaHashEl = document.getElementById('dynamic-sha-hash');
+    if (shaHashEl) shaHashEl.textContent = release.sha256 || 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590';
+
+    const shaCmdEl = document.getElementById('dynamic-sha-cmd');
+    if (shaCmdEl) {
+        const exeName = release.exeName || `YT-Deluxe-Setup-${release.version}.exe`;
+        shaCmdEl.textContent = `Get-FileHash "${exeName}" -Algorithm SHA256`;
+    }
 
     // Analytics stats
     const statDownloads = document.getElementById('stat-downloads');
@@ -332,6 +349,16 @@ async function renderUpdatesPage() {
         if (releaseDateEl) releaseDateEl.textContent = latest.date;
         const releaseDownloadBtn = document.getElementById('release-notes-download');
         if (releaseDownloadBtn) releaseDownloadBtn.href = latest.downloadUrl;
+
+        // Dynamic SHA-256 Hash and Command on Updates Page
+        const shaHashEl = document.getElementById('dynamic-sha-hash');
+        if (shaHashEl) shaHashEl.textContent = latest.sha256 || 'C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590';
+
+        const shaCmdEl = document.getElementById('dynamic-sha-cmd');
+        if (shaCmdEl) {
+            const exeName = latest.exeName || `YT-Deluxe-Setup-${latest.version}.exe`;
+            shaCmdEl.textContent = `Get-FileHash "${exeName}" -Algorithm SHA256`;
+        }
     }
 }
 
@@ -388,6 +415,27 @@ window.toggleVersionCard = function(btn) {
         body.style.maxHeight = '0px';
         chevron && chevron.classList.remove('rotate-180');
     }
+};
+
+// ============================================================
+// Clipboard Utility: Copy text and show success feedback
+// ============================================================
+window.copyToClipboard = function(elementId, btn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = el.textContent || el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        // Success feedback: turn copy icon into a green checkmark
+        const originalSVG = btn.innerHTML;
+        btn.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+        btn.classList.add('bg-emerald-500/10');
+        setTimeout(() => {
+            btn.innerHTML = originalSVG;
+            btn.classList.remove('bg-[#5584ff]/10', 'bg-emerald-500/10');
+        }, 1500);
+    }).catch(err => {
+        console.error('[YT-Deluxe] Copy failed:', err);
+    });
 };
 
 // ============================================================

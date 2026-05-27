@@ -856,6 +856,37 @@
                 <p id="main-download-meta" class="text-sm text-white/50 font-medium tracking-wide"></p>
             </div>
 
+            <!-- Integrity Verification -->
+            <div class="mt-8 max-w-xl mx-auto bg-white/[0.02] border border-white/[0.06] rounded-[1rem] p-6 text-left text-sm backdrop-blur-md relative z-20 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-100">
+                <h4 class="text-white font-bold mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    Verify Download Integrity
+                </h4>
+                <div class="space-y-3 font-sans text-white/70">
+                    <div>
+                        <span class="text-xs text-white/40 block uppercase tracking-wider font-semibold">SHA-256 Checksum</span>
+                        <div class="relative mt-1">
+                            <code id="dynamic-sha-hash" class="block bg-black/40 border border-white/[0.08] pl-3 pr-10 py-2.5 rounded-md text-emerald-400 font-mono text-[11px] break-all select-all">C2235A35C48CAAE27CF210814273AA9BDEB39B0366079CEA78C74FDB2442E590</code>
+                            <button onclick="copyToClipboard('dynamic-sha-hash', this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 p-1.5 transition-colors rounded hover:bg-white/5" title="Copy Checksum">
+                                <svg class="copy-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-white/40 block uppercase tracking-wider font-semibold">Verification Command (PowerShell)</span>
+                        <div class="relative mt-1">
+                            <code id="dynamic-sha-cmd" class="block bg-black/40 border border-white/[0.08] pl-3 pr-10 py-2.5 rounded-md text-white/80 font-mono text-[11px] break-all select-all">Get-FileHash "YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256</code>
+                            <button onclick="copyToClipboard('dynamic-sha-cmd', this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 p-1.5 transition-colors rounded hover:bg-white/5" title="Copy Command">
+                                <svg class="copy-icon w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-white/45 text-xs leading-relaxed mt-4 border-t border-white/[0.04] pt-4">
+                        <strong>Why verify?</strong> A SHA-256 checksum acts as a unique digital fingerprint of the installer file. By comparing your locally computed hash using PowerShell with the official one above, you guarantee that the file was not corrupted during download, modified by a third party, or tampered with by malware.
+                    </p>
+                </div>
+            </div>
+
             <!-- System Requirements -->
             <div class="mt-10 max-w-xl mx-auto border-t border-white/[0.06] pt-8 reveal-on-scroll opacity-0 translate-y-8 scale-95 transition-all duration-700 delay-200">
                 <h3 class="text-xl font-bold text-white mb-6 flex items-center justify-center gap-2">
