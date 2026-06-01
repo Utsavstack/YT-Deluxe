@@ -18,6 +18,8 @@ import LicenseAndDisclaimer from './components/LicenseAndDisclaimer';
 import { useTheme } from '../../utils/ThemeContext';
 import { YTDeluxeStorage, STORAGE_KEYS } from '../../utils/storage';
 import { getAllPermissions, resetPermission, resetAllPermissions, PERMISSION_META, PERMISSIONS } from '../../utils/permissions';
+import { useUpdateCheck } from '../../hooks/useUpdateCheck';
+import { UpdateBanner } from '../../components/ui/UpdateBanner';
 
 // ── Auto-reads from package.json — just bump version there, no manual UI updates needed
 const APP_VERSION = `v${import.meta.env.VITE_APP_VERSION || import.meta.env.PACKAGE_VERSION || '1.0.0-beta'}`;
@@ -28,6 +30,8 @@ const UserSettingsPreferences = () => {
   const [activeSection, setActiveSection] = useState('account');
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { hasUnseenUpdate, updateData } = useUpdateCheck();
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
   // Mock user data
   const [user, setUser] = useState({
@@ -80,12 +84,12 @@ const UserSettingsPreferences = () => {
     { id: 'theme', label: t('nav.theme'), icon: 'Palette', description: t('nav.themeDesc') },
     { id: 'downloads', label: t('nav.downloads'), icon: 'Download', description: t('nav.downloadsDesc') },
     { id: 'language', label: t('nav.language'), icon: 'Globe', description: t('nav.languageDesc') },
-    { id: 'permissions', label: 'App Permissions', icon: 'ShieldCheck', description: 'Manage permissions' },
     { id: 'about', label: t('nav.about'), icon: 'Info', description: t('nav.aboutDesc') },
+    { id: 'updates', label: t('nav.updates', 'Updates & FAQ'), icon: 'Zap', description: t('nav.updatesDesc', 'Changelog and support') },
+    { id: 'permissions', label: 'App Permissions', icon: 'ShieldCheck', description: 'Manage permissions' },
     { id: 'privacy', label: t('nav.privacy'), icon: 'Shield', description: t('nav.privacyDesc') },
     { id: 'terms', label: t('nav.terms'), icon: 'FileText', description: t('nav.termsDesc') },
     { id: 'license', label: t('nav.license', 'License & Disclaimer'), icon: 'Scale', description: t('nav.licenseDesc', 'Legal terms and licenses') },
-    { id: 'updates', label: t('nav.updates', 'Updates & FAQ'), icon: 'Zap', description: t('nav.updatesDesc', 'Changelog and support') },
     { id: 'report', label: 'Report a Problem', icon: 'Bug', description: 'Bug reports & known issues' },
   ];
 
@@ -132,14 +136,22 @@ const UserSettingsPreferences = () => {
   // Persist ALL download preferences to storage on every change
   const handleDownloadPreferencesChange = (updated) => {
     setDownloadPreferences(updated);
+    // Save full prefs object — backend will extract downloadPath + organizeFolders
+    // and sync both to Windows registry automatically (see /api/settings/:key handler)
     YTDeluxeStorage.setItem(STORAGE_KEYS.DOWNLOAD_PREFS, updated);
-    // Also keep download path in its dedicated key (used by the download API)
+
+    // Also keep download path in its dedicated key (used by the download API + history recovery)
     if (updated.downloadPath !== undefined) {
       YTDeluxeStorage.setItem(STORAGE_KEYS.DOWNLOAD_PATH, updated.downloadPath);
     }
-    // Keep organize_folders in its dedicated key (read directly by api.js)
+
+    // Keep organize_folders in its dedicated key:
+    //   - localStorage  → read instantly by api.js for every download
+    //   - YTDeluxeStorage (backend) → triggers registry sync so installer and
+    //     in-app Settings never diverge
     if (updated.organizeFolders !== undefined) {
       localStorage.setItem('ytdeluxe_organize_folders', updated.organizeFolders ? 'true' : 'false');
+      YTDeluxeStorage.setItem('ytdeluxe_organize_folders', updated.organizeFolders);
     }
   };
 
@@ -215,9 +227,9 @@ const UserSettingsPreferences = () => {
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4"
+              className="mb-8 mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4 relative"
             >
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-glass-md">
                   <Icon name="Settings2" size={20} />
                 </div>
@@ -226,6 +238,19 @@ const UserSettingsPreferences = () => {
                   <p className="text-xs text-muted-foreground">{t('settings.subtitle')}</p>
                 </div>
               </div>
+              
+              {/* Global Update Banner */}
+              {hasUnseenUpdate && updateData && !isBannerDismissed && activeSection !== 'updates' && (
+                <div className="flex-1 flex justify-center w-full md:absolute md:left-1/2 md:-translate-x-1/2 pointer-events-none mt-4 md:mt-0">
+                  <div className="pointer-events-auto">
+                    <UpdateBanner 
+                      latestRelease={updateData} 
+                      onDismiss={() => setIsBannerDismissed(true)} 
+                      className="mb-0"
+                    />
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8 mt-4">
@@ -240,7 +265,7 @@ const UserSettingsPreferences = () => {
                   <div className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
                     {t('settings.configMap')}
                   </div>
-                  <nav className="space-y-1">
+                  <nav className="space-y-2 max-h-[60vh] overflow-y-auto overscroll-contain pr-4">
                     {settingSections?.map((section) => (
                       <motion.button
                         key={section?.id}
@@ -248,7 +273,7 @@ const UserSettingsPreferences = () => {
                         whileHover={{ x: 5 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setActiveSection(section?.id)}
-                        className={`w-full group flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-all duration-300 relative overflow-hidden ${activeSection === section?.id
+                        className={`w-full group flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left transition-all duration-300 relative overflow-hidden ${activeSection === section?.id
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'glass border-transparent hover:border-primary/20 hover:bg-primary/5 text-foreground'
                           }`}
@@ -269,6 +294,9 @@ const UserSettingsPreferences = () => {
                             </p>
                           </div>
                         </div>
+                        {section?.id === 'updates' && hasUnseenUpdate && (
+                          <span className="absolute top-[10px] right-[10px] w-[6px] h-[6px] rounded-full bg-primary shadow-[0_0_6px_theme(colors.primary.DEFAULT)]" />
+                        )}
                       </motion.button>
                     ))}
                   </nav>

@@ -17,14 +17,14 @@ When building a new release, follow these step-by-step instructions in English t
 2. **Compute SHA-256 Checksum**
    Generate the integrity hash by executing the following command in PowerShell:
    ```powershell
-   Get-FileHash "D:\MyProject Reserve\30-9-25_Experimental\yt-deluxe\desktop\installer\Output\YT-Deluxe-Setup-v<Version>.exe" -Algorithm SHA256 | Select-Object Hash
+   Get-FileHash "C:\Path\To\YT-Deluxe\desktop\installer\Output\YT-Deluxe-Setup-v<Version>.exe" -Algorithm SHA256 | Select-Object Hash
    ```
    *Copy the hexadecimal hash value from the console output.*
 
 3. **Publish to GitHub Releases**
    In the GitHub release notes / description block, paste the following integrity verification card:
    ```markdown
-   ## ✅ Verify Download Integrity
+   **Verify Download Integrity**
    - **SHA-256 (Setup.exe)**: <Hex-Hash-Value>
    - **Verification Command (PowerShell)**:
      ```powershell
@@ -35,7 +35,7 @@ When building a new release, follow these step-by-step instructions in English t
 ---
 
 
-## 2.0 [2026-05-27] Latest
+## 2.0 [2026-06-01] Latest
 
 > [!NOTE]
 > **Major Release: UI/UX, Performance, Security!**
@@ -47,7 +47,7 @@ When building a new release, follow these step-by-step instructions in English t
 
 > [!IMPORTANT]
 > **Verify Download Integrity (v2.0.0)**
-> - **SHA-256 (Setup.exe)**: `F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC`
+> - **SHA-256 (Setup.exe)**: `6400AFE8C6D81E58911D58BD4AE9F0D2756811E946BD0E6F1BA376954C1BBB2A`
 > - **Verification Command (PowerShell)**:
 >   ```powershell
 >   Get-FileHash "YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256

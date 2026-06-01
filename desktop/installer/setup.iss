@@ -42,6 +42,7 @@ DisableDirPage=no
 DisableWelcomePage=no
 UsePreviousAppDir=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayName={#MyAppName} v{#MyAppVersion}
 UsedUserAreasWarning=no
 
 ; Custom banner images
@@ -78,6 +79,7 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Registry]
 ; Store installer version for future reference
 Root: HKCU; Subkey: "Software\YTDeluxe"; ValueType: string; ValueName: "InstallerVersion"; ValueData: "{#MyAppVersion}"; Flags: uninsdeletekey
+
 
 [Run]
 ; Post-install: launch the app
@@ -250,9 +252,7 @@ begin
   FeaturesLabel.Left := WizardForm.WelcomeLabel2.Left;
   FeaturesLabel.Top := ScaleY(128);
   FeaturesLabel.Caption :=
-    '────────────────────────────────────' + #13#10 +
     'YT Deluxe  |  Free && Open-Source YouTube Media Downloader' + #13#10 +
-    '────────────────────────────────────' + #13#10 + #13#10 +
     '  • 100% Free && No Ads' + #13#10 +
     '  • Premium Glassy UI' + #13#10 +
     '  • Privacy-First (No Tracking, No Accounts)' + #13#10 +
@@ -579,6 +579,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   DownloadBase: String;
+  WebCachePath: String;
 begin
   if CurStep = ssInstall then
   begin
@@ -589,6 +590,19 @@ begin
     end
     else
       Log('WebView2 already installed. Skipping.');
+
+    // --- FIX FOR EXISTING USERS: Clear WebView2 HTTP Cache on Upgrade ---
+    // This ensures that users upgrading from older versions don't see stale
+    // cached JS/CSS files and get the latest UI immediately.
+    // It only deletes the browser cache, NOT the user's settings or app data.
+    WebCachePath := ExpandConstant('{userappdata}\YT Deluxe\webview_storage\EBWebView\Default');
+    if DirExists(WebCachePath) then
+    begin
+      DelTree(WebCachePath + '\Cache', True, True, True);
+      DelTree(WebCachePath + '\Code Cache', True, True, True);
+      DelTree(WebCachePath + '\Service Worker', True, True, True);
+      Log('Cleared WebView2 HTTP cache for seamless upgrade.');
+    end;
 
     WizardForm.StatusLabel.Caption := 'Installing core files...';
     WizardForm.StatusLabel.Update;
@@ -638,6 +652,18 @@ begin
 
     Log('User preferences saved to registry.');
     Log('Download folder created at: ' + DownloadBase);
+
+    // Enable "Modify" button in Windows Apps & Features
+    // Inno Setup sets NoModify=1 by default; we override it here (post-install)
+    // so the Modify button is active and calls unins000.exe /modify
+    RegWriteDWordValue(HKLM,
+      'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B8F3A2E1-7C4D-4E5F-9A6B-1D2E3F4A5B6C}_is1',
+      'NoModify', 0);
+    RegWriteStringValue(HKLM,
+      'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B8F3A2E1-7C4D-4E5F-9A6B-1D2E3F4A5B6C}_is1',
+      'ModifyPath',
+      '"' + ExpandConstant('{app}\unins000.exe') + '" /modify');
+    Log('Modify button enabled in Apps & Features.');
   end;
 end;
 
@@ -710,7 +736,76 @@ begin
   end;
 end;
 
-function InitializeSetup: Boolean;
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// InitializeUninstall — Intercept /modify flag to show Modify wizard
+// Windows calls unins000.exe /modify when the user clicks "Modify" in
+// Apps & Features. We detect this in InitializeUninstall and show a
+// data-clearing wizard, then exit without touching app files.
+// ═══════════════════════════════════════════════════════════════════════════════
+function InitializeUninstall: Boolean;
+var
+  ParamVal: String;
+  MsgResult: Integer;
+  AppDataPath: String;
+  LocalAppDataPath: String;
+  ClearChoice: Integer;
 begin
   Result := True;
+
+  ParamVal := LowerCase(ParamStr(1));
+
+  // Detect when Windows Apps calls setup with /modify
+  if (ParamVal = '/modify') or (ParamVal = '-modify') then
+  begin
+    // Show the Modify / Reset dialog
+    ClearChoice := MsgBox(
+      'YT Deluxe App: Modify / Reset' + #13#10 +
+      'What would you like to do?' + #13#10 + #13#10 +
+      '[Yes]    Clear app data and cache' + #13#10 +
+      '         (download history, settings, temp files)' + #13#10 + #13#10 +
+      '[No]     Cancel the process',
+      mbConfirmation, MB_YESNO);
+
+    if ClearChoice = IDYES then
+    begin
+      // 1. Kill app if running
+      ShellExec('', 'taskkill.exe', '/F /IM YT-Deluxe.exe', '', SW_HIDE, ewWaitUntilTerminated, MsgResult);
+      ShellExec('', 'taskkill.exe', '/F /IM main.exe',       '', SW_HIDE, ewWaitUntilTerminated, MsgResult);
+
+      // 2. Clear APPDATA\YT-Deluxe  (download history DB, settings.json, etc.)
+      AppDataPath := ExpandConstant('{userappdata}\YT-Deluxe');
+      if DirExists(AppDataPath) then
+      begin
+        DelTree(AppDataPath, True, True, True);
+        Log('Cleared AppData: ' + AppDataPath);
+      end;
+
+      // 3. Clear LOCALAPPDATA\YT-Deluxe  (cache, WebView2 profile, etc.)
+      LocalAppDataPath := ExpandConstant('{localappdata}\YT-Deluxe');
+      if DirExists(LocalAppDataPath) then
+      begin
+        DelTree(LocalAppDataPath, True, True, True);
+        Log('Cleared LocalAppData: ' + LocalAppDataPath);
+      end;
+
+      // 4. Clear registry settings (download path, preferences)
+      RegDeleteKeyIncludingSubkeys(HKEY_CURRENT_USER, 'Software\YTDeluxe');
+      Log('Cleared registry key: Software\YTDeluxe');
+
+      MsgBox(
+        'YT Deluxe has been reset successfully.' + #13#10 + #13#10 +
+        'The following data was cleared:' + #13#10 +
+        '  • Download history' + #13#10 +
+        '  • App settings & preferences' + #13#10 +
+        '  • Cache & temporary files' + #13#10 + #13#10 +
+        'Launch the app to start fresh.',
+        mbInformation, MB_OK);
+    end;
+
+    // Exit setup immediately — do NOT install anything
+    Result := False;
+    Exit;
+  end;
 end;

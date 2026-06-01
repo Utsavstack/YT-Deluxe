@@ -134,7 +134,26 @@ class YTDeluxeAPI {
       // Always send convert_to_mp3 (defaults false on backend)
       formData.append('convert_to_mp3', downloadConfig.convert_to_mp3 ? 'true' : 'false');
 
-      const downloadPath = localStorage.getItem('ytdeluxe_download_path');
+      // ── Resolve download path ────────────────────────────────────────────────
+      // Priority: (1) localStorage (set by Settings UI), (2) backend unified
+      // effective path (merges installer registry + settings.json), (3) nothing.
+      let downloadPath = localStorage.getItem('ytdeluxe_download_path') || '';
+      if (!downloadPath && isDesktop) {
+        try {
+          const resp = await fetch(`${API_BASE_URL}/api/desktop/settings`);
+          if (resp.ok) {
+            const ds = await resp.json();
+            if (ds && ds.download_path) {
+              downloadPath = ds.download_path;
+              // Cache it in localStorage so next call is instant
+              localStorage.setItem('ytdeluxe_download_path', downloadPath);
+              if (typeof ds.auto_organize === 'boolean') {
+                localStorage.setItem('ytdeluxe_organize_folders', ds.auto_organize ? 'true' : 'false');
+              }
+            }
+          }
+        } catch { /* ignore — non-fatal */ }
+      }
       if (downloadPath) {
         formData.append('download_path', downloadPath);
       }
@@ -335,6 +354,55 @@ class YTDeluxeAPI {
     } else {
       // Otherwise, do a keyword search
       return this.searchVideos(query, page, nextpage);
+    }
+  }
+
+  // ── Update Notification Helpers ──────────────────────────────────────────
+  static normalizeVersion(v = '') {
+    return v.toLowerCase().trim().replace(/^v/, '').replace(/\s+/g, '-');
+  }
+
+  static isNewVersionAvailable(latest, installed) {
+    if (!latest || !installed) return false;
+    return this.normalizeVersion(latest) !== this.normalizeVersion(installed);
+  }
+
+  // 24h Update Check
+  static async checkForUpdateOnce(installedVer) {
+    const REPO = 'Utsavstack/YT-Deluxe';
+    const UPDATE_CHECK_KEY = 'ytdeluxe_update_check';
+    const UPDATE_CHECK_TTL = 24 * 60 * 60 * 1000;
+
+    try {
+      const raw = localStorage.getItem(UPDATE_CHECK_KEY);
+      if (raw) {
+        const { result, timestamp } = JSON.parse(raw);
+        if (Date.now() - timestamp < UPDATE_CHECK_TTL) {
+          return result;
+        }
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+      if (!res.ok) return null;
+      const r = await res.json();
+      const exe =
+        r.assets.find((a) => a.name.toLowerCase().includes('setup') && a.name.endsWith('.exe')) ||
+        r.assets.find((a) => a.name.endsWith('.exe'));
+
+      const result = {
+        hasUpdate: this.isNewVersionAvailable(r.tag_name, installedVer),
+        version: r.tag_name,
+        date: new Date(r.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
+        downloadUrl: exe ? exe.browser_download_url : `https://github.com/${REPO}/releases/tag/${r.tag_name}`,
+        htmlUrl: r.html_url,
+      };
+
+      localStorage.setItem(UPDATE_CHECK_KEY, JSON.stringify({ result, timestamp: Date.now() }));
+      return result;
+    } catch {
+      return null;
     }
   }
 }

@@ -5,12 +5,14 @@ import Icon from '../AppIcon';
 import ThemeToggle from './ThemeToggle';
 import { useDownloadContext } from '../../context/DownloadContext';
 import { formatTime } from '../../utils/dateFormat';
+import { useUpdateCheck } from '../../hooks/useUpdateCheck';
 
 const Header = ({ isScrolled: isScrolledProp }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [internalScrolled, setInternalScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { hasUnseenUpdate } = useUpdateCheck();
 
   // Notification bell state
   const { downloads, activeCount, bellColor, cancelDownload, pauseDownload, resumeDownload, dismissDownload, clearHistory } = useDownloadContext();
@@ -274,6 +276,9 @@ const Header = ({ isScrolled: isScrolledProp }) => {
                           )}
                           <Icon name={item?.icon} size={16} className={isActive ? 'text-blue-600 dark:text-blue-400' : ''} />
                           <span>{item?.label}</span>
+                          {item.path === '/user-settings-preferences' && hasUnseenUpdate && (
+                            <span className="absolute top-[8px] right-[10px] w-[6px] h-[6px] rounded-full bg-primary shadow-[0_0_6px_theme(colors.primary.DEFAULT)]" />
+                          )}
                         </button>
                       );
                     })}

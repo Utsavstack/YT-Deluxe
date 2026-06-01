@@ -48,9 +48,9 @@ export const TheInfiniteGrid = () => {
       </motion.div>
 
       <div className="absolute inset-0">
-        <div className="absolute right-[-15%] top-[-15%] w-[40%] h-[40%] rounded-full bg-orange-500/80 dark:bg-orange-600/50 blur-[120px]" />
-        <div className="absolute right-[10%] top-[-10%] w-[20%] h-[20%] rounded-full bg-primary/40 blur-[100px]" />
-        <div className="absolute left-[-15%] top-[-15%] w-[40%] h-[40%] rounded-full bg-blue-500/80 dark:bg-blue-600/50 blur-[120px]" />
+        <div className="absolute right-[-15%] top-[-15%] w-[40%] h-[40%] rounded-full bg-orange-500/80 dark:bg-violet-600/30 blur-[120px] transition-colors duration-700" />
+        <div className="absolute right-[10%] top-[-10%] w-[20%] h-[20%] rounded-full bg-primary/40 blur-[100px] transition-colors duration-700" />
+        <div className="absolute left-[-15%] top-[-15%] w-[40%] h-[40%] rounded-full bg-blue-500/80 dark:bg-blue-600/40 blur-[120px] transition-colors duration-700" />
       </div>
     </div>
   );

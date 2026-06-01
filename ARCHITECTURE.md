@@ -63,6 +63,10 @@
 - [5.7 Hosted Web Application Architecture](#57-hosted-web-application-architecture)
 - [5.8 Native Windows Desktop Architecture](#58-native-windows-desktop-architecture)
 - [5.9 System Architecture & Workflows](#59-system-architecture--workflows)
+- [5.9.4 AppData-Based History Persistence](#594-appdata-based-history-persistence)
+- [5.9.5 Multi-Source Settings Sync Architecture](#595-multi-source-settings-sync-architecture)
+- [5.9.6 Installer Update Lifecycle & WebView2 Cache Strategy](#596-installer-update-lifecycle--webview2-cache-strategy)
+- [5.9.7 In-App Update Notification System](#597-in-app-update-notification-system)
 
 </details>
 
@@ -246,6 +250,7 @@ yt-deluxe/
 │       │   │   ├── ThemeToggle.jsx         # Dark/light mode toggle
 │       │   │   ├── UndoToast.jsx           # Undo action toast
 │       │   │   ├── WifiLoader.jsx          # Connection spinner
+│       │   │   ├── UpdateBanner.jsx        # In-app update notification banner
 │       │   │   └── the-infinite-grid.jsx   # Animated background grid
 │       │   ├── AppIcon.jsx     # Dynamic app icon component
 │       │   ├── AppImage.jsx    # Lazy image with fallback
@@ -263,6 +268,8 @@ yt-deluxe/
 │       │   ├── hi.json         # Hindi
 │       │   ├── de.json         # German
 │       │   └── hg.json         # Hinglish
+│       ├── hooks/              # Custom React hooks
+│       │   └── useUpdateCheck.js # Update availability & unseen state hook
 │       └── utils/              # Utility modules
 │           ├── api.js          # Backend API communication client
 │           ├── dataCache.js    # In-memory cache for search & trending
@@ -1290,17 +1297,17 @@ sequenceDiagram
 
     Note over UI: User toggles "Separate files" OFF (default)
     UI->>LS: ytdeluxe_organize_folders = "false"
-    UI->>LS: ytdeluxe_download_path = "C:\Users\OM\Downloads"
+    UI->>LS: ytdeluxe_download_path = "C:\Users\Username\Downloads"
 
     Note over UI: User clicks Download
     API->>LS: Read organize_folders → "false"
-    API->>LS: Read download_path → "C:\Users\OM\Downloads"
+    API->>LS: Read download_path → "C:\Users\Username\Downloads"
     API->>BE: POST /api/download {organize_folders=false, download_path=...}
 
     BE->>BE: organize_folders is not None → use explicit false
     BE->>BE: download_path is valid dir → use as base_dir
     BE->>BE: use_subfolders = false → TARGET_DIR = base_dir
-    BE->>FS: Save to C:\Users\OM\Downloads\video.mp4
+    BE->>FS: Save to C:\Users\Username\Downloads\video.mp4
 
     Note over API: If organize_folders was NOT sent (resume/batch)
     BE->>REG: Read AutoOrganize → "0"
@@ -2463,6 +2470,322 @@ graph TD
 - **Desktop Cache (24 Hours):** The installed app checks for updates in the background. To save massive bandwidth and preserve API quotas, the app only pings GitHub once every 24 hours.
 - **Markdown Parsing:** The JavaScript engine natively intercepts GitHub's raw markdown changelog, parses `**bold**` and `` `code` `` tags, and dynamically renders fluid, collapsible UI accordions without any server-side rendering.
 
+#### 5.9.4 AppData-Based History Persistence
+
+*How download history is stored so it survives reinstalls, EXE rebuilds, and PyInstaller temp-folder changes.*
+
+In the packaged EXE build, PyInstaller extracts all bundled files into a temporary folder (`_MEIPASSXX`) whose path changes on every reinstall. Any history file written relative to that path is permanently lost. The architecture adopts **Windows AppData** as the single persistent storage location for all runtime user data.
+
+**Key principle:** History is written and read exclusively via an HTTP API endpoint never by direct filesystem access from the frontend. This makes the storage path transparent to the frontend and identical in behaviour between dev mode (Python process) and packaged EXE.
+
+```mermaid
+flowchart TD
+    subgraph Backend["backend/main.py"]
+        A["_get_appdata_dir()"] --> B["%APPDATA%\\YTDeluxe\\ created if missing"]
+        B --> C["HISTORY_FILE = AppData/YTDeluxe/download_history.json"]
+    end
+
+    subgraph Endpoints["HTTP Endpoints"]
+        D["GET /api/history"] --> E["Read HISTORY_FILE → return JSON"]
+        F["download_worker() completes"] --> G["Append entry → write HISTORY_FILE"]
+        H["DELETE /api/history/:id"] --> I["Filter entry → rewrite HISTORY_FILE"]
+    end
+
+    subgraph Frontend["frontend/src/utils/api.js"]
+        J["APIClient.getHistory()"] --> K["fetch('/api/history')"] --> E
+        L["History page mounts"] --> J
+    end
+
+    subgraph SPA["SPA Catch-All Route"]
+        M["GET /{any non-api path}"] --> N{"Starts with 'api/'?"}
+        N -- No --> O["Return index.html → React Router handles"]
+        N -- Yes --> P["404 JSON"]
+    end
+
+    style C fill:#1e3a5f,color:#7dd3fc
+    style O fill:#1e3a5f,color:#7dd3fc
+```
+
+**Path stability across environments:**
+
+| Environment | `os.getcwd()` | `%APPDATA%\YTDeluxe\` |
+|---|---|---|
+| Dev (`python main.py`) | Project root | ✅ Stable |
+| EXE (first run) | `_MEIPASS` temp dir | ✅ Stable |
+| EXE (after reinstall) | New `_MEIPASS` temp dir | ✅ Stable |
+| EXE (drive letter changed) | New `_MEIPASS` temp dir | ✅ Stable |
+
+**SPA Fallback Route:** A catch-all `GET /{full_path}` route was added to `main.py` so that React Router deep-links (e.g. `/history`, `/settings`) resolve correctly when the user refreshes the page inside the EXE they get `index.html` back, not a 404.
+
+**Files involved:**
+| File | Change |
+|---|---|
+| `backend/main.py` | `_get_appdata_dir()` helper; `HISTORY_FILE` constant; `GET /api/history` endpoint; SPA catch-all route |
+| `frontend/src/utils/api.js` | `APIClient.getHistory()` fetches over HTTP instead of direct file read |
+| `frontend/src/pages/download-history-management/index.jsx` | Calls `APIClient.getHistory()` on mount |
+
+---
+
+#### 5.9.5 Multi-Source Settings Sync Architecture
+
+*How installer-written settings and in-app settings are kept in sync, and how history entries remain accessible even when the download folder moves.*
+
+Previously, the Inno Setup installer wrote the download path to the Windows Registry, while the in-app Settings page read from `localStorage`. They were two independent stores that never talked to each other. This caused newly installed versions to use the wrong download path until the user opened Settings and saved again.
+
+The new architecture establishes a **three-source priority chain** for resolving the download directory, and a **multi-path search** for locating history entries regardless of which path the user currently uses.
+
+```mermaid
+flowchart TD
+    subgraph Sources["Download Path Sources (Priority Order)"]
+        S1["1. Frontend POST body\n(download_path from Settings UI)"]
+        S2["2. Windows Registry\nHKCU\\Software\\YTDeluxe\\DownloadPath"]
+        S3["3. System Downloads folder\n(os.path.expanduser fallback)"]
+    end
+
+    S1 --> R{"download_path\nin request?"}
+    R -- Yes --> USE["base_dir = request value"]
+    R -- No --> S2
+    S2 --> R2{"Registry key\nexists & valid?"}
+    R2 -- Yes --> USE
+    R2 -- No --> S3 --> USE
+
+    subgraph MultiPath["_get_all_known_download_dirs() History File Search"]
+        M1["Read Registry DownloadPath"]
+        M2["Read AppData config.json DownloadPath"]
+        M3["Expand each base: /Videos, /Music, /Thumbnails subfolders"]
+        M4["Deduplicate (os.path.normpath)"]
+        M1 & M2 --> M3 --> M4
+        M4 --> SEARCH["Search all dirs for history entry filename"]
+    end
+
+    USE --> DOWNLOAD["Download worker saves file"]
+    SEARCH --> EXISTS{"File found?"}
+    EXISTS -- Yes --> SHOW["History entry: file_exists = true"]
+    EXISTS -- No --> MISSING["History entry: file_exists = false\n(shown as missing badge, not removed)"]
+
+    style USE fill:#14532d,color:#86efac
+    style MISSING fill:#7c2d12,color:#fdba74
+```
+
+**Settings write-through (Frontend → Registry):**
+
+When the user saves their download path in Settings, `api.js` sends it as `download_path` in the POST body to every download call. The backend's `download_worker()` receives this as the authoritative value no Registry lookup needed mid-session. On the next app start, the value is read back from Registry (written by the installer or a previous session) and pre-filled into the Settings UI.
+
+```mermaid
+sequenceDiagram
+    participant UI as DownloadPreferences.jsx
+    participant LS as localStorage / YTDeluxeStorage
+    participant API as api.js
+    participant BE as backend/main.py
+    participant REG as Windows Registry
+
+    UI->>LS: Save download_path on change
+    Note over UI: User clicks Download
+    API->>LS: Read download_path
+    API->>BE: POST /api/download {download_path=C:\Users\...\Downloads}
+    BE->>BE: download_path in request → use directly (skip Registry)
+    BE->>REG: (No read needed explicit value wins)
+    Note over BE: File saved to correct path
+
+    Note over UI: App restarts
+    UI->>BE: GET /api/settings/download_path
+    BE->>REG: Read HKCU\Software\YTDeluxe\DownloadPath
+    BE-->>UI: Saved path pre-filled in Settings
+```
+
+**Files involved:**
+| File | Change |
+|---|---|
+| `backend/main.py` | `_get_all_known_download_dirs()` multi-path search; three-source priority chain in `download_worker()` |
+| `frontend/src/pages/user-settings-preferences/components/DownloadPreferences.jsx` | Reads Registry path on mount via `apiClient.getDownloadPreferences()` |
+| `frontend/src/utils/api.js` | Always sends `download_path` in every download POST |
+
+---
+
+#### 5.9.6 Installer Update Lifecycle & WebView2 Cache Strategy
+
+*How the Inno Setup installer handles upgrades, the "Modify" repair flow, and why WebView2's HTTP cache is cleared on every update.*
+
+PyWebView uses the installed Edge/Chromium WebView2 runtime, which maintains an on-disk HTTP cache at `%LOCALAPPDATA%\YTDeluxe\EBWebView\Default\Cache`. When a new version is installed, the runtime may serve stale JS/CSS bundles from this cache instead of the freshly copied build causing the new version to behave identically to the old one until the user manually clears the cache.
+
+The installer now **automatically clears this cache** during every upgrade via the `CurStepChanged(ssInstall)` hook.
+
+```mermaid
+flowchart TD
+    subgraph Install["Inno Setup: CurStepChanged(ssInstall)"]
+        A["Install step begins"] --> B{"IsUpgrade()\nRegistry version check"}
+        B -- "Upgrade" --> C["Clear WebView2 HTTP cache\n%LOCALAPPDATA%\\YTDeluxe\\EBWebView\\Default\\Cache"]
+        B -- "Fresh install" --> D["Skip cache clear\n(no cache exists yet)"]
+        C --> E["Continue installation"]
+        D --> E
+        E --> F["Write InstallerVersion to Registry\nHKCU\\Software\\YTDeluxe\\InstallerVersion"]
+        F --> G["Write DownloadPath to Registry\n(from installer wizard page)"]
+        G --> H["App files copied to install dir"]
+    end
+
+    subgraph Modify["Inno Setup: /modify flag (Repair Flow)"]
+        I["User opens Apps & Features"] --> J["Clicks 'Modify' button"]
+        J --> K["Installer launches with /modify"]
+        K --> L["CurPageChanged detects /modify"]
+        L --> M["Show Modify/Reset dialog:\n1. Reset to Defaults\n2. Repair Installation\n3. Cancel"]
+        M --> N{"Choice"}
+        N -- "Reset" --> O["Delete AppData\\YTDeluxe\\config.json\nClear Registry preferences"]
+        N -- "Repair" --> P["Re-run ssInstall\nWebView2 cache cleared"]
+        N -- "Cancel" --> Q["Abort installer"]
+    end
+
+    subgraph Registry["Registry Keys Written"]
+        R1["InstallerVersion: 2.x.x"]
+        R2["DownloadPath: C:\\Users\\...\\Downloads"]
+        R3["AutoOrganize: 0 or 1"]
+        R4["ModifyPath: {app}\\YTDeluxe.exe /modify"]
+    end
+
+    H --> Registry
+
+    style C fill:#7c2d12,color:#fdba74
+    style O fill:#7c2d12,color:#fdba74
+```
+
+**Why WebView2 cache clear is necessary:**
+
+| Without cache clear | With cache clear |
+|---|---|
+| Old JS bundle served from disk cache | Fresh JS bundle loaded from new install |
+| History page may use outdated API client | API client matches new backend endpoints |
+| Settings page may miss new UI sections | All settings sections rendered correctly |
+| Requires user to manually clear cache | Transparent user notices nothing |
+
+**Registry key inventory:**
+
+| Key | Written by | Read by | Purpose |
+|---|---|---|---|
+| `DownloadPath` | Installer wizard, Settings save | `download_worker()` | Download destination |
+| `AutoOrganize` | Installer wizard, Settings save | `download_worker()` | Subfolder organization toggle |
+| `InstallerVersion` | Installer `CurStepChanged` | `IsUpgrade()` function | Detects upgrade vs fresh install |
+| `ModifyPath` | Installer `[Registry]` section | Windows Apps & Features | Enables "Modify" button in control panel |
+
+**Files involved:**
+| File | Change |
+|---|---|
+| `desktop/installer/setup.iss` | `WebCachePath` variable; `DelTree()` cache clear in `CurStepChanged`; `ModifyPath` registry key; `UninstallDisplayName` with version; Modify/Reset dialog handler |
+
+---
+
+#### 5.9.7 In-App Update Notification System
+
+*How the app detects a new release, surfaces it exactly once, and shares that state across the Header navigation dot and the Settings page banner without prop-drilling.*
+
+The update check logic previously lived inline in `ChangelogAndFaq.jsx` and was not shared with any other component. The new architecture extracts it into a dedicated React hook (`useUpdateCheck`) that acts as the **single source of truth** for update state across the entire app.
+
+```mermaid
+flowchart TD
+    subgraph Hook["useUpdateCheck.js (custom hook)"]
+        A["Hook mounts"] --> B["APIClient.checkForUpdateOnce(installedVer)"]
+        B --> C{"localStorage:\nytdeluxe_update_check\nexpired or missing?"}
+        C -- "Fresh (< 24h)" --> D["Return cached result instantly"]
+        C -- "Expired / missing" --> E["fetch api.github.com/releases/latest"]
+        E --> F["Compare latest tag vs window.__APP_VERSION__"]
+        F --> G["Save result to localStorage with timestamp"]
+        G --> H{"hasUpdate?"}
+        D --> H
+        H -- Yes --> I["setHasUnseenUpdate(true)\nsetUpdateData({version, url})"]
+        H -- No --> J["setHasUnseenUpdate(false)"]
+    end
+
+    subgraph Consumers["Hook Consumers"]
+        K["Header.jsx"] --> L["useUpdateCheck()\n→ hasUnseenUpdate"]
+        M["user-settings-preferences/index.jsx"] --> N["useUpdateCheck()\n→ hasUnseenUpdate + updateData"]
+    end
+
+    subgraph UI["Update Surface Components"]
+        L --> O["Red dot on Settings nav icon\n(always visible in header)"]
+        L --> P["Red dot on Changelog menu item\n(inside Config Map nav)"]
+        N --> Q["UpdateBanner.jsx\nAnimated banner above settings sections"]
+    end
+
+    subgraph Dismiss["Dismissal Flow"]
+        R["User clicks 'Download' in banner\nor 'Check for Updates' in Changelog"] --> S["APIClient.clearUpdateCache()"]
+        S --> T["Remove ytdeluxe_update_check\nRemove ytdeluxe_unseen_update_version"]
+        T --> U["setHasUnseenUpdate(false)"]
+        U --> V["All dots + banner disappear"]
+    end
+
+    style I fill:#1e3a5f,color:#7dd3fc
+    style V fill:#14532d,color:#86efac
+```
+
+**`checkForUpdateOnce` caching strategy (`api.js`):**
+
+```
+first call in session:
+  → check localStorage ytdeluxe_update_check
+  → if missing or expired (> 24h): fetch GitHub API → save with timestamp
+  → compare version strings semver-style
+  → return { hasUpdate, latestVersion, releaseUrl }
+
+subsequent calls in same session:
+  → localStorage hit → return cached result (0ms, no network)
+```
+
+**Version comparison:** Uses a numeric tuple comparison `(major, minor, patch)` not string comparison so `2.10.0 > 2.9.0` resolves correctly.
+
+**Update notification surface map:**
+
+| Surface | Component | Condition | Dismiss action |
+|---|---|---|---|
+| Header Settings icon dot | `Header.jsx` | `hasUnseenUpdate = true` | User clicks Changelog → "Check for Updates" |
+| Changelog nav item dot | `index.jsx` (sidebar) | `hasUnseenUpdate = true` + section id = `changelog` | Same as above |
+| Settings page banner | `UpdateBanner.jsx` | `hasUnseenUpdate = true` + `updateData != null` | Click Download or ✕ dismiss |
+
+**`UpdateBanner.jsx` Component Design:**
+
+The banner is a `framer-motion` animated card injected between the Settings page header and the section navigation. It renders:
+- Ambient glow orb (primary color, blurred)
+- Version string (`New version available: vX.X.X`)
+- "Download" button → opens GitHub release page via `window.pywebview.api` (desktop) or `window.open` (web)
+- ✕ dismiss button → calls `onDismiss()` → `setHasUnseenUpdate(false)` locally
+
+```mermaid
+sequenceDiagram
+    participant App as App (mounts)
+    participant Hook as useUpdateCheck
+    participant LS as localStorage
+    participant GH as GitHub API
+    participant Header
+    participant Settings
+
+    App->>Hook: mount (Header + Settings both call useUpdateCheck)
+    Hook->>LS: read ytdeluxe_update_check
+    LS-->>Hook: expired / missing
+    Hook->>GH: fetch /releases/latest
+    GH-->>Hook: {tag_name: "v2.1.0", ...}
+    Hook->>Hook: compare v2.1.0 > v2.0.0 → hasUpdate = true
+    Hook->>LS: save result + timestamp
+    Hook-->>Header: hasUnseenUpdate = true → red dot renders
+    Hook-->>Settings: hasUnseenUpdate = true + updateData → banner renders
+
+    Note over Header,Settings: User opens Settings page
+    Settings->>Settings: UpdateBanner visible
+    Settings->>GH: (no new fetch 24h cache still valid)
+
+    Note over Settings: User clicks "Download"
+    Settings->>LS: clearUpdateCache()
+    Settings->>Hook: setHasUnseenUpdate(false)
+    Hook-->>Header: hasUnseenUpdate = false → dot gone
+    Hook-->>Settings: banner unmounts
+```
+
+**Files involved:**
+| File | Role |
+|---|---|
+| `frontend/src/hooks/useUpdateCheck.js` | Custom hook central update state, 24h cache, version comparison |
+| `frontend/src/utils/api.js` | `checkForUpdateOnce()` + `clearUpdateCache()` static methods |
+| `frontend/src/components/ui/UpdateBanner.jsx` | Animated update banner component |
+| `frontend/src/components/ui/Header.jsx` | Consumes `useUpdateCheck` → renders notification dot on Settings nav |
+| `frontend/src/pages/user-settings-preferences/index.jsx` | Consumes `useUpdateCheck` → renders `UpdateBanner` + Changelog dot |
+| `frontend/src/pages/user-settings-preferences/components/ChangelogAndFaq.jsx` | "Check for Updates" button calls `clearUpdateCache()` to dismiss all notifications |
+
 ---
 
 ## 6. Installation and Setup (Local Development)
@@ -2829,7 +3152,7 @@ Before building (or before replacing `backend/ffmpeg.exe` with a newer version),
 
 **Verify before building:**
 ```powershell
-# Run from repo root — must match hash above exactly
+# Run from repo root must match hash above exactly
 Get-FileHash "backend\ffmpeg.exe" -Algorithm SHA256 | Select-Object Hash
 ```
 
@@ -2894,7 +3217,7 @@ To generate the distribution `.exe` that users can install on any Windows machin
 
    ```powershell
    # Automate the entire 4-step build from terminal root:
-   cd "d:\MyProject Reserve\30-9-25_Experimental\yt-deluxe"
+   cd "C:\Path\To\YT-Deluxe"
    
    cd frontend && npm run build && cd ..
    cd backend && .venv\Scripts\pyinstaller.exe main.spec --clean -y && cd ..
@@ -2936,7 +3259,7 @@ Once the build is complete, calculate the cryptographic hash value of the instal
 
 1. Compute the SHA-256 hash using the following native command in PowerShell:
    ```powershell
-   Get-FileHash "D:\MyProject Reserve\30-9-25_Experimental\yt-deluxe\desktop\installer\Output\YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256 | Select-Object Hash
+   Get-FileHash "C:\Path\To\YT-Deluxe\desktop\installer\Output\YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256 | Select-Object Hash
    ```
 2. The output lists the cryptographic fingerprint. For the official release v2.0.0, this is:
    ```text
@@ -2951,7 +3274,7 @@ Before running the executable installer on any target machine, users can perform
    Get-FileHash "YT-Deluxe-Setup-v2.0.0.exe" -Algorithm SHA256
    ```
 2. Compare the output hash with the official publication hash:
-   - **Official Hash**: `F03055B6ED82662FA73E4803931F6CD853F75E79736D3EC36581271A3B94FCCC`
+   - **Official Hash**: `6400AFE8C6D81E58911D58BD4AE9F0D2756811E946BD0E6F1BA376954C1BBB2A`
    - If the hashes match, the installer is verified safe and intact.
    - If they do not match, **do not execute** the installer, as it is corrupt or compromised.
 

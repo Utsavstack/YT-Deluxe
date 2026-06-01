@@ -9,13 +9,52 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
   const { t } = useTranslation();
   const [downloadPrefs, setDownloadPrefs] = useState(preferences || {});
 
+  const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+
+  // Sync preferences when parent updates them
   useEffect(() => {
     if (preferences) {
       setDownloadPrefs(preferences);
     }
   }, [preferences]);
 
-  const isDesktop = typeof window !== 'undefined' && window.pywebview !== undefined;
+  // On desktop: fetch the effective unified path from backend on mount.
+  // This merges installer registry + in-app settings.json so the two
+  // sources never show different values.
+  useEffect(() => {
+    if (!isDesktop) return;
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+    fetch(`${API_BASE}/api/desktop/settings`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.download_path) {
+          // Update local state + localStorage + parent so all consumers are consistent
+          const effectivePath = data.download_path;
+          const effectiveOrganize = typeof data.auto_organize === 'boolean'
+            ? data.auto_organize
+            : (localStorage.getItem('ytdeluxe_organize_folders') === 'true');
+
+          // Only update if it differs from what parent already loaded
+          setDownloadPrefs(prev => {
+            const needsUpdate =
+              prev.downloadPath !== effectivePath ||
+              prev.organizeFolders !== effectiveOrganize;
+            if (!needsUpdate) return prev;
+            const updated = { ...prev, downloadPath: effectivePath, organizeFolders: effectiveOrganize };
+            // Sync localStorage
+            localStorage.setItem('ytdeluxe_download_path', effectivePath);
+            localStorage.setItem('ytdeluxe_organize_folders', effectiveOrganize ? 'true' : 'false');
+            // Notify parent so api.js picks up the correct path for next download
+            if (typeof onPreferencesChange === 'function') {
+              onPreferencesChange(updated);
+            }
+            return updated;
+          });
+        }
+      })
+      .catch(() => { /* ignore — backend may not be running in dev mode */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDesktop]);
 
   const namingConventionOptions = [
     { value: 'title', label: 'Video Title', description: 'Use original video title' },
@@ -30,8 +69,27 @@ const DownloadPreferences = ({ preferences, onPreferencesChange }) => {
     if (typeof onPreferencesChange === 'function') {
       onPreferencesChange(updated);
     }
-    if (key === 'downloadPath') {
+    // Sync individual changed keys to backend (→ registry) immediately.
+    // The parent's onPreferencesChange also persists the full prefs object,
+    // but writing individual keys here ensures registry is updated even if
+    // the parent handler is replaced or delayed.
+    if (key === 'downloadPath' && value) {
       localStorage.setItem('ytdeluxe_download_path', value);
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+      fetch(`${API_BASE}/api/settings/ytdeluxe_download_path`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value })
+      }).catch(() => {});
+    }
+    if (key === 'organizeFolders') {
+      localStorage.setItem('ytdeluxe_organize_folders', value ? 'true' : 'false');
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+      fetch(`${API_BASE}/api/settings/ytdeluxe_organize_folders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value })
+      }).catch(() => {});
     }
   };
 

@@ -110,27 +110,181 @@ def get_desktop_registry_settings():
     Reads installer-written preferences from the Windows registry.
     Returns a dict with 'download_path' and 'auto_organize' (bool).
     Fallback: system Downloads folder, no folder organization.
+
+    Priority order for download_path:
+      1. Registry (set by installer OR by the app itself when user changes in Settings)
+      2. app settings.json (ytdeluxe_download_path key)
+      3. System Downloads folder
     """
     result = {'download_path': get_downloads_folder(), 'auto_organize': False}
     if os.name != 'nt':
+        # Non-Windows: try settings.json only
+        try:
+            settings_path = get_settings_file_path()
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r') as _f:
+                    _s = json.load(_f)
+                _p = _s.get('ytdeluxe_download_path', '')
+                if _p and os.path.isdir(_p):
+                    result['download_path'] = _p
+        except Exception:
+            pass
         return result
+
+    # Windows: Registry takes highest priority
+    registry_path = None
+    registry_organize = None
     try:
         import winreg
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\YTDeluxe\Settings') as key:
             try:
                 path_val = winreg.QueryValueEx(key, 'DownloadPath')[0]
                 if path_val and os.path.isdir(path_val):
-                    result['download_path'] = path_val
+                    registry_path = path_val
             except Exception:
                 pass
             try:
                 org_val = winreg.QueryValueEx(key, 'AutoOrganize')[0]
-                result['auto_organize'] = str(org_val).strip() == '1'
+                registry_organize = str(org_val).strip() == '1'
             except Exception:
                 pass
     except Exception:
         pass
+
+    # If registry has a valid path, use it
+    if registry_path:
+        result['download_path'] = registry_path
+    else:
+        # Fallback: try settings.json (user may have set path via app Settings UI)
+        try:
+            settings_path = get_settings_file_path()
+            if os.path.exists(settings_path):
+                with open(settings_path, 'r') as _f:
+                    _s = json.load(_f)
+                _p = _s.get('ytdeluxe_download_path', '')
+                if _p and os.path.isdir(_p):
+                    result['download_path'] = _p
+        except Exception:
+            pass
+
+    if registry_organize is not None:
+        result['auto_organize'] = registry_organize
     return result
+
+
+def set_desktop_registry_setting(key_name: str, value: str):
+    """
+    Writes a value to HKCU\\Software\\YTDeluxe\\Settings in the Windows registry.
+    Used to keep installer registry and in-app Settings in sync.
+    No-op on non-Windows systems.
+    """
+    if os.name != 'nt':
+        return
+    try:
+        import winreg
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, r'Software\YTDeluxe\Settings') as key:
+            winreg.SetValueEx(key, key_name, 0, winreg.REG_SZ, str(value))
+    except Exception as e:
+        logger.warning(f'[Registry] Could not write {key_name}: {e}')
+
+
+def _get_all_known_download_dirs(old_filepath: str = None) -> list:
+    """
+    Returns ALL directories where downloads might be stored, in priority order.
+    Checks BOTH registry AND settings.json independently (they may differ if user
+    changed path in installer vs in-app Settings without the two syncing yet).
+
+    Search order:
+      1. Old file's parent directory (file may still be nearby on same drive)
+      2. Old file's grandparent directory (in case file was in Videos/ subfolder)
+      3. Registry DownloadPath (installer-set)  + its type subfolders
+      4. App settings.json ytdeluxe_download_path  + its type subfolders
+      5. App settings.json ytdeluxe_download_preferences.downloadPath  + subfolders
+      6. System Downloads folder  + its type subfolders
+    """
+    dirs = []
+    seen = set()
+
+    TYPE_SUBFOLDERS = ('Videos', 'Music', 'Thumbnails')
+
+    def _add(d):
+        """Add directory and its type subfolders, deduplicating."""
+        if not d or d in seen:
+            return
+        seen.add(d)
+        dirs.append(d)
+        for sub in TYPE_SUBFOLDERS:
+            sub_path = os.path.join(d, sub)
+            if sub_path not in seen:
+                seen.add(sub_path)
+                dirs.append(sub_path)
+
+    # 1 & 2. Old filepath context — search nearby first (handles drive change where
+    # the file is still on the same drive in a different folder)
+    if old_filepath:
+        old_parent = os.path.dirname(old_filepath)
+        _add(old_parent)
+        grandparent = os.path.dirname(old_parent)
+        if grandparent and grandparent != old_parent:
+            _add(grandparent)
+
+    # 3. Registry path — read DIRECTLY (not through merged helper) so we always
+    # get the raw installer/registry value even if settings.json differs
+    if os.name == 'nt':
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\YTDeluxe\Settings') as _rk:
+                try:
+                    _rp = winreg.QueryValueEx(_rk, 'DownloadPath')[0]
+                    if _rp and os.path.isdir(_rp):
+                        _add(_rp)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # 4 & 5. App settings.json — read DIRECTLY so we get both dedicated key and
+    # the download-preferences blob (in case they point to different directories)
+    try:
+        settings_file = get_settings_file_path()
+        if os.path.exists(settings_file):
+            with open(settings_file, 'r') as _sf:
+                _s = json.load(_sf)
+            # Dedicated download-path key
+            _sp = _s.get('ytdeluxe_download_path', '')
+            if _sp and os.path.isdir(_sp):
+                _add(_sp)
+            # Download-preferences blob
+            _prefs = _s.get('ytdeluxe_download_preferences', {})
+            if isinstance(_prefs, dict):
+                _pp = _prefs.get('downloadPath', '')
+                if _pp and os.path.isdir(_pp):
+                    _add(_pp)
+    except Exception:
+        pass
+
+    # 6. System Downloads folder (last resort)
+    _add(get_downloads_folder())
+
+    return dirs
+
+
+def _find_file_in_download_dirs(filename: str, old_filepath: str = None) -> str:
+    """
+    Searches for `filename` across all known download directories.
+    Pass `old_filepath` so the search starts near the file's original location
+    (e.g., same drive, nearby folder) before widening to the configured paths.
+    Returns the full path if found, else None.
+    """
+    if not filename:
+        return None
+    for directory in _get_all_known_download_dirs(old_filepath):
+        if not os.path.isdir(directory):
+            continue
+        candidate = os.path.join(directory, filename)
+        if os.path.exists(candidate):
+            return candidate
+    return None
 
 bgutil_process = None
 
@@ -2642,30 +2796,54 @@ def load_history():
 def get_history():
   global download_history
 
-  # Filter out entries where the file has been manually deleted from disk.
-  # We only check entries that have a filepath (desktop downloads).
-  # Web entries (no filepath, or filepath in temp dir) are kept as-is.
+  # ── Smart filepath recovery ────────────────────────────────────────────────
+  # Rules:
+  #   1. File at original filepath → keep, mark file_exists=True
+  #   2. File not at original path but found in known download dirs → update
+  #      filepath automatically (handles folder-change scenario)
+  #   3. File not found anywhere → keep in history, mark file_exists=False
+  #      (user may restore from backup / reconnect drive — don't auto-purge)
+  #   4. No filepath (web-mode entry) → keep, mark file_exists=None
+  # We only persist back to disk when a filepath was actually updated (case 2).
   valid_history = []
-  orphaned = False
+  path_updated = False
 
   for item in download_history:
     filepath = item.get("filepath")
-    if filepath:
-      exists = os.path.exists(filepath)
-      if not exists:
-        # File was manually deleted — remove from history entirely
-        orphaned = True
-        print(f"[History] Purging orphaned entry: {item.get('title', 'Unknown')} ({filepath})")
-        continue
-      # File exists: include it with the flag
-      valid_history.append({ **item, "file_exists": True })
-    else:
-      # Web mode or no path — keep entry, mark as N/A
-      valid_history.append({ **item, "file_exists": None })
 
-  # Persist the cleaned-up list if any orphaned entries were removed
-  if orphaned:
-    download_history = valid_history
+    if not filepath:
+      # Web mode / no path — keep as-is
+      valid_history.append({**item, "file_exists": None})
+      continue
+
+    if os.path.exists(filepath):
+      # ✅ Case 1: file at original path
+      valid_history.append({**item, "file_exists": True})
+      continue
+
+    # File not at original path — try to recover
+    filename = item.get("filename")
+    new_path = _find_file_in_download_dirs(filename, old_filepath=filepath)
+
+    if new_path:
+      # ✅ Case 2: found in a different folder (download folder changed)
+      logger.info(f"[History] Recovered '{item.get('title', 'Unknown')}': {filepath} → {new_path}")
+      print(f"[History] Recovered '{item.get('title', 'Unknown')}': {filepath} → {new_path}")
+      updated_item = {**item, "filepath": new_path, "file_exists": True}
+      valid_history.append(updated_item)
+      path_updated = True
+    else:
+      # ⚠️ Case 3: file truly not found anywhere — keep entry, flag missing
+      # Don't purge; user may restore/reconnect the drive later.
+      print(f"[History] Missing file (kept): {item.get('title', 'Unknown')} ({filepath})")
+      valid_history.append({**item, "file_exists": False})
+
+  # Persist only if filepaths were updated
+  if path_updated:
+    download_history = [
+      {k: v for k, v in i.items() if k != "file_exists"}
+      for i in valid_history
+    ]
     save_history()
 
   return {"history": valid_history}
@@ -2749,11 +2927,104 @@ async def save_setting(key: str, request: Request):
     if os.path.exists(path):
       with open(path, "r") as f:
         settings = json.load(f)
-    
+
     settings[key] = value
     with open(path, "w") as f:
       json.dump(settings, f, indent=2)
+
+    # ── Registry sync: keep installer registry in sync with in-app settings ──
+    # When the user changes the download path or organize setting via the Settings UI,
+    # update the Windows registry too so the two sources never diverge.
+    if key == 'ytdeluxe_download_path' and isinstance(value, str) and value:
+      set_desktop_registry_setting('DownloadPath', value)
+      logger.info(f'[Settings] Synced download path to registry: {value}')
+
+    elif key == 'ytdeluxe_organize_folders':
+      organize_val = '1' if value else '0'
+      set_desktop_registry_setting('AutoOrganize', organize_val)
+      logger.info(f'[Settings] Synced AutoOrganize to registry: {organize_val}')
+
+    elif key == 'ytdeluxe_download_preferences' and isinstance(value, dict):
+      # The frontend also saves the full prefs object — extract and sync individual
+      # values to registry so installer and app settings stay in sync.
+      _dp = value.get('downloadPath', '')
+      if _dp and isinstance(_dp, str):
+        set_desktop_registry_setting('DownloadPath', _dp)
+        # Also persist in the dedicated single-key slot for easy lookup
+        settings['ytdeluxe_download_path'] = _dp
+        logger.info(f'[Settings] Synced download path (from prefs blob) to registry: {_dp}')
+      _org = value.get('organizeFolders')
+      if _org is not None:
+        organize_val = '1' if _org else '0'
+        set_desktop_registry_setting('AutoOrganize', organize_val)
+        settings['ytdeluxe_organize_folders'] = bool(_org)
+        logger.info(f'[Settings] Synced AutoOrganize (from prefs blob) to registry: {organize_val}')
+      # Re-write settings.json with the extra extracted keys
+      with open(path, 'w') as f:
+        json.dump(settings, f, indent=2)
+
     return {"status": "success"}
+  except Exception as e:
+    return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/desktop/settings")
+def get_desktop_settings():
+  """
+  Returns the EFFECTIVE unified desktop settings — merging registry + settings.json.
+  The frontend uses this on first load to populate the download path field correctly,
+  ensuring installer settings and in-app settings are always in sync.
+  """
+  try:
+    reg = get_desktop_registry_settings()
+    # Also read app settings.json for the display value
+    app_settings = {}
+    settings_path = get_settings_file_path()
+    if os.path.exists(settings_path):
+      try:
+        with open(settings_path, 'r') as f:
+          app_settings = json.load(f)
+      except Exception:
+        pass
+
+    # Effective path: registry wins, then settings.json, then system Downloads
+    effective_path = reg['download_path']
+    settings_path_val = app_settings.get('ytdeluxe_download_path', '')
+
+    # If registry and settings.json differ, sync the winner back to both
+    if settings_path_val and os.path.isdir(settings_path_val) and settings_path_val != effective_path:
+      # settings.json has a valid path that differs from registry — check which is newer
+      # For simplicity: if registry path doesn't exist but settings.json path does, prefer settings.json
+      if not os.path.isdir(effective_path):
+        effective_path = settings_path_val
+        set_desktop_registry_setting('DownloadPath', settings_path_val)
+    elif effective_path and effective_path != settings_path_val:
+      # Registry has a valid path but settings.json is out of sync — update settings.json
+      if os.path.isdir(effective_path):
+        app_settings['ytdeluxe_download_path'] = effective_path
+        try:
+          with open(get_settings_file_path(), 'w') as f:
+            json.dump(app_settings, f, indent=2)
+        except Exception:
+          pass
+
+    organize = reg['auto_organize']
+    # Override organize from settings.json — check both the dedicated key and the
+    # download-preferences blob (whichever is more recent / explicitly set).
+    if 'ytdeluxe_organize_folders' in app_settings:
+      organize = bool(app_settings['ytdeluxe_organize_folders'])
+    elif isinstance(app_settings.get('ytdeluxe_download_preferences'), dict):
+      _prefs_org = app_settings['ytdeluxe_download_preferences'].get('organizeFolders')
+      if _prefs_org is not None:
+        organize = bool(_prefs_org)
+
+    return {
+      "download_path": effective_path,
+      "auto_organize": organize,
+      # Subfolder names so frontend can display the correct folder structure preview
+      "subfolders": {"videos": "Videos", "music": "Music", "thumbnails": "Thumbnails"},
+      "source": "registry" if reg['download_path'] == effective_path else "settings"
+    }
   except Exception as e:
     return JSONResponse({"error": str(e)}, status_code=500)
 
@@ -2969,13 +3240,27 @@ if _frontend_dir and os.path.isdir(_frontend_dir):
     # SPA catch-all: any route not starting with /api/ returns index.html
     # so React Router can handle client-side navigation on page refresh
     @app.get('/{path:path}')
-    async def _spa_fallback(path: str):
+    async def _spa_fallback(path: str, request: Request):
+        from starlette.responses import Response
         # If the path matches a real static file, serve it
         file_path = os.path.join(_frontend_dir, path)
         if path and os.path.isfile(file_path):
-            return FileResponse(file_path)
-        # Otherwise serve index.html for React Router
-        return FileResponse(_index_html)
+            # Content-hashed assets (e.g. index-BXPKKB0S.js) can be cached
+            # long-term. HTML/manifest must never be cached so new chunks
+            # are discovered after an app update.
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext in ('.js', '.css', '.woff', '.woff2', '.ttf', '.ico', '.webp', '.png', '.svg'):
+                return FileResponse(file_path, headers={
+                    'Cache-Control': 'public, max-age=31536000, immutable'
+                })
+            else:
+                return FileResponse(file_path, headers={
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
+                })
+        # Otherwise serve index.html for React Router — NEVER cache it
+        return FileResponse(_index_html, headers={
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+        })
 
     print(f'[YT Deluxe] Serving frontend from: {_frontend_dir}')
 elif getattr(sys, 'frozen', False):

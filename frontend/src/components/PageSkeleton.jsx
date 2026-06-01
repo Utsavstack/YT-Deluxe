@@ -106,31 +106,80 @@ const HistorySkeleton = () => (
   <main className="pt-24 pb-32 px-4 lg:px-6">
     <div className="max-w-[1600px] mx-auto">
       {/* Modern Hero Section Skeleton */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-black/10 dark:bg-white/10 border border-border/20 p-8 md:p-12 mb-8 animate-pulse">
-        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-8 md:p-12 mb-8">
+        <div className="relative z-10 flex flex-col gap-6">
           <div className="max-w-xl space-y-4">
-            <div className="h-10 bg-black/10 dark:bg-white/10 rounded-xl w-72"></div>
-            <div className="h-6 bg-black/10 dark:bg-white/10 rounded-lg w-96"></div>
+            <div className="h-10 bg-slate-200 dark:bg-white/10 rounded-xl w-72 animate-pulse"></div>
+            <div className="h-6 bg-slate-200 dark:bg-white/10 rounded-lg w-96 animate-pulse"></div>
           </div>
-          <div className="w-full xl:w-[450px] h-[180px] bg-black/10 dark:bg-white/10 rounded-2xl"></div>
+          
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full items-stretch">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-full h-full min-h-[300px]">
+                <div className="bg-white/50 dark:bg-black/20 rounded-[2rem] border border-slate-200/50 dark:border-white/5 p-6 md:p-8 w-full h-full shadow-sm flex flex-col animate-pulse">
+                  {/* Header */}
+                  <div className="flex items-center mb-5 space-x-2.5">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-white/10" />
+                    <div className="w-32 h-5 rounded-md bg-slate-200 dark:bg-white/10" />
+                  </div>
+                  {/* Inner Content Container */}
+                  <div className="flex-1 p-4 bg-slate-100 dark:bg-white/[0.03] rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col justify-between">
+                    <div className="w-full space-y-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="w-16 h-6 rounded-full bg-slate-200/60 dark:bg-white/5" />
+                        <div className="w-32 h-6 rounded-full bg-slate-200/60 dark:bg-white/5" />
+                      </div>
+                      <div className="w-full h-3 rounded-full bg-slate-200/60 dark:bg-white/5 mb-6" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mt-4">
+                      <div className="w-full h-16 rounded-xl bg-slate-200/60 dark:bg-white/5" />
+                      <div className="w-full h-16 rounded-xl bg-slate-200/60 dark:bg-white/5" />
+                      <div className="w-full h-16 rounded-xl bg-slate-200/60 dark:bg-white/5" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Filter Bar Skeleton */}
       <div className="py-4 mb-8">
         <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
-          <div className="w-full xl:w-auto h-12 bg-black/10 dark:bg-white/10 rounded-2xl animate-pulse"></div>
+          <div className="w-full xl:w-64 h-12 bg-black/10 dark:bg-white/10 rounded-2xl animate-pulse"></div>
           <div className="w-full xl:w-[600px] h-12 bg-black/10 dark:bg-white/10 rounded-2xl animate-pulse"></div>
         </div>
       </div>
       
       {/* Main Content Area Skeleton */}
-      <div className="relative z-10 rounded-[2.5rem] bg-white/10 dark:bg-black/10 border border-black/5 dark:border-white/5 p-6 md:p-8 space-y-8">
-        <div className="w-full h-10 bg-black/10 dark:bg-white/10 rounded-xl animate-pulse"></div>
-        
+      <div className="relative z-10 rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-6 md:p-8 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="w-full h-[160px] bg-black/10 dark:bg-white/10 rounded-[2rem] animate-pulse border border-border/30"></div>
+            <div key={i} className="bg-white/90 dark:bg-[#1e1e1e]/80 rounded-[24px] border border-black/10 dark:border-white/10 p-4 animate-pulse h-[114px]">
+              <div className="flex items-start gap-4 h-full">
+                {/* Thumbnail */}
+                <div className="w-32 h-20 rounded-2xl bg-slate-200 dark:bg-white/5 flex-shrink-0" />
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-between h-20">
+                  <div>
+                    <div className="w-3/4 h-4 rounded-md bg-slate-200 dark:bg-white/10 mb-2.5" />
+                    <div className="w-1/2 h-3 rounded-md bg-slate-200/60 dark:bg-white/5" />
+                  </div>
+                  
+                  {/* Footer badges */}
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-2">
+                      <div className="w-12 h-4 rounded-md bg-slate-200/60 dark:bg-white/5" />
+                      <div className="w-10 h-4 rounded-md bg-slate-200/60 dark:bg-white/5" />
+                      <div className="w-14 h-4 rounded-md bg-slate-200/60 dark:bg-white/5" />
+                    </div>
+                    <div className="w-24 h-4 rounded-full bg-slate-200/60 dark:bg-white/5" />
+                  </div>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>

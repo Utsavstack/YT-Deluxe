@@ -5,7 +5,8 @@ import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
 import HistoryCard from './components/HistoryCard';
 import FilterBar from './components/FilterBar';
-import StorageUsage from './components/StorageUsage';
+import StorageUsage, { StorageStatsBox } from './components/StorageUsage';
+import { FileTypeBreakdown } from './components/FileTypeBreakdown';
 import BulkActions from './components/BulkActions';
 import TabNavigation from './components/TabNavigation';
 import EmptyState from './components/EmptyState';
@@ -18,6 +19,64 @@ import { useDownloadContext } from '../../context/DownloadContext';
 import Icon from '../../components/AppIcon';
 
 const CHUNK_SIZE = 20; // Items to render per batch
+
+const TopCardsSkeleton = () => (
+  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full items-stretch">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className="w-full h-full min-h-[300px]">
+        <div className="bg-white/50 dark:bg-black/20 rounded-[2rem] border border-slate-200/50 dark:border-white/5 p-6 md:p-8 w-full h-full shadow-sm flex flex-col animate-pulse">
+          {/* Header */}
+          <div className="flex items-center mb-5 space-x-2.5">
+            <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-white/10" />
+            <div className="w-32 h-5 rounded-md bg-slate-200 dark:bg-white/10" />
+          </div>
+          {/* Inner Content Container */}
+          <div className="flex-1 p-4 bg-slate-100 dark:bg-white/[0.03] rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col justify-between">
+            <div className="w-full space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="w-16 h-6 rounded-full bg-slate-200/60 dark:bg-white/5" />
+                <div className="w-32 h-6 rounded-full bg-slate-200/60 dark:bg-white/5" />
+              </div>
+              <div className="w-full h-3 rounded-full bg-slate-200/60 dark:bg-white/5 mb-6" />
+            </div>
+            <div className="grid grid-cols-3 gap-3 mt-4">
+              <div className="w-full h-16 rounded-xl bg-slate-200/60 dark:bg-white/5" />
+              <div className="w-full h-16 rounded-xl bg-slate-200/60 dark:bg-white/5" />
+              <div className="w-full h-16 rounded-xl bg-slate-200/60 dark:bg-white/5" />
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const HistoryCardSkeleton = () => (
+  <div className="bg-white/90 dark:bg-[#1e1e1e]/80 rounded-[24px] border border-black/10 dark:border-white/10 p-4 animate-pulse h-[114px]">
+    <div className="flex items-start gap-4 h-full">
+      {/* Thumbnail */}
+      <div className="w-32 h-20 rounded-2xl bg-slate-200 dark:bg-white/5 flex-shrink-0" />
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0 py-0.5 flex flex-col justify-between h-20">
+        <div>
+          <div className="w-3/4 h-4 rounded-md bg-slate-200 dark:bg-white/10 mb-2.5" />
+          <div className="w-1/2 h-3 rounded-md bg-slate-200/60 dark:bg-white/5" />
+        </div>
+        
+        {/* Footer badges */}
+        <div className="flex items-center justify-between mt-auto">
+          <div className="flex items-center gap-2">
+            <div className="w-12 h-4 rounded-md bg-slate-200/60 dark:bg-white/5" />
+            <div className="w-10 h-4 rounded-md bg-slate-200/60 dark:bg-white/5" />
+            <div className="w-14 h-4 rounded-md bg-slate-200/60 dark:bg-white/5" />
+          </div>
+          <div className="w-24 h-4 rounded-full bg-slate-200/60 dark:bg-white/5" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const DownloadHistoryManagement = () => {
   const { t } = useTranslation();
@@ -108,6 +167,11 @@ const DownloadHistoryManagement = () => {
           trim_end: item.trim_end ?? null,
           format_id: item.format_id || null,
           audio_format_id: item.audio_format_id || null,
+          // Preserve file_exists flag from backend smart-recovery:
+          //   true  = file found on disk
+          //   false = file missing (drive removed / deleted)
+          //   null  = web-mode entry, no local file
+          file_exists: item.file_exists ?? null,
         }));
 
         const totalSize = transformed.reduce((sum, item) => sum + item.fileSize, 0);
@@ -176,6 +240,9 @@ const DownloadHistoryManagement = () => {
     }
 
     let filtered = [...downloadHistory];
+
+    // Exclude entries where the file is confirmed missing from disk.
+    filtered = filtered.filter((item) => item.file_exists !== false);
 
     if (activeTab !== 'all') {
       filtered = filtered.filter((item) => item.type === activeTab);
@@ -247,7 +314,7 @@ const DownloadHistoryManagement = () => {
       savedCount = JSON.parse(localStorage.getItem('ytdeluxe_saved') || '[]').length;
     } catch {}
     return {
-      all: downloadHistory.length,
+      all: downloadHistory.filter(i => i.file_exists !== false).length,
       saved: savedCount
     };
   }, [downloadHistory]);
@@ -448,27 +515,40 @@ const DownloadHistoryManagement = () => {
           <div className="container mx-auto px-4 max-w-[1600px]">
             {/* Modern Hero Section */}
             <div className="relative overflow-hidden rounded-[2.5rem] bg-white/90 dark:bg-black/40 backdrop-blur-xl bg-gradient-to-b from-black/5 to-slate-200/50 dark:from-white/5 dark:to-background border border-black/5 dark:border-white/5 p-8 md:p-12 mb-8">
-              <div className="relative z-10 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
+              <div className="relative z-10 flex flex-col gap-6">
                 <div className="max-w-xl">
                   <h1 className="text-3xl md:text-4xl font-black text-foreground mb-2 tracking-tight leading-tight">
                     {t("downloadHistoryManagement.downloadHistoryManagement")}
                   </h1>
-                  <p className="text-muted-foreground text-base md:text-lg font-medium">
+                  <p className="text-muted-foreground text-base md:text-lg font-medium mb-4">
                     {t("downloadHistoryManagement.trackOrganizeAndManage")}
                   </p>
                 </div>
-                <div className="w-full xl:w-[450px] shrink-0 transform md:scale-[1.08] origin-left xl:origin-right">
-                  <StorageUsage
-                    totalSize={storageStats.totalSize}
-                    availableSpace={storageStats.availableSpace}
-                    itemCount={storageStats.itemCount}
-                  />
-                </div>
+
+                {isLoading && downloadHistory.length === 0 ? (
+                  <TopCardsSkeleton />
+                ) : (
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full items-stretch">
+                    <div className="w-full h-full">
+                      <StorageStatsBox
+                        totalSize={storageStats.totalSize}
+                        availableSpace={storageStats.availableSpace}
+                        itemCount={downloadHistory.length}
+                      />
+                    </div>
+                    <div className="w-full h-full">
+                      <FileTypeBreakdown history={downloadHistory} />
+                    </div>
+                    <div className="w-full h-full">
+                      <StorageUsage itemCount={downloadHistory.length} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Sticky Navigation & Filters */}
-            <div className="sticky top-20 z-[60] py-4 -mx-4 px-4 md:mx-0 md:px-0 mb-8 transition-all">
+            <div className="sticky top-20 z-50 py-4 -mx-4 px-4 md:mx-0 md:px-0 mb-8 transition-all">
               <div className="flex flex-col xl:flex-row items-center justify-between gap-4">
                 <div className="w-full xl:w-auto shrink-0">
                   <TabNavigation
@@ -505,9 +585,10 @@ const DownloadHistoryManagement = () => {
                 )}
 
                 {isLoading && downloadHistory.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-                    <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
-                    <p className="text-muted-foreground font-bold tracking-widest uppercase text-xs">{t("downloadHistoryManagement.loading")}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <HistoryCardSkeleton key={i} />
+                    ))}
                   </div>
                 ) : filteredAndSortedData.length === 0 ? (
                   <EmptyState
